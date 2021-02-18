@@ -6,6 +6,7 @@ import org.marc4j.marc.DataField;
 import org.marc4j.marc.Record;
 import org.marc4j.marc.Subfield;
 import org.w3c.dom.Document;
+import org.w3c.dom.Node;
 import org.w3c.dom.NodeList;
 import org.xml.sax.InputSource;
 import org.xml.sax.SAXException;
@@ -37,36 +38,26 @@ public class XmlParser {
     public static final char MARC_CODE_U = 'u';
     public static final char MARC_CODE_3 = '3';
     public static final String MARC_PREFIX = "marc:";
-    public static final String NODE_TEMPLATE = "<record>"
-            + "<datafield tag='856' ind1='4' ind2='2'>"
+    public static final String DATAFIELD = "datafield";
+    public static final String NODE_TEMPLATE ="<datafield tag='856' ind1='4' ind2='2'>"
             + "<subfield code='3'>1</subfield>"
             + "<subfield code='u'>2</subfield>"
             + "<subfield code='q'>3</subfield>"
-            + "</datafield>"
-            + "</record>";
+            + "</datafield>";
 
     /**
      * Parses a SRU-response to extract the title of an marc21xml-record.
      *
-     * @param xml marc21-xml record
      * @return simple json with <code>title</code>
      * @throws TransformerException         some stream reading went south
      */
-    private Record record;
 
-    public XmlParser(String xml) throws TransformerException{
-        this.record = asMarcRecord(asDocument(xml.replace("&", "&amp;")));
-    }
-    public Record getRecord(){
-        return record;
-    }
-
-    public void setRecord(String xml) throws TransformerException {
-        this.record = asMarcRecord(asDocument(xml));
+    public XmlParser(){
     }
 
     @SuppressWarnings("PMD.NcssCount")
-    public String extractMms_id() {
+    public String extractMms_id(String xml) throws TransformerException{
+        Record record = asMarcRecord(asDocument(xml));
         List<ControlField> controlFieldList = record.getControlFields();
         for (ControlField controlField : controlFieldList) {
             String controlFieldTag = controlField.getTag();
@@ -86,7 +77,7 @@ public class XmlParser {
 
         Document doc = db.parse(is);
 
-        NodeList datafields = doc.getElementsByTagName("datafield");
+        NodeList datafields = doc.getElementsByTagName(DATAFIELD);
         NodeList subfields = datafields.item(0).getChildNodes();
 
         subfields.item(0).setTextContent(description);
@@ -101,7 +92,31 @@ public class XmlParser {
         return doc;
     }
 
-    public boolean alreadyExists(String description, String url){
+    public Document insertUpdatedIntoRecord(String xml, Document update){
+        Document doc = asDocument(xml);
+        Node updateNode = doc.importNode(update.getFirstChild(), true);
+        NodeList datafields = doc.getElementsByTagName(DATAFIELD);
+        int i;
+        for(i=0; i<datafields.getLength(); i++){
+            Node datafield = datafields.item(i);
+            if(getTagNumber(datafield) >= 856) {
+                doc.getFirstChild().insertBefore(updateNode, datafield);
+                return doc;
+            }
+        }
+        doc.insertBefore(update, datafields.item(i));
+        return doc;
+    }
+
+    public int getTagNumber(Node node){
+        String tagString = node.getAttributes().getNamedItem("tag").toString();
+        String tagNumberString = tagString.substring(5, tagString.length()-1);
+        int tagInt = Integer.parseInt(tagNumberString);
+        return tagInt;
+    }
+
+    public boolean alreadyExists(String description, String url, String xml) throws TransformerException{
+        Record record = asMarcRecord(asDocument(xml));
         List<DataField> dataFieldList = record.getDataFields();
         for (DataField dataField : dataFieldList) {
             Subfield subField_U;
@@ -142,7 +157,8 @@ public class XmlParser {
             DocumentBuilderFactory factory = DocumentBuilderFactory.newInstance();
             DocumentBuilder builder = factory.newDocumentBuilder();
             String removedMarcInSruXml = sruxml.replace(MARC_PREFIX, EMPTY_STRING);
-            InputSource is = new InputSource(new StringReader(removedMarcInSruXml));
+            String fixedAmpersandInSruXML = removedMarcInSruXml.replace("&", "&amp;");
+            InputSource is = new InputSource(new StringReader(fixedAmpersandInSruXML));
             document = builder.parse(is);
         } catch (ParserConfigurationException | SAXException | IOException e) {
             System.out.println("Something went wrong during parsing of sruResponse. " + e.getMessage());

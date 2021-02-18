@@ -25,8 +25,6 @@ public class UpdateAlmaDescriptionHandlerTest {
     public static final String MOCK_UPDATE_HOST = "alma-update-host-dot-com";
     public static final String MOCK_ISBN = "9788203364181";
     public static final String EXPECTED_ID = "991325803064702201";
-    public static final int NUMBER_OF_SUBFIELDS_2 = 2;
-    public static final int NUMBER_OF_SUBFIELDS_3 = 3;
 
     public static final String MOCK_XML =
             "<record xmlns='http://www.loc.gov/MARC21/slim'>"
@@ -91,8 +89,8 @@ public class UpdateAlmaDescriptionHandlerTest {
         newXML = "<?xml version='1.0' encoding='UTF-8'?>" + newXML;
         System.out.println(newXML);
         try{
-            XmlParser xmlParser = new XmlParser(newXML);
-            String resultID = xmlParser.extractMms_id();
+            XmlParser xmlParser = new XmlParser();
+            String resultID = xmlParser.extractMms_id(newXML);
             assertEquals(EXPECTED_ID, resultID);
         }catch (TransformerException e) {
             System.out.println(e);
@@ -106,8 +104,8 @@ public class UpdateAlmaDescriptionHandlerTest {
         newXML = newXML.replace("&", "&amp;");
         System.out.println(newXML);
         try{
-            XmlParser xmlParser = new XmlParser(newXML);
-            assertTrue(xmlParser.alreadyExists("Beskrivelse fra forlaget (kort)", "http://innhold.bibsys.no/bilde/forside/?size=mini&amp;id=LITE_150088182.jpg".replace("&amp;", "&")));
+            XmlParser xmlParser = new XmlParser();
+            assertTrue(xmlParser.alreadyExists("Beskrivelse fra forlaget (kort)", "http://innhold.bibsys.no/bilde/forside/?size=mini&amp;id=LITE_150088182.jpg".replace("&amp;", "&"), newXML));
         }catch (TransformerException e) {
             System.out.println(e);
         }
@@ -147,22 +145,6 @@ public class UpdateAlmaDescriptionHandlerTest {
         }
     }
 
-    @Test
-    public void testXmlInsertion() throws Exception{
-        XmlParser parser = new XmlParser(MOCK_XML);
-        Document doc = parser.create856Node("This is the description", "This is the url", null);
-        NodeList datafields = doc.getElementsByTagName("datafield");
-        NodeList subfields = datafields.item(0).getChildNodes();
-        System.out.println(subfields.item(0).getTextContent());
-        System.out.println(subfields.item(1).getTextContent());
-        assertEquals(NUMBER_OF_SUBFIELDS_2, subfields.getLength());
-        Document doc2 = parser.create856Node("This is the description", "This is the url", "This is det type");
-        NodeList datafields2 = doc2.getElementsByTagName("datafield");
-        NodeList subfields2 = datafields2.item(0).getChildNodes();
-        assertEquals(NUMBER_OF_SUBFIELDS_3, subfields2.getLength());
-        //TODO Use this next time
-        System.out.println(datafields.item(0).getAttributes().getNamedItem("tag"));
 
-    }
 
 }
