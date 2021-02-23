@@ -1,5 +1,6 @@
 package no.unit.alma;
 
+import com.google.gson.reflect.TypeToken;
 import no.unit.alma.Config;
 import no.unit.alma.GatewayResponse;
 import no.unit.alma.UpdateAlmaDescriptionHandler;
@@ -12,18 +13,24 @@ import javax.xml.parsers.DocumentBuilder;
 import javax.xml.parsers.DocumentBuilderFactory;
 import javax.xml.transform.TransformerException;
 import java.io.StringReader;
+import no.unit.marc.Reference;
+
+import java.lang.reflect.Type;
 import java.util.HashMap;
+import java.util.List;
 import java.util.Map;
 
 import static org.junit.jupiter.api.Assertions.assertEquals;
 import static org.junit.jupiter.api.Assertions.assertTrue;
 import static org.mockito.ArgumentMatchers.any;
 import static org.mockito.Mockito.mock;
+import com.google.gson.Gson;
+import com.google.gson.GsonBuilder;
 
 public class UpdateAlmaDescriptionHandlerTest {
 
     public static final String MOCK_UPDATE_HOST = "alma-update-host-dot-com";
-    public static final String MOCK_ISBN = "9788203364181";
+    public static final String MOCK_ISBN = "9788210053412";
     public static final String EXPECTED_ID = "991325803064702201";
 
     public static final String MOCK_XML =
@@ -66,6 +73,23 @@ public class UpdateAlmaDescriptionHandlerTest {
                 +"</record>";
 
     @Test
+    public void testConnectionToAlmaSru(){
+        final Config instance = Config.getInstance();
+        instance.setAlmaUpdateHost(MOCK_UPDATE_HOST);
+
+        Map<String, String> queryParameters = new HashMap<>();
+        queryParameters.put(UpdateAlmaDescriptionHandler.ISBN_KEY, MOCK_ISBN);
+        Map<String, Object> event = new HashMap<>();
+        event.put(UpdateAlmaDescriptionHandler.QUERY_STRING_PARAMETERS_KEY, queryParameters);
+
+        final UpdateAlmaDescriptionHandler updateAlmaDescriptionHandler = new UpdateAlmaDescriptionHandler();
+
+        final GatewayResponse gatewayResponse = updateAlmaDescriptionHandler.handleRequest(event, null);
+        String result = gatewayResponse.getBody();
+        System.out.println(result);
+    }
+
+    @Test
     public void testIdMatchBasedOnIsbn(){
         final Config instance = Config.getInstance();
         instance.setAlmaUpdateHost(MOCK_UPDATE_HOST);
@@ -75,12 +99,16 @@ public class UpdateAlmaDescriptionHandlerTest {
         Map<String, Object> event = new HashMap<>();
         event.put(UpdateAlmaDescriptionHandler.QUERY_STRING_PARAMETERS_KEY, queryParameters);
 
-        final UpdateAlmaDescriptionHandler updateAlma856Handler = new UpdateAlmaDescriptionHandler();
+        final UpdateAlmaDescriptionHandler updateAlmaDescriptionHandler = new UpdateAlmaDescriptionHandler();
 
-        final GatewayResponse gatewayResponse = updateAlma856Handler.handleRequest(event, null);
+        final GatewayResponse gatewayResponse = updateAlmaDescriptionHandler.handleRequest(event, null);
         String result = gatewayResponse.getBody();
-        System.out.println(result);
-        assertEquals(1, 1);
+
+        GsonBuilder gsonBuilder = new GsonBuilder();
+        Gson gson = gsonBuilder.create();
+        Type listOfMyClassObject = new TypeToken<List<Reference>>() {}.getType();
+        List<Reference> reference = gson.fromJson(result, listOfMyClassObject);
+        assertEquals(EXPECTED_ID, reference.get(0).getId());
     }
 
     @Test
@@ -110,41 +138,5 @@ public class UpdateAlmaDescriptionHandlerTest {
             System.out.println(e);
         }
     }
-
-    @Test
-    public void testParsingSkills(){
-        try{
-            final Config instance = Config.getInstance();
-            instance.setAlmaUpdateHost(MOCK_UPDATE_HOST);
-
-            Map<String, String> queryParameters = new HashMap<>();
-            queryParameters.put(UpdateAlmaDescriptionHandler.ISBN_KEY, "9780367196721");
-            Map<String, Object> event = new HashMap<>();
-            event.put(UpdateAlmaDescriptionHandler.QUERY_STRING_PARAMETERS_KEY, queryParameters);
-
-            final UpdateAlmaDescriptionHandler updateAlma856Handler = new UpdateAlmaDescriptionHandler();
-
-            final GatewayResponse gatewayResponse = updateAlma856Handler.handleRequest(event, null);
-            String result = gatewayResponse.getBody();
-            String newXML = result;
-            newXML = newXML.replace("&", "&amp;");
-            DocumentBuilderFactory dbFactory = DocumentBuilderFactory.newInstance();
-            DocumentBuilder dBuilder = dbFactory.newDocumentBuilder();
-            Document doc = dBuilder.parse(new InputSource(new StringReader(newXML)));
-            doc.getDocumentElement().normalize();
-            NodeList nList = doc.getElementsByTagName("recordData");
-            for (int temp = 0; temp < nList.getLength(); temp++) {
-                NodeList childList = nList.item(temp).getChildNodes();
-                for(int i = 0; i < childList.getLength(); i++){
-                    System.out.println(childList.item(i).getNodeName());
-                }
-            }
-            assertTrue(true);
-        } catch(Exception e){
-            System.out.println(e);
-        }
-    }
-
-
 
 }
