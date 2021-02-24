@@ -44,13 +44,7 @@ public class XmlParser {
             + "<subfield code='u'>2</subfield>"
             + "<subfield code='q'>3</subfield>"
             + "</datafield>";
-
-    /**
-     * Parses a SRU-response to extract the title of an marc21xml-record.
-     *
-     * @return simple json with <code>title</code>
-     * @throws TransformerException         some stream reading went south
-     */
+    
 
     public XmlParser(){
     }
@@ -92,6 +86,13 @@ public class XmlParser {
         return doc;
     }
 
+    /**
+     * @param xml The xml that we want to insert the extra info into
+     * @param update The update document that we want to insert into the xml
+     * @return Document. The updated document with the added info
+     * This method assumes that the xml starts with an outer node (in this case <bib>)
+     * the outer node contains several metadata nodes before the last node which is the <record>
+     */
     public Document insertUpdatedIntoRecord(String xml, Document update){
         Document doc = asDocument(xml);
         Node updateNode = doc.importNode(update.getFirstChild(), true);
@@ -100,11 +101,11 @@ public class XmlParser {
         for(i=0; i<datafields.getLength(); i++){
             Node datafield = datafields.item(i);
             if(getTagNumber(datafield) >= 856) {
-                doc.getFirstChild().insertBefore(updateNode, datafield);
+                doc.getFirstChild().getLastChild().insertBefore(updateNode, datafield);
                 return doc;
             }
         }
-        doc.insertBefore(update, datafields.item(i));
+        doc.getFirstChild().getLastChild().appendChild(updateNode);
         return doc;
     }
 
@@ -165,4 +166,5 @@ public class XmlParser {
         }
         return document;
     }
+
 }

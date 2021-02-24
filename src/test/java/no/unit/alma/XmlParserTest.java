@@ -5,12 +5,16 @@ import org.w3c.dom.Document;
 import org.w3c.dom.Node;
 import org.w3c.dom.NodeList;
 
+import java.net.http.HttpResponse;
+
 import static org.junit.jupiter.api.Assertions.assertEquals;
 
 public class XmlParserTest {
 
     public static final int NUMBER_OF_SUBFIELDS_2 = 2;
     public static final int NUMBER_OF_SUBFIELDS_3 = 3;
+
+    public static final String MMS_ID = "991325803064702201";
 
     public static final String MOCK_XML =
             "<record xmlns='http://www.loc.gov/MARC21/slim'>"
@@ -79,8 +83,6 @@ public class XmlParserTest {
         NodeList datafields2 = doc2.getElementsByTagName("datafield");
         NodeList subfields2 = datafields2.item(0).getChildNodes();
         assertEquals(NUMBER_OF_SUBFIELDS_3, subfields2.getLength());
-        //TODO Use this next time
-        System.out.println(datafields.item(0).getAttributes().getNamedItem("tag"));
 
     }
 
@@ -89,6 +91,18 @@ public class XmlParserTest {
         XmlParser parser = new XmlParser();
         Document updateDoc = parser.create856Node("This is the description", "This is the url", null);
         Document doc = parser.insertUpdatedIntoRecord(MOCK_XML, updateDoc);
+        printDocument(doc);
+    }
+
+    @Test
+    public void testInsertUpdateIntoAlmaRecord() throws Exception{
+        AlmaConnection almaCon = new AlmaConnection();
+        SecretRetriever secretRetriever = new SecretRetriever();
+        String secretKey = secretRetriever.getSecret();
+        HttpResponse<String> result = almaCon.sendGet(MMS_ID, secretKey);
+        XmlParser parser = new XmlParser();
+        Document updateDoc = parser.create856Node("This is the description", "This is the url", null);
+        Document doc = parser.insertUpdatedIntoRecord(result.body(), updateDoc);
         printDocument(doc);
     }
 }

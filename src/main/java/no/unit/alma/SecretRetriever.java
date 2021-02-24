@@ -1,5 +1,6 @@
 package no.unit.alma;
 
+import com.google.gson.Gson;
 import software.amazon.awssdk.regions.Region;
 import software.amazon.awssdk.services.secretsmanager.SecretsManagerClient;
 import software.amazon.awssdk.services.secretsmanager.model.*;
@@ -9,9 +10,14 @@ import java.util.Base64;
 
 public class SecretRetriever {
 
+    private class secretFormat{
+        String ALMA_APIKEY;
+    }
+
     public static String getSecret() {
         String secretName = "ALMA_APIKEY";
         Region region = Region.of("eu-west-1");
+        Gson g = new Gson();
 
         // Create a Secrets Manager client
         SecretsManagerClient client = SecretsManagerClient.builder()
@@ -56,11 +62,13 @@ public class SecretRetriever {
         // Depending on whether the secret is a string or binary, one of these fields will be populated.
         if (getSecretValueResponse.secretString() != null) {
             secret = getSecretValueResponse.secretString();
-            return secret;
+            secretFormat secretJson = g.fromJson(secret,secretFormat.class);
+            return secretJson.ALMA_APIKEY;
         }
         else {
             decodedBinarySecret = new String(Base64.getDecoder().decode(getSecretValueResponse.secretBinary().asByteBuffer()).array());
-            return decodedBinarySecret;
+            secretFormat secretJson = g.fromJson(decodedBinarySecret, secretFormat.class);
+            return secretJson.ALMA_APIKEY;
         }
     }
 }
