@@ -31,8 +31,6 @@ import java.util.List;
 public class XmlParser {
 
     public static final String EMPTY_STRING = "";
-    public static final String CLOSING_BRACKET = ")";
-    public static final String XML_PROTOCOL = "<?xml version='1.0' encoding='UTF-8'?>";
     public static final String MARC_TAG_001 = "001";
     public static final String MARC_TAG_856 = "856";
     public static final char MARC_CODE_U = 'u';
@@ -44,11 +42,17 @@ public class XmlParser {
             + "<subfield code='u'>2</subfield>"
             + "<subfield code='q'>3</subfield>"
             + "</datafield>";
-    
+
 
     public XmlParser(){
     }
 
+    /**
+     *
+     * @param xml A xml in the form of a String
+     * @return The mms_id of the xml(bib-record)
+     * @throws TransformerException
+     */
     @SuppressWarnings("PMD.NcssCount")
     public String extractMms_id(String xml) throws TransformerException{
         Record record = asMarcRecord(asDocument(xml));
@@ -62,7 +66,17 @@ public class XmlParser {
         return null;
     }
 
-    public Document create856Node(String description, String url, String descType) throws ParserConfigurationException, IOException, SAXException, TransformerException{
+    /**
+     *
+     * @param description The description we want to popluate the node with
+     * @param url The url we want to popluate the node with
+     * @param descType The type we want to popluate the node with. Set to null unless the resource is a picture, if it is this should be 'image/jpg'
+     * @return A document populated with the fields set from the params
+     * @throws ParserConfigurationException
+     * @throws IOException
+     * @throws SAXException
+     */
+    public Document create856Node(String description, String url, String descType) throws ParserConfigurationException, IOException, SAXException {
         DocumentBuilderFactory dbf = DocumentBuilderFactory.newDefaultInstance();
         DocumentBuilder db = dbf.newDocumentBuilder();
 
@@ -109,6 +123,11 @@ public class XmlParser {
         return doc;
     }
 
+    /**
+     *
+     * @param node the node from which we want to extract the tag number
+     * @return int the tag number
+     */
     public int getTagNumber(Node node){
         String tagString = node.getAttributes().getNamedItem("tag").toString();
         String tagNumberString = tagString.substring(5, tagString.length()-1);
@@ -116,6 +135,14 @@ public class XmlParser {
         return tagInt;
     }
 
+    /**
+     *
+     * @param description The description we want to check if exists
+     * @param url The url we want to check if exists
+     * @param xml The xml we want to check if url and description already exists inn.
+     * @return True if both description and url exists on the same 856 node, false if not
+     * @throws TransformerException
+     */
     public boolean alreadyExists(String description, String url, String xml) throws TransformerException{
         Record record = asMarcRecord(asDocument(xml));
         List<DataField> dataFieldList = record.getDataFields();

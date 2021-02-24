@@ -2,12 +2,9 @@ package no.unit.alma;
 
 import java.io.IOException;
 import java.net.URI;
-import java.net.URLEncoder;
 import java.net.http.HttpClient;
 import java.net.http.HttpRequest;
 import java.net.http.HttpResponse;
-import java.nio.charset.StandardCharsets;
-import java.util.Map;
 
 public class AlmaConnection {
 
@@ -22,6 +19,16 @@ public class AlmaConnection {
             .version(HttpClient.Version.HTTP_2)
             .build();
 
+    /**
+     *
+     * @param mms_id the mms_id of the bib-post you want to retrieve
+     * @param api_key the api_key needed to access the api
+     * @return the http-response in the shape of a String
+     * @throws IOException
+     * @throws IllegalArgumentException
+     * @throws InterruptedException
+     * @throws SecurityException
+     */
     public HttpResponse<String> sendGet(String mms_id, String api_key) throws IOException, IllegalArgumentException, InterruptedException, SecurityException {
 
         HttpRequest request = HttpRequest.newBuilder()
@@ -35,6 +42,17 @@ public class AlmaConnection {
         return response;
     }
 
+    /**
+     *
+     * @param mms_id the mms_id of the bib-post you want to update
+     * @param api_key the api_key needed to access the api
+     * @param xml the new xml that should replace the old bib-post
+     * @return the Http-response in the form of a String
+     * @throws IOException
+     * @throws IllegalArgumentException
+     * @throws InterruptedException
+     * @throws SecurityException
+     */
     public HttpResponse<String> sendPut(String mms_id, String api_key, String xml) throws IOException, IllegalArgumentException, InterruptedException, SecurityException{
         HttpRequest request = HttpRequest.newBuilder()
                 .PUT(HttpRequest.BodyPublishers.ofString(xml))
