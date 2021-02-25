@@ -5,9 +5,23 @@ import org.w3c.dom.Document;
 import org.w3c.dom.Node;
 import org.w3c.dom.NodeList;
 
+import javax.xml.parsers.DocumentBuilder;
+import javax.xml.parsers.DocumentBuilderFactory;
+import javax.xml.transform.Transformer;
+import javax.xml.transform.TransformerFactory;
+import javax.xml.transform.dom.DOMSource;
+import javax.xml.transform.stream.StreamResult;
+import java.io.*;
 import java.net.http.HttpResponse;
+import java.nio.charset.StandardCharsets;
+import java.nio.file.Files;
+import java.nio.file.Path;
+import java.nio.file.Paths;
+import java.util.stream.Collectors;
 
 import static org.junit.jupiter.api.Assertions.assertEquals;
+import static org.mockito.ArgumentMatchers.any;
+import static org.mockito.Mockito.when;
 
 public class XmlParserTest {
 
@@ -15,6 +29,9 @@ public class XmlParserTest {
     public static final int NUMBER_OF_SUBFIELDS_3 = 3;
 
     public static final String MMS_ID = "991325803064702201";
+
+    public static final String FAULTY_XML_FILE = "/Faulty_xml.xml";
+    public static final String CORRECT_XML_FILE = "/Mock_xml.xml";
 
     public static final String MOCK_XML =
             "<record xmlns='http://www.loc.gov/MARC21/slim'>"
@@ -60,13 +77,25 @@ public class XmlParserTest {
         NodeList nodeList = topNode.getChildNodes();
         for(int i = 0; i < nodeList.getLength(); i++){
             if(nodeList.item(i).hasChildNodes()){
-                NodeList nodeChildren = nodeList.item(i).getChildNodes();
-                for (int j = 0; j < nodeChildren.getLength(); j++){
-                    System.out.println(nodeChildren.item(j).getTextContent());
-                }
+                printChildNodes(nodeList.item(i).getChildNodes());
             }else{
-                System.out.println(nodeList.item(i).getTextContent());
+                if(!nodeList.item(i).getTextContent().isBlank()) {
+                    System.out.println(nodeList.item(i).getTextContent());
+                }
             }
+        }
+    }
+
+    public void printChildNodes(NodeList children){
+        for (int i = 0; i < children.getLength(); i++){
+            if(children.item(i).hasChildNodes()){
+                printChildNodes(children.item(i).getChildNodes());
+            }else{
+                if(!children.item(i).getTextContent().isBlank()) {
+                    System.out.println(children.item(i).getTextContent());
+                }
+            }
+
         }
     }
 
@@ -95,7 +124,7 @@ public class XmlParserTest {
     }
 
     @Test
-    public void testInsertUpdateIntoAlmaRecord() throws Exception{
+    public void testInsertUpdatedRecordIntoAlmaRecord() throws Exception{
         AlmaConnection almaCon = new AlmaConnection();
         SecretRetriever secretRetriever = new SecretRetriever();
         String secretKey = secretRetriever.getSecret();
@@ -103,6 +132,22 @@ public class XmlParserTest {
         XmlParser parser = new XmlParser();
         Document updateDoc = parser.create856Node("This is the description", "This is the url", null);
         Document doc = parser.insertUpdatedIntoRecord(result.body(), updateDoc);
+        printDocument(doc);
+    }
+
+    @Test
+    public void testDatafieldAtWrongPlaceInXml() throws Exception{
+        InputStream stream = XmlParserTest.class.getResourceAsStream(FAULTY_XML_FILE);
+        InputStreamReader reader = new InputStreamReader(stream);
+        BufferedReader br = new BufferedReader(reader);
+        String line;
+        StringBuilder sb = new StringBuilder();
+        while((line=br.readLine())!= null){
+            sb.append(line.trim());
+        }
+        XmlParser parser = new XmlParser();
+        Document updateDoc = parser.create856Node("This is the description", "This is the url", null);
+        Document doc = parser.insertUpdatedIntoRecord(sb.toString(), updateDoc);
         printDocument(doc);
     }
 }

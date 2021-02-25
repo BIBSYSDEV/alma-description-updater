@@ -115,10 +115,21 @@ public class XmlParser {
         for(i=0; i<datafields.getLength(); i++){
             Node datafield = datafields.item(i);
             if(getTagNumber(datafield) >= 856) {
-                doc.getFirstChild().getLastChild().insertBefore(updateNode, datafield);
-                return doc;
+                try{
+                    doc.getFirstChild().getLastChild().insertBefore(updateNode, datafield);
+                    return doc;
+                }catch(Exception e){
+                    /** We dont want to handle this exception
+                     * its just a failsafe in case of an out-of-place datafield-tag
+                     * in this case we just skip it
+                     */
+                    continue;
+                }
             }
         }
+        System.out.println(doc.getChildNodes().getLength());
+        System.out.println(doc.getFirstChild().getChildNodes().getLength());
+        System.out.println(doc.getFirstChild().getLastChild().getChildNodes().getLength());
         doc.getFirstChild().getLastChild().appendChild(updateNode);
         return doc;
     }
@@ -179,7 +190,7 @@ public class XmlParser {
         return outputStream;
     }
 
-    private Document asDocument(String sruxml) {
+    public Document asDocument(String sruxml) {
         Document document = null;
         try {
             DocumentBuilderFactory factory = DocumentBuilderFactory.newInstance();
