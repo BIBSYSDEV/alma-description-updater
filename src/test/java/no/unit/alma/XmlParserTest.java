@@ -5,23 +5,11 @@ import org.w3c.dom.Document;
 import org.w3c.dom.Node;
 import org.w3c.dom.NodeList;
 
-import javax.xml.parsers.DocumentBuilder;
-import javax.xml.parsers.DocumentBuilderFactory;
-import javax.xml.transform.Transformer;
-import javax.xml.transform.TransformerFactory;
-import javax.xml.transform.dom.DOMSource;
-import javax.xml.transform.stream.StreamResult;
 import java.io.*;
 import java.net.http.HttpResponse;
-import java.nio.charset.StandardCharsets;
-import java.nio.file.Files;
-import java.nio.file.Path;
-import java.nio.file.Paths;
-import java.util.stream.Collectors;
+
 
 import static org.junit.jupiter.api.Assertions.assertEquals;
-import static org.mockito.ArgumentMatchers.any;
-import static org.mockito.Mockito.when;
 
 public class XmlParserTest {
 
@@ -102,13 +90,13 @@ public class XmlParserTest {
     @Test
     public void testXmlInsertion() throws Exception{
         XmlParser parser = new XmlParser();
-        Document doc = parser.create856Node("This is the description", "This is the url", null);
+        Document doc = parser.create856Node("This is the description", "This is the url");
         NodeList datafields = doc.getElementsByTagName("datafield");
         NodeList subfields = datafields.item(0).getChildNodes();
         System.out.println(subfields.item(0).getTextContent());
         System.out.println(subfields.item(1).getTextContent());
         assertEquals(NUMBER_OF_SUBFIELDS_2, subfields.getLength());
-        Document doc2 = parser.create856Node("This is the description", "This is the url", "This is det type");
+        Document doc2 = parser.create856Node("This is the description", "This is the url");
         NodeList datafields2 = doc2.getElementsByTagName("datafield");
         NodeList subfields2 = datafields2.item(0).getChildNodes();
         assertEquals(NUMBER_OF_SUBFIELDS_3, subfields2.getLength());
@@ -118,7 +106,7 @@ public class XmlParserTest {
     @Test
     public void testInsertUpdatedIntoRecord() throws Exception{
         XmlParser parser = new XmlParser();
-        Document updateDoc = parser.create856Node("This is the description", "This is the url", null);
+        Document updateDoc = parser.create856Node("This is the description", "This is the url");
         Document doc = parser.insertUpdatedIntoRecord(MOCK_XML, updateDoc);
         printDocument(doc);
     }
@@ -130,7 +118,7 @@ public class XmlParserTest {
         String secretKey = secretRetriever.getSecret();
         HttpResponse<String> result = almaCon.sendGet(MMS_ID, secretKey);
         XmlParser parser = new XmlParser();
-        Document updateDoc = parser.create856Node("This is the description", "This is the url", null);
+        Document updateDoc = parser.create856Node("This is the description", "This is the url");
         Document doc = parser.insertUpdatedIntoRecord(result.body(), updateDoc);
         printDocument(doc);
     }
@@ -146,8 +134,32 @@ public class XmlParserTest {
             sb.append(line.trim());
         }
         XmlParser parser = new XmlParser();
-        Document updateDoc = parser.create856Node("This is the description", "This is the url", null);
+        Document updateDoc = parser.create856Node("This is a test", "This is a test url");
         Document doc = parser.insertUpdatedIntoRecord(sb.toString(), updateDoc);
         printDocument(doc);
     }
+
+    @Test
+    public void testConvertDocToString() throws Exception{
+        InputStream stream = XmlParserTest.class.getResourceAsStream(FAULTY_XML_FILE);
+        InputStreamReader reader = new InputStreamReader(stream);
+        BufferedReader br = new BufferedReader(reader);
+        String line;
+        StringBuilder sb = new StringBuilder();
+        while((line=br.readLine())!= null){
+            sb.append(line.trim());
+        }
+        XmlParser parser = new XmlParser();
+        Document updateDoc = parser.create856Node("This is a test", "This is a test url");
+        Document doc = parser.insertUpdatedIntoRecord(sb.toString(), updateDoc);
+        System.out.println(parser.convertDocToString(doc));
+    }
+
+    @Test
+    public void testCreate856Node() throws Exception{
+        XmlParser xmlParser = new XmlParser();
+        Document doc = xmlParser.create856Node("This is the description", "ThisIsAJPG.jpg");
+        printDocument(doc);
+    }
+
 }

@@ -15,24 +15,22 @@ import org.xml.sax.SAXException;
 import javax.xml.parsers.DocumentBuilder;
 import javax.xml.parsers.DocumentBuilderFactory;
 import javax.xml.parsers.ParserConfigurationException;
-import javax.xml.transform.Result;
-import javax.xml.transform.Source;
-import javax.xml.transform.TransformerException;
-import javax.xml.transform.TransformerFactory;
+import javax.xml.transform.*;
 import javax.xml.transform.dom.DOMSource;
 import javax.xml.transform.stream.StreamResult;
-import java.io.ByteArrayInputStream;
-import java.io.ByteArrayOutputStream;
-import java.io.IOException;
-import java.io.StringReader;
+import java.io.*;
 import java.util.List;
 
 
 public class XmlParser {
 
+    public static final String UPDATE_NODE_ERROR_MESSAGE = "Caught and error while creating the updateNode";
+    public static final String ALREADY_EXISTS_ERROR_MESSAGE = "Caught an error while checking if the update fields already exists";
+    public static final String CONVERTING_TO_DOC_ERROR_MESSAGE = "Caught an error while converting to document";
+    public static final String CONVERTING_TO_STRING_ERROR_MESSAGE = "Caught an error while converting to String";
+
     public static final String EMPTY_STRING = "";
-    public static final String MARC_TAG_001 = "001";
-    public static final String MARC_TAG_856 = "856";
+    public static final int MARC_TAG_856 = 856;
     public static final char MARC_CODE_U = 'u';
     public static final char MARC_CODE_3 = '3';
     public static final String MARC_PREFIX = "marc:";
@@ -40,7 +38,7 @@ public class XmlParser {
     public static final String NODE_TEMPLATE ="<datafield tag='856' ind1='4' ind2='2'>"
             + "<subfield code='3'>1</subfield>"
             + "<subfield code='u'>2</subfield>"
-            + "<subfield code='q'>3</subfield>"
+            + "<subfield code='q'>image/jpeg</subfield>"
             + "</datafield>";
 
 
@@ -49,55 +47,37 @@ public class XmlParser {
 
     /**
      *
-     * @param xml A xml in the form of a String
-     * @return The mms_id of the xml(bib-record)
-     * @throws TransformerException
-     */
-    @SuppressWarnings("PMD.NcssCount")
-    public String extractMms_id(String xml) throws TransformerException{
-        Record record = asMarcRecord(asDocument(xml));
-        List<ControlField> controlFieldList = record.getControlFields();
-        for (ControlField controlField : controlFieldList) {
-            String controlFieldTag = controlField.getTag();
-            if (controlFieldTag.equals(MARC_TAG_001)) {
-                return controlField.getData();
-            }
-        }
-        return null;
-    }
-
-    /**
-     *
      * @param description The description we want to popluate the node with
      * @param url The url we want to popluate the node with
-     * @param descType The type we want to popluate the node with. Set to null unless the resource is a picture, if it is this should be 'image/jpg'
      * @return A document populated with the fields set from the params
      * @throws ParserConfigurationException
      * @throws IOException
      * @throws SAXException
      */
-    public Document create856Node(String description, String url, String descType) throws ParserConfigurationException, IOException, SAXException {
-        DocumentBuilderFactory dbf = DocumentBuilderFactory.newDefaultInstance();
-        DocumentBuilder db = dbf.newDocumentBuilder();
+    public Document create856Node(String description, String url) throws ParsingException {
+        try{
+            DocumentBuilderFactory dbf = DocumentBuilderFactory.newDefaultInstance();
+            DocumentBuilder db = dbf.newDocumentBuilder();
 
-        InputSource is = new InputSource();
-        is.setCharacterStream(new StringReader(NODE_TEMPLATE));
+            InputSource is = new InputSource();
+            is.setCharacterStream(new StringReader(NODE_TEMPLATE));
 
-        Document doc = db.parse(is);
+            Document doc = db.parse(is);
 
-        NodeList datafields = doc.getElementsByTagName(DATAFIELD);
-        NodeList subfields = datafields.item(0).getChildNodes();
+            NodeList datafields = doc.getElementsByTagName(DATAFIELD);
+            NodeList subfields = datafields.item(0).getChildNodes();
 
-        subfields.item(0).setTextContent(description);
-        subfields.item(1).setTextContent(url);
+            subfields.item(0).setTextContent(description);
+            subfields.item(1).setTextContent(url);
 
-        if(descType != null) {
-            subfields.item(2).setTextContent(descType);
-        } else {
-            datafields.item(0).removeChild(subfields.item(2));
+            if(!url.endsWith(".jpg")) {
+                datafields.item(0).removeChild(subfields.item(2));
+            }
+            return doc;
+
+        }catch(ParserConfigurationException |IOException | SAXException e){
+            throw new ParsingException(UPDATE_NODE_ERROR_MESSAGE, e);
         }
-
-        return doc;
     }
 
     /**
@@ -107,7 +87,7 @@ public class XmlParser {
      * This method assumes that the xml starts with an outer node (in this case <bib>)
      * the outer node contains several metadata nodes before the last node which is the <record>
      */
-    public Document insertUpdatedIntoRecord(String xml, Document update){
+    public Document insertUpdatedIntoRecord(String xml, Document update) throws ParsingException{
         Document doc = asDocument(xml);
         Node updateNode = doc.importNode(update.getFirstChild(), true);
         NodeList datafields = doc.getElementsByTagName(DATAFIELD);
@@ -127,9 +107,7 @@ public class XmlParser {
                 }
             }
         }
-        System.out.println(doc.getChildNodes().getLength());
-        System.out.println(doc.getFirstChild().getChildNodes().getLength());
-        System.out.println(doc.getFirstChild().getLastChild().getChildNodes().getLength());
+
         doc.getFirstChild().getLastChild().appendChild(updateNode);
         return doc;
     }
@@ -146,6 +124,12 @@ public class XmlParser {
         return tagInt;
     }
 
+    public char getSubfieldCode(Node node){
+        String codeString = node.getAttributes().getNamedItem("code").toString();
+        char code = codeString.charAt(codeString.length()-2);
+        return code;
+    }
+
     /**
      *
      * @param description The description we want to check if exists
@@ -154,43 +138,53 @@ public class XmlParser {
      * @return True if both description and url exists on the same 856 node, false if not
      * @throws TransformerException
      */
-    public boolean alreadyExists(String description, String url, String xml) throws TransformerException{
-        Record record = asMarcRecord(asDocument(xml));
-        List<DataField> dataFieldList = record.getDataFields();
-        for (DataField dataField : dataFieldList) {
-            Subfield subField_U;
-            Subfield subField_3;
-            String dataFieldTag = dataField.getTag();
-            if (dataFieldTag.equals(MARC_TAG_856)) {
-                subField_U = dataField.getSubfield(MARC_CODE_U);
-                subField_3 = dataField.getSubfield(MARC_CODE_3);
-                if(subField_U != null && subField_3 != null) {
-                    System.out.println(subField_3.getData() + "    " + subField_U.getData());
-                    if(subField_U.getData().equals(url) && subField_3.getData().equals(description)) {
-                        return true;
+    public boolean alreadyExists(String description, String url, String xml) throws ParsingException{
+        try{
+            boolean descriptionMatches = false;
+            boolean urlMatches = false;
+            Document doc = asDocument(xml);
+            NodeList nodeList = doc.getElementsByTagName(DATAFIELD);
+            for(int i = 0; i < nodeList.getLength(); i++){
+                if(getTagNumber(nodeList.item(i)) == MARC_TAG_856){
+                    NodeList children = nodeList.item(i).getChildNodes();
+                    for(int j = 0; j < children.getLength(); j++){
+                        if(getSubfieldCode(children.item(j)) == MARC_CODE_3
+                                && children.item(j).getTextContent().equals(description)){
+                            descriptionMatches = true;
+                        }
+                        if(getSubfieldCode(children.item(j)) == MARC_CODE_U
+                                && children.item(j).getTextContent().equals(url)){
+                            urlMatches = true;
+                        }
                     }
+                    if(descriptionMatches && urlMatches) return true;
                 }
+                descriptionMatches = false;
+                urlMatches = false;
             }
+            return false;
+
+        }catch(ParsingException e){
+            throw new ParsingException(ALREADY_EXISTS_ERROR_MESSAGE, e);
         }
-        return false;
     }
 
+    public String convertDocToString(Document doc) throws ParsingException{
+        try{
+            TransformerFactory tf = TransformerFactory.newInstance();
+            Transformer transformer = tf.newTransformer();
+            transformer.setOutputProperty(OutputKeys.OMIT_XML_DECLARATION, "yes");
+            StringWriter writer = new StringWriter();
+            transformer.transform(new DOMSource(doc), new StreamResult(writer));
+            String output = writer.getBuffer().toString().replaceAll("\n|\r", "");
+            return output;
+        }catch(TransformerException e){
+            throw new ParsingException(CONVERTING_TO_STRING_ERROR_MESSAGE, e);
+        }
 
-    private Record asMarcRecord(Document doc) throws TransformerException {
-        ByteArrayOutputStream outputStream = removeStylesheet(doc);
-        return new MarcXmlReader(new ByteArrayInputStream(outputStream.toByteArray())).next();
     }
 
-
-    private ByteArrayOutputStream removeStylesheet(Document result) throws TransformerException {
-        Source source = new DOMSource(result);
-        ByteArrayOutputStream outputStream = new ByteArrayOutputStream();
-        Result outputTarget = new StreamResult(outputStream);
-        TransformerFactory.newInstance().newTransformer().transform(source, outputTarget);
-        return outputStream;
-    }
-
-    public Document asDocument(String sruxml) {
+    private Document asDocument(String sruxml) throws ParsingException{
         Document document = null;
         try {
             DocumentBuilderFactory factory = DocumentBuilderFactory.newInstance();
@@ -200,7 +194,7 @@ public class XmlParser {
             InputSource is = new InputSource(new StringReader(fixedAmpersandInSruXML));
             document = builder.parse(is);
         } catch (ParserConfigurationException | SAXException | IOException e) {
-            System.out.println("Something went wrong during parsing of sruResponse. " + e.getMessage());
+            throw new ParsingException(CONVERTING_TO_DOC_ERROR_MESSAGE, e);
         }
         return document;
     }

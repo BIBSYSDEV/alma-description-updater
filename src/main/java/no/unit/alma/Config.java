@@ -2,14 +2,16 @@ package no.unit.alma;
 
 import no.unit.utils.StringUtils;
 
+import java.awt.*;
+
 public class Config {
 
     public static final String MISSING_ENVIRONMENT_VARIABLES = "Missing environment variables ALMA_SRU_HOST or ALMA_UPDATE_HOST";
     public static final String CORS_ALLOW_ORIGIN_HEADER_ENVIRONMENT_NAME = "ALLOWED_ORIGIN";
-    public static final String ALMA_UPDATE_HOST_KEY = "ALMA_UPDATE_HOST";
+    public static final String ALMA_SRU_HOST_KEY = "ALMA_SRU_HOST";
 
     private String corsHeader;
-    private String almaUpdateHost;
+    private String almaSruEndpoint;
 
 
     private Config() {
@@ -20,7 +22,7 @@ public class Config {
         private static final Config INSTANCE = new Config();
 
         static {
-            INSTANCE.setAlmaUpdateHost(System.getenv(ALMA_UPDATE_HOST_KEY));
+            INSTANCE.setAlmaSruEndpoint(System.getenv(ALMA_SRU_HOST_KEY));
             INSTANCE.setCorsHeader(System.getenv(CORS_ALLOW_ORIGIN_HEADER_ENVIRONMENT_NAME));
         }
     }
@@ -30,23 +32,23 @@ public class Config {
     }
 
     /**
-     * Checking if almaSruHost is present.
+     * Checking if almaSruEndpoint is present.
      *
      * @return <code>TRUE</code> if property is present.
      */
     public boolean checkProperties() {
-        if (StringUtils.isEmpty(almaUpdateHost)) {
+        if (StringUtils.isEmpty(almaSruEndpoint)) {
             throw new RuntimeException(MISSING_ENVIRONMENT_VARIABLES);
         }
         return true;
     }
 
-    public void setAlmaUpdateHost(String almaUpdateHost) {
-        this.almaUpdateHost = almaUpdateHost;
+    public String getAlmaSruEndpoint() {
+        return almaSruEndpoint;
     }
 
-    public String getAlmaUpdateHost() {
-        return almaUpdateHost;
+    public void setAlmaSruEndpoint(String almaSruEndpoint) {
+        this.almaSruEndpoint = almaSruEndpoint;
     }
 
     public String getCorsHeader() {

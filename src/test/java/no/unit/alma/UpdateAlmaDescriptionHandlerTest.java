@@ -20,8 +20,7 @@ import java.util.HashMap;
 import java.util.List;
 import java.util.Map;
 
-import static org.junit.jupiter.api.Assertions.assertEquals;
-import static org.junit.jupiter.api.Assertions.assertTrue;
+import static org.junit.jupiter.api.Assertions.*;
 import static org.mockito.ArgumentMatchers.any;
 import static org.mockito.Mockito.mock;
 import com.google.gson.Gson;
@@ -29,9 +28,11 @@ import com.google.gson.GsonBuilder;
 
 public class UpdateAlmaDescriptionHandlerTest {
 
-    public static final String MOCK_UPDATE_HOST = "alma-update-host-dot-com";
-    public static final String MOCK_ISBN = "9788210053412";
+    public static final String MOCK_UPDATE_HOST = "ALMA_SRU_HOST";
+    public static final String MOCK_ISBN = "9788290625974";
     public static final String EXPECTED_ID = "991325803064702201";
+    public static final String MOCK_DESCRIPTION = "This is a test";
+    public static final String MOCK_URL = "thisIsATest.jpg";
 
     public static final String MOCK_XML =
             "<record xmlns='http://www.loc.gov/MARC21/slim'>"
@@ -74,9 +75,6 @@ public class UpdateAlmaDescriptionHandlerTest {
 
     @Test
     public void testConnectionToAlmaSru(){
-        final Config instance = Config.getInstance();
-        instance.setAlmaUpdateHost(MOCK_UPDATE_HOST);
-
         Map<String, String> queryParameters = new HashMap<>();
         queryParameters.put(UpdateAlmaDescriptionHandler.ISBN_KEY, MOCK_ISBN);
         Map<String, Object> event = new HashMap<>();
@@ -92,7 +90,7 @@ public class UpdateAlmaDescriptionHandlerTest {
     @Test
     public void testIdMatchBasedOnIsbn(){
         final Config instance = Config.getInstance();
-        instance.setAlmaUpdateHost(MOCK_UPDATE_HOST);
+        instance.setAlmaSruEndpoint(MOCK_UPDATE_HOST);
 
         Map<String, String> queryParameters = new HashMap<>();
         queryParameters.put(UpdateAlmaDescriptionHandler.ISBN_KEY, MOCK_ISBN);
@@ -112,31 +110,27 @@ public class UpdateAlmaDescriptionHandlerTest {
     }
 
     @Test
-    public void testParser(){
-        String newXML = MOCK_XML.substring(MOCK_XML.indexOf("<recordData>") + 12,  MOCK_XML.lastIndexOf("</recordData>"));
-        newXML = "<?xml version='1.0' encoding='UTF-8'?>" + newXML;
-        System.out.println(newXML);
-        try{
-            XmlParser xmlParser = new XmlParser();
-            String resultID = xmlParser.extractMms_id(newXML);
-            assertEquals(EXPECTED_ID, resultID);
-        }catch (TransformerException e) {
-            System.out.println(e);
-        }
-    }
-
-    @Test
-    public void testDuplicateLenkeAndDescription(){
+    public void testDuplicateLenkeAndDescription() throws Exception{
         String newXML = MOCK_XML.substring(MOCK_XML.indexOf("<recordData>") + 12,  MOCK_XML.lastIndexOf("</recordData>"));
         newXML = "<?xml version='1.0' encoding='UTF-8'?>" + newXML;
         newXML = newXML.replace("&", "&amp;");
         System.out.println(newXML);
-        try{
-            XmlParser xmlParser = new XmlParser();
-            assertTrue(xmlParser.alreadyExists("Beskrivelse fra forlaget (kort)", "http://innhold.bibsys.no/bilde/forside/?size=mini&amp;id=LITE_150088182.jpg".replace("&amp;", "&"), newXML));
-        }catch (TransformerException e) {
-            System.out.println(e);
-        }
+        XmlParser xmlParser = new XmlParser();
+        assertTrue(xmlParser.alreadyExists("Beskrivelse fra forlaget (kort)", "http://innhold.bibsys.no/bilde/forside/?size=mini&amp;id=LITE_150088182.jpg".replace("&amp;", "&"), newXML));
+    }
+
+    @Test
+    public void testTheCompleteLoop() throws Exception{
+        Map<String, String> queryParameters = new HashMap<>();
+        queryParameters.put(UpdateAlmaDescriptionHandler.ISBN_KEY, MOCK_ISBN);
+        queryParameters.put(UpdateAlmaDescriptionHandler.DESCRPTION_KEY, MOCK_DESCRIPTION);
+        queryParameters.put(UpdateAlmaDescriptionHandler.URL_KEY, MOCK_URL);
+        Map<String, Object> event = new HashMap<>();
+        event.put(UpdateAlmaDescriptionHandler.QUERY_STRING_PARAMETERS_KEY, queryParameters);
+        UpdateAlmaDescriptionHandler updateHandler = new UpdateAlmaDescriptionHandler();
+        GatewayResponse response = updateHandler.handleRequest(event, null);
+        System.out.println(response.getBody());
+        assertEquals(200, response.getStatusCode());
     }
 
 }
