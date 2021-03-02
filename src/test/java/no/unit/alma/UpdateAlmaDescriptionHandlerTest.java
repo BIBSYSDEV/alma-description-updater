@@ -1,18 +1,7 @@
 package no.unit.alma;
 
 import com.google.gson.reflect.TypeToken;
-import no.unit.alma.Config;
-import no.unit.alma.GatewayResponse;
-import no.unit.alma.UpdateAlmaDescriptionHandler;
 import org.junit.jupiter.api.Test;
-import org.w3c.dom.Document;
-import org.w3c.dom.NodeList;
-import org.xml.sax.InputSource;
-
-import javax.xml.parsers.DocumentBuilder;
-import javax.xml.parsers.DocumentBuilderFactory;
-import javax.xml.transform.TransformerException;
-import java.io.StringReader;
 import no.unit.marc.Reference;
 
 import java.lang.reflect.Type;
@@ -21,18 +10,17 @@ import java.util.List;
 import java.util.Map;
 
 import static org.junit.jupiter.api.Assertions.*;
-import static org.mockito.ArgumentMatchers.any;
-import static org.mockito.Mockito.mock;
+
 import com.google.gson.Gson;
 import com.google.gson.GsonBuilder;
 
 public class UpdateAlmaDescriptionHandlerTest {
 
     public static final String MOCK_UPDATE_HOST = "ALMA_SRU_HOST";
-    public static final String MOCK_ISBN = "9788290625974";
+    public static final String MOCK_ISBN = "9788210053412";
     public static final String EXPECTED_ID = "991325803064702201";
-    public static final String MOCK_DESCRIPTION = "This is a test";
-    public static final String MOCK_URL = "thisIsATest.jpg";
+    public static final String MOCK_DESCRIPTION = "Beskrivelse fra forlaget (kort)";
+    public static final String MOCK_URL = "http://content.bibsys.no/content/?type=descr_publ_brief&isbn=8210053418";
 
     public static final String MOCK_XML =
             "<record xmlns='http://www.loc.gov/MARC21/slim'>"
@@ -61,7 +49,7 @@ public class UpdateAlmaDescriptionHandlerTest {
                   +"</datafield>"
                   +"<datafield tag='856' ind1='4' ind2='2'>"
                     +"<subfield code='3'>Beskrivelse fra forlaget (kort)</subfield>"
-                    +"<subfield code='u'>http://innhold.bibsys.no/bilde/forside/?size=mini&id=LITE_150088182.jpg</subfield>"
+                    +"<subfield code='u'>http://innhold.bibsys.no/bilde/forside/?size=mini&amp;id=LITE_150088182.jpg</subfield>"
                   +"</datafield>"
                 +"<datafield tag='856' ind1='4' ind2='2'>"
                     +"<subfield code='3'>Beskrivelse fra forlaget (Lang)</subfield>"
@@ -73,64 +61,21 @@ public class UpdateAlmaDescriptionHandlerTest {
                   +"</datafield>"
                 +"</record>";
 
-    @Test
-    public void testConnectionToAlmaSru(){
-        Map<String, String> queryParameters = new HashMap<>();
-        queryParameters.put(UpdateAlmaDescriptionHandler.ISBN_KEY, MOCK_ISBN);
-        Map<String, Object> event = new HashMap<>();
-        event.put(UpdateAlmaDescriptionHandler.QUERY_STRING_PARAMETERS_KEY, queryParameters);
-
-        final UpdateAlmaDescriptionHandler updateAlmaDescriptionHandler = new UpdateAlmaDescriptionHandler();
-
-        final GatewayResponse gatewayResponse = updateAlmaDescriptionHandler.handleRequest(event, null);
-        String result = gatewayResponse.getBody();
-        System.out.println(result);
-    }
 
     @Test
-    public void testIdMatchBasedOnIsbn(){
-        final Config instance = Config.getInstance();
-        instance.setAlmaSruEndpoint(MOCK_UPDATE_HOST);
-
-        Map<String, String> queryParameters = new HashMap<>();
-        queryParameters.put(UpdateAlmaDescriptionHandler.ISBN_KEY, MOCK_ISBN);
-        Map<String, Object> event = new HashMap<>();
-        event.put(UpdateAlmaDescriptionHandler.QUERY_STRING_PARAMETERS_KEY, queryParameters);
-
+    public void testIdMatchBasedOnIsbn() throws Exception{
         final UpdateAlmaDescriptionHandler updateAlmaDescriptionHandler = new UpdateAlmaDescriptionHandler();
-
-        final GatewayResponse gatewayResponse = updateAlmaDescriptionHandler.handleRequest(event, null);
-        String result = gatewayResponse.getBody();
-
-        GsonBuilder gsonBuilder = new GsonBuilder();
-        Gson gson = gsonBuilder.create();
-        Type listOfMyClassObject = new TypeToken<List<Reference>>() {}.getType();
-        List<Reference> reference = gson.fromJson(result, listOfMyClassObject);
+        List<Reference> reference = updateAlmaDescriptionHandler.getReferenceListByIsbn(MOCK_ISBN);
         assertEquals(EXPECTED_ID, reference.get(0).getId());
     }
 
-    @Test
-    public void testDuplicateLenkeAndDescription() throws Exception{
-        String newXML = MOCK_XML.substring(MOCK_XML.indexOf("<recordData>") + 12,  MOCK_XML.lastIndexOf("</recordData>"));
-        newXML = "<?xml version='1.0' encoding='UTF-8'?>" + newXML;
-        newXML = newXML.replace("&", "&amp;");
-        System.out.println(newXML);
-        XmlParser xmlParser = new XmlParser();
-        assertTrue(xmlParser.alreadyExists("Beskrivelse fra forlaget (kort)", "http://innhold.bibsys.no/bilde/forside/?size=mini&amp;id=LITE_150088182.jpg".replace("&amp;", "&"), newXML));
-    }
 
     @Test
-    public void testTheCompleteLoop() throws Exception{
-        Map<String, String> queryParameters = new HashMap<>();
-        queryParameters.put(UpdateAlmaDescriptionHandler.ISBN_KEY, MOCK_ISBN);
-        queryParameters.put(UpdateAlmaDescriptionHandler.DESCRPTION_KEY, MOCK_DESCRIPTION);
-        queryParameters.put(UpdateAlmaDescriptionHandler.URL_KEY, MOCK_URL);
-        Map<String, Object> event = new HashMap<>();
-        event.put(UpdateAlmaDescriptionHandler.QUERY_STRING_PARAMETERS_KEY, queryParameters);
-        UpdateAlmaDescriptionHandler updateHandler = new UpdateAlmaDescriptionHandler();
-        GatewayResponse response = updateHandler.handleRequest(event, null);
-        System.out.println(response.getBody());
-        assertEquals(200, response.getStatusCode());
+    public void testDuplicateLenkeAndDescription() throws Exception{
+        String newXML = MOCK_XML;
+        newXML = "<?xml version='1.0' encoding='UTF-8'?>" + newXML;
+        XmlParser xmlParser = new XmlParser();
+        assertTrue(xmlParser.alreadyExists("Beskrivelse fra forlaget (kort)", "http://innhold.bibsys.no/bilde/forside/?size=mini&id=LITE_150088182.jpg", newXML));
     }
 
 }

@@ -149,11 +149,11 @@ public class XmlParser {
                     NodeList children = nodeList.item(i).getChildNodes();
                     for(int j = 0; j < children.getLength(); j++){
                         if(getSubfieldCode(children.item(j)) == MARC_CODE_3
-                                && children.item(j).getTextContent().equals(description)){
+                                && children.item(j).getTextContent().trim().equals(description.trim())){
                             descriptionMatches = true;
                         }
                         if(getSubfieldCode(children.item(j)) == MARC_CODE_U
-                                && children.item(j).getTextContent().equals(url)){
+                                && children.item(j).getTextContent().trim().equals(url.trim())){
                             urlMatches = true;
                         }
                     }
@@ -184,14 +184,14 @@ public class XmlParser {
 
     }
 
-    private Document asDocument(String sruxml) throws ParsingException{
+    public Document asDocument(String sruxml) throws ParsingException{
         Document document = null;
         try {
             DocumentBuilderFactory factory = DocumentBuilderFactory.newInstance();
             DocumentBuilder builder = factory.newDocumentBuilder();
             String removedMarcInSruXml = sruxml.replace(MARC_PREFIX, EMPTY_STRING);
-            String fixedAmpersandInSruXML = removedMarcInSruXml.replace("&", "&amp;");
-            InputSource is = new InputSource(new StringReader(fixedAmpersandInSruXML));
+
+            InputSource is = new InputSource(new StringReader(removedMarcInSruXml));
             document = builder.parse(is);
         } catch (ParserConfigurationException | SAXException | IOException e) {
             throw new ParsingException(CONVERTING_TO_DOC_ERROR_MESSAGE, e);

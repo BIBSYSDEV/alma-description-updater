@@ -8,7 +8,7 @@ import java.net.http.HttpResponse;
 
 public class AlmaConnection {
 
-    private final static String URL_STRING = "https://api-eu.hosted.exlibrisgroup.com/almaws/v1/bibs/";
+    private final static String URL_STRING = System.getenv("ALMA_API_HOST");
     private final static String AUTHORIZATION_KEY = "Authorization";
     private final static String APIKEY_KEY = "apikey";
     private final static String CONTENT_TYPE_KEY = "Content-Type";

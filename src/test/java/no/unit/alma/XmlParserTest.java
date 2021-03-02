@@ -21,8 +21,8 @@ public class XmlParserTest {
     public static final String FAULTY_XML_FILE = "/Faulty_xml.xml";
     public static final String CORRECT_XML_FILE = "/Mock_xml.xml";
 
-    public static final String MOCK_XML =
-            "<record xmlns='http://www.loc.gov/MARC21/slim'>"
+    public static final String MOCK_XML ="<bib>"
+                    +"<record xmlns='http://www.loc.gov/MARC21/slim'>"
                     +"<leader>01044cam a2200301 c 4500</leader>"
                     +"<controlfield tag='001'>991325803064702201</controlfield>"
                     +"<controlfield tag='005'>20160622160726.0</controlfield>"
@@ -48,7 +48,7 @@ public class XmlParserTest {
                     +"</datafield>"
                     +"<datafield tag='856' ind1='4' ind2='2'>"
                     +"<subfield code='3'>Beskrivelse fra forlaget (kort)</subfield>"
-                    +"<subfield code='u'>http://innhold.bibsys.no/bilde/forside/?size=mini&id=LITE_150088182.jpg</subfield>"
+                    +"<subfield code='u'>http://innhold.bibsys.no/bilde/forside/?size=mini&amp;id=LITE_150088182.jpg</subfield>"
                     +"</datafield>"
                     +"<datafield tag='856' ind1='4' ind2='2'>"
                     +"<subfield code='3'>Beskrivelse fra forlaget (Lang)</subfield>"
@@ -58,7 +58,8 @@ public class XmlParserTest {
                     +"<subfield code='a'>Norbok</subfield>"
                     +"<subfield code='b'>NB</subfield>"
                     +"</datafield>"
-                    +"</record>";
+                    +"</record>"
+            +"</bib>";
 
     public void printDocument(Document doc){
         Node topNode = doc.getFirstChild();
@@ -93,10 +94,8 @@ public class XmlParserTest {
         Document doc = parser.create856Node("This is the description", "This is the url");
         NodeList datafields = doc.getElementsByTagName("datafield");
         NodeList subfields = datafields.item(0).getChildNodes();
-        System.out.println(subfields.item(0).getTextContent());
-        System.out.println(subfields.item(1).getTextContent());
         assertEquals(NUMBER_OF_SUBFIELDS_2, subfields.getLength());
-        Document doc2 = parser.create856Node("This is the description", "This is the url");
+        Document doc2 = parser.create856Node("This is the description", "This/is/the/url.jpg");
         NodeList datafields2 = doc2.getElementsByTagName("datafield");
         NodeList subfields2 = datafields2.item(0).getChildNodes();
         assertEquals(NUMBER_OF_SUBFIELDS_3, subfields2.getLength());
@@ -158,7 +157,7 @@ public class XmlParserTest {
     @Test
     public void testCreate856Node() throws Exception{
         XmlParser xmlParser = new XmlParser();
-        Document doc = xmlParser.create856Node("This is the description", "ThisIsAJPG.jpg");
+        Document doc = xmlParser.create856Node("Beskrivelse fra forlaget (kort)", "http://innhold.bibsys.no/bilde/forside/?size=mini&id=LITE_150088182.jpg");
         printDocument(doc);
     }
 

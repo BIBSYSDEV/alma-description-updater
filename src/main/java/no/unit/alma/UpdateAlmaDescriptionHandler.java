@@ -2,6 +2,7 @@ package no.unit.alma;
 
 import java.io.*;
 import java.lang.reflect.Type;
+import java.net.MalformedURLException;
 import java.net.URL;
 import java.net.http.HttpResponse;
 import java.util.*;
@@ -32,7 +33,7 @@ public class UpdateAlmaDescriptionHandler implements RequestHandler<Map<String, 
     public static final String MISSING_EVENT_ELEMENT_QUERYSTRINGPARAMETERS =
             "Missing event element 'queryStringParameters'.";
     public static final String MANDATORY_PARAMETER_MISSING = "Mandatory parameter 'isbn', 'description' or 'url' is missing.";
-    public static final String INTERNAL_SERVER_ERROR_MESSAGE = "An error occurred, error has been logged";
+
 
     protected final transient GetRecordByISBNConnection connection = new GetRecordByISBNConnection();
 
@@ -85,25 +86,15 @@ public class UpdateAlmaDescriptionHandler implements RequestHandler<Map<String, 
             return gatewayResponse;
         }
 
-        /** Step 1. Get a REFERENCE LIST from alma-sru through a lambda. */
-        Map<String, String> queryStringParameters = (Map<String, String>) input.get(QUERY_STRING_PARAMETERS_KEY);
-        String isbn = queryStringParameters.get(ISBN_KEY);
-
         try {
-            URL theURL = new URL(Config.getInstance().getAlmaSruEndpoint() + isbn);
-            InputStreamReader streamReader = connection.connect(theURL);
-            String referenceString = new BufferedReader(streamReader)
-                    .lines()
-                    .collect(Collectors.joining(System.lineSeparator()));
-
-            if(referenceString.isEmpty()){
-                gatewayResponse.setStatusCode(404);
+            /** Step 1. Get a REFERENCE LIST from alma-sru through a lambda. */
+            String isbn = inputParameters.get(ISBN_KEY);
+            referenceList = getReferenceListByIsbn(isbn);
+            if(referenceList == null){
+                gatewayResponse.setStatusCode(Response.Status.BAD_REQUEST.getStatusCode());
+                gatewayResponse.setErrorBody("No reference object retrieved for this ISBN");
+                return gatewayResponse;
             }
-
-            GsonBuilder gsonBuilder = new GsonBuilder();
-            Gson gson = gsonBuilder.create();
-            Type listOfMyClassObject = new TypeToken<List<Reference>>() {}.getType();
-            referenceList = gson.fromJson(referenceString, listOfMyClassObject);
 
             gatewayResponseBody += "Got " + referenceList.size() + " reference object(s) from alma-sru \n";
 
@@ -136,15 +127,15 @@ public class UpdateAlmaDescriptionHandler implements RequestHandler<Map<String, 
                     if(othersSucceeded){
                         gatewayResponse.setStatusCode(207);
                     }else{
-                        gatewayResponse.setStatusCode(400);
+                        gatewayResponse.setStatusCode(409);
                     }
                     othersFailed = true;
                     continue;
                 }
 
                 Document updateNode = xmlParser.
-                        create856Node(queryStringParameters.get(DESCRPTION_KEY),
-                                queryStringParameters.get(URL_KEY));
+                        create856Node(inputParameters.get(DESCRPTION_KEY),
+                                inputParameters.get(URL_KEY));
 
                 Document updatedDocument = xmlParser.insertUpdatedIntoRecord(bib_record_xml, updateNode);
                 String updatedXml = xmlParser.convertDocToString(updatedDocument);
@@ -180,6 +171,25 @@ public class UpdateAlmaDescriptionHandler implements RequestHandler<Map<String, 
             gatewayResponse.setStatusCode(500);
         }
         return gatewayResponse;
+    }
+
+    public List<Reference> getReferenceListByIsbn(String isbn) throws IOException {
+        List<Reference> referenceList;
+        URL theURL = new URL(Config.getInstance().getAlmaSruEndpoint() + isbn);
+        InputStreamReader streamReader = connection.connect(theURL);
+        String referenceString = new BufferedReader(streamReader)
+                .lines()
+                .collect(Collectors.joining(System.lineSeparator()));
+
+        if(referenceString.isEmpty()){
+            return null;
+        }
+
+        GsonBuilder gsonBuilder = new GsonBuilder();
+        Gson gson = gsonBuilder.create();
+        Type listOfMyClassObject = new TypeToken<List<Reference>>() {}.getType();
+        referenceList = gson.fromJson(referenceString, listOfMyClassObject);
+        return referenceList;
     }
 
     @SuppressWarnings("unchecked")
