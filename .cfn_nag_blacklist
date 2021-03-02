@@ -1,0 +1,9 @@
+---
+RulesToSuppress:
+- id: W64
+  reason: UsagePlan not required
+- id: W68
+  reason: UsagePlan not required
+- id: W69
+  reason: Accesslogging not required
+© 2021 GitHub, Inc.
