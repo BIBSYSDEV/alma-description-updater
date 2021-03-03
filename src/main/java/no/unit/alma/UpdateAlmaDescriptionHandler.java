@@ -2,7 +2,6 @@ package no.unit.alma;
 
 import java.io.*;
 import java.lang.reflect.Type;
-import java.net.MalformedURLException;
 import java.net.URL;
 import java.net.http.HttpResponse;
 import java.util.*;
@@ -12,7 +11,6 @@ import com.amazonaws.services.lambda.runtime.RequestHandler;
 import com.google.gson.Gson;
 import com.google.gson.GsonBuilder;
 import com.google.gson.reflect.TypeToken;
-import no.unit.alma.GetRecordByISBNConnection;
 import no.unit.marc.Reference;
 import org.w3c.dom.Document;
 
@@ -66,16 +64,6 @@ public class UpdateAlmaDescriptionHandler implements RequestHandler<Map<String, 
         String gatewayResponseBody = "";
         gatewayResponse.setStatusCode(400);
 
-
-        try{
-            SecretRetriever secretRetriever = new SecretRetriever();
-            secretKey = secretRetriever.getSecret();
-        } catch (Exception e){
-            gatewayResponse.setStatusCode(401);
-            gatewayResponse.setErrorBody("Couldn't retrieve the API-key " + e.getMessage());
-            return gatewayResponse;
-        }
-
         try {
             Config.getInstance().checkProperties();
             inputParameters = this.checkParameters(input);
@@ -83,6 +71,15 @@ public class UpdateAlmaDescriptionHandler implements RequestHandler<Map<String, 
             DebugUtils.dumpException(e);
             gatewayResponse.setErrorBody(e.getMessage()); // Exception contains missing parameter name
             gatewayResponse.setStatusCode(Response.Status.BAD_REQUEST.getStatusCode());
+            return gatewayResponse;
+        }
+
+        try{
+            SecretRetriever secretRetriever = new SecretRetriever();
+            secretKey = secretRetriever.getSecret();
+        } catch (Exception e){
+            gatewayResponse.setStatusCode(401);
+            gatewayResponse.setErrorBody("Couldn't retrieve the API-key " + e.getMessage());
             return gatewayResponse;
         }
 
