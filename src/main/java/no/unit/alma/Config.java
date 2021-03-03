@@ -4,7 +4,8 @@ import no.unit.utils.StringUtils;
 
 public class Config {
 
-    public static final String MISSING_ENVIRONMENT_VARIABLES = "Missing environment variables ALMA_SRU_HOST or ALMA_UPDATE_HOST";
+    public static final String MISSING_ENVIRONMENT_VARIABLES =
+            "Missing environment variables ALMA_SRU_HOST or ALMA_UPDATE_HOST";
     public static final String CORS_ALLOW_ORIGIN_HEADER_ENVIRONMENT_NAME = "ALLOWED_ORIGIN";
     public static final String ALMA_SRU_HOST_KEY = "ALMA_SRU_HOST";
 
