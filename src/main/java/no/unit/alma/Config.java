@@ -2,8 +2,6 @@ package no.unit.alma;
 
 import no.unit.utils.StringUtils;
 
-import java.awt.*;
-
 public class Config {
 
     public static final String MISSING_ENVIRONMENT_VARIABLES = "Missing environment variables ALMA_SRU_HOST or ALMA_UPDATE_HOST";
