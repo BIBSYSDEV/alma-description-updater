@@ -1,10 +1,10 @@
 package no.unit.alma;
 
-import java.io.*;
+import java.io.IOException;
 import java.lang.reflect.Type;
 import java.net.URL;
 import java.net.http.HttpResponse;
-import java.util.*;
+import java.util.List;
 import java.util.stream.Collectors;
 import com.amazonaws.services.lambda.runtime.Context;
 import com.amazonaws.services.lambda.runtime.RequestHandler;
@@ -30,10 +30,11 @@ public class UpdateAlmaDescriptionHandler implements RequestHandler<Map<String, 
 
     public static final String MISSING_EVENT_ELEMENT_QUERYSTRINGPARAMETERS =
             "Missing event element 'queryStringParameters'.";
-    public static final String MANDATORY_PARAMETER_MISSING = "Mandatory parameter 'isbn', 'description' or 'url' is missing.";
+    public static final String MANDATORY_PARAMETER_MISSING =
+            "Mandatory parameter 'isbn', 'description' or 'url' is missing.";
 
 
-    protected final transient GetRecordByISBNConnection connection = new GetRecordByISBNConnection();
+    protected final transient GetRecordByIsbnConnection connection = new GetRecordByIsbnConnection();
 
     /**
      * Main lambda function to update the links in Alma records.
@@ -74,20 +75,20 @@ public class UpdateAlmaDescriptionHandler implements RequestHandler<Map<String, 
             return gatewayResponse;
         }
 
-        try{
+        try {
             SecretRetriever secretRetriever = new SecretRetriever();
             secretKey = secretRetriever.getSecret();
-        } catch (Exception e){
+        } catch (Exception e) {
             gatewayResponse.setStatusCode(401);
             gatewayResponse.setErrorBody("Couldn't retrieve the API-key " + e.getMessage());
             return gatewayResponse;
         }
 
         try {
-            /** Step 1. Get a REFERENCE LIST from alma-sru through a lambda. */
+            /* Step 1. Get a REFERENCE LIST from alma-sru through a lambda. */
             String isbn = inputParameters.get(ISBN_KEY);
             referenceList = getReferenceListByIsbn(isbn);
-            if(referenceList == null){
+            if (referenceList == null) {
                 gatewayResponse.setStatusCode(Response.Status.BAD_REQUEST.getStatusCode());
                 gatewayResponse.setErrorBody("No reference object retrieved for this ISBN");
                 return gatewayResponse;
@@ -95,74 +96,74 @@ public class UpdateAlmaDescriptionHandler implements RequestHandler<Map<String, 
 
             gatewayResponseBody += "Got " + referenceList.size() + " reference object(s) from alma-sru \n";
 
-            /** 2. Loop through the LIST. */
-            for(Reference reference : referenceList){
-                /** 3. Get the MMS_ID from the REFERENCE OBJECT. */
-                String mms_id = reference.getId();
-                /** 4. Use the MMS_ID to get a BIB-RECORD from the alma-api. */
-                HttpResponse<String> almaResponse = almaConnection.sendGet(mms_id, secretKey);
-                if(almaResponse.statusCode() == 200){
-                    gatewayResponseBody += "Got the BIB-post for: " + mms_id + "\n";
-                }else{
-                    gatewayResponseBody += "Couldn't get the BIB-post for: " + mms_id + ". Alma responded with statuscode: "
+            /* 2. Loop through the LIST. */
+            for (Reference reference : referenceList) {
+                /* 3. Get the MMS_ID from the REFERENCE OBJECT. */
+                String mmsId = reference.getId();
+                /* 4. Use the MMS_ID to get a BIB-RECORD from the alma-api. */
+                HttpResponse<String> almaResponse = almaConnection.sendGet(mmsId, secretKey);
+                if (almaResponse.statusCode() == 200) {
+                    gatewayResponseBody += "Got the BIB-post for: " + mmsId + "\n";
+                } else {
+                    gatewayResponseBody +=
+                            "Couldn't get the BIB-post for: " + mmsId + ". Alma responded with statuscode: "
                             + almaResponse.statusCode() + "\n";
-                    if(othersSucceeded){
+                    if (othersSucceeded) {
                         gatewayResponse.setStatusCode(207);
-                    }else{
+                    } else {
                         gatewayResponse.setStatusCode(400);
                     }
                     othersFailed = true;
                     continue;
                 }
 
-                String bib_record_xml = almaResponse.body();
+                String bibRecordXml = almaResponse.body();
 
-                /** 5. Insert the new link-data into the BIB-RECORD. */
-                if(xmlParser.alreadyExists(inputParameters.get(DESCRPTION_KEY),
-                        inputParameters.get(URL_KEY), bib_record_xml)){
-                    gatewayResponseBody += "409 The BIB-post with mms_id: " + mms_id + " is already up to date. \n";
-                    if(othersSucceeded){
+                /* 5. Insert the new link-data into the BIB-RECORD. */
+                if (xmlParser.alreadyExists(inputParameters.get(DESCRPTION_KEY),
+                        inputParameters.get(URL_KEY), bibRecordXml)) {
+                    gatewayResponseBody += "409 The BIB-post with mms_id: " + mmsId + " is already up to date. \n";
+                    if (othersSucceeded) {
                         gatewayResponse.setStatusCode(207);
-                    }else{
+                    } else {
                         gatewayResponse.setStatusCode(409);
                     }
                     othersFailed = true;
                     continue;
                 }
 
-                Document updateNode = xmlParser.
-                        create856Node(inputParameters.get(DESCRPTION_KEY),
+                Document updateNode = xmlParser
+                        .create856Node(inputParameters.get(DESCRPTION_KEY),
                                 inputParameters.get(URL_KEY));
 
-                Document updatedDocument = xmlParser.insertUpdatedIntoRecord(bib_record_xml, updateNode);
+                Document updatedDocument = xmlParser.insertUpdatedIntoRecord(bibRecordXml, updateNode);
                 String updatedXml = xmlParser.convertDocToString(updatedDocument);
 
-                /** 6. Push the updated BIB-RECORD back to the alma through a put-request to the api. */
-                HttpResponse<String> response = almaConnection.sendPut(mms_id, secretKey, updatedXml);
+                /* 6. Push the updated BIB-RECORD back to the alma through a put-request to the api. */
+                HttpResponse<String> response = almaConnection.sendPut(mmsId, secretKey, updatedXml);
 
-                if(response.statusCode() == 200){
-                    gatewayResponseBody += "Updated the BIB-post with id: " + mms_id + " in alma. \n";
-                    if(othersFailed){
+                if (response.statusCode() == 200) {
+                    gatewayResponseBody += "Updated the BIB-post with id: " + mmsId + " in alma. \n";
+                    if (othersFailed) {
                         gatewayResponse.setStatusCode(207);
-                    }else{
+                    } else {
                         gatewayResponse.setStatusCode(200);
                     }
                     othersSucceeded = true;
-                }else{
-                    gatewayResponseBody += "Failed to updated the BIB-post with id: " + mms_id +
-                            ". Alma responded with statuscode: " + response.statusCode() + "\n";
-                    if(othersSucceeded){
+                } else {
+                    gatewayResponseBody += "Failed to updated the BIB-post with id: " + mmsId
+                            + ". Alma responded with statuscode: " + response.statusCode() + "\n";
+                    if (othersSucceeded) {
                         gatewayResponse.setStatusCode(207);
-                    }else{
+                    } else {
                         gatewayResponse.setStatusCode(400);
                     }
                     othersFailed = true;
                 }
-
             }
             gatewayResponse.setBody(gatewayResponseBody);
-        }
-        catch (ParsingException | IOException | IllegalArgumentException | InterruptedException | SecurityException e){
+        } catch (ParsingException | IOException | IllegalArgumentException
+                | InterruptedException | SecurityException e) {
             DebugUtils.dumpException(e);
             gatewayResponse.setErrorBody(e.getMessage());
             gatewayResponse.setStatusCode(500);
@@ -170,6 +171,12 @@ public class UpdateAlmaDescriptionHandler implements RequestHandler<Map<String, 
         return gatewayResponse;
     }
 
+    /**
+     * Retrieve a list of referenceobjects based on the isbn you enter.
+     * @param isbn The isbn you wish to retrieve refrenceobjects based on.
+     * @return A list of reference objects matching the isbn, this list will usually contain only one reference object.
+     * @throws IOException when something goes wrong
+     */
     public List<Reference> getReferenceListByIsbn(String isbn) throws IOException {
         List<Reference> referenceList;
         URL theURL = new URL(Config.getInstance().getAlmaSruEndpoint() + isbn);
@@ -178,7 +185,7 @@ public class UpdateAlmaDescriptionHandler implements RequestHandler<Map<String, 
                 .lines()
                 .collect(Collectors.joining(System.lineSeparator()));
 
-        if(referenceString.isEmpty()){
+        if (referenceString.isEmpty()) {
             return null;
         }
 
@@ -198,11 +205,11 @@ public class UpdateAlmaDescriptionHandler implements RequestHandler<Map<String, 
         Map<String, String> queryStringParameters = (Map<String, String>) input.get(QUERY_STRING_PARAMETERS_KEY);
         if (!queryStringParameters.containsKey(ISBN_KEY)
                 || !queryStringParameters.containsKey(DESCRPTION_KEY)
-                ||!queryStringParameters.containsKey(URL_KEY)
+                || !queryStringParameters.containsKey(URL_KEY)
                 || Objects.isNull(queryStringParameters.get(ISBN_KEY))
                 || Objects.isNull(queryStringParameters.get(DESCRPTION_KEY))
                 || Objects.isNull(queryStringParameters.get(URL_KEY))
-                ) {
+        ) {
             throw new ParameterException(MANDATORY_PARAMETER_MISSING);
         }
         return queryStringParameters;

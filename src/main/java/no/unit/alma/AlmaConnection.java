@@ -8,33 +8,34 @@ import java.net.http.HttpResponse;
 
 public class AlmaConnection {
 
-    private final static String URL_STRING = System.getenv("ALMA_API_HOST");
-    private final static String AUTHORIZATION_KEY = "Authorization";
-    private final static String APIKEY_KEY = "apikey";
-    private final static String CONTENT_TYPE_KEY = "Content-Type";
-    private final static String XML_KEY = "application/xml";
-    private final static String SPACE_KEY = " ";
+    private static final  String URL_STRING = System.getenv("ALMA_API_HOST");
+    private static final  String AUTHORIZATION_KEY = "Authorization";
+    private static final  String APIKEY_KEY = "apikey";
+    private static final  String CONTENT_TYPE_KEY = "Content-Type";
+    private static final  String XML_KEY = "application/xml";
+    private static final  String SPACE_KEY = " ";
 
     private final HttpClient httpClient = HttpClient.newBuilder()
             .version(HttpClient.Version.HTTP_2)
             .build();
 
     /**
-     *
-     * @param mms_id the mms_id of the bib-post you want to retrieve
-     * @param api_key the api_key needed to access the api
+     * Sends a get request to the Alma api.
+     * @param mmsId the mms_id of the bib-post you want to retrieve
+     * @param apiKey the api_key needed to access the api
      * @return the http-response in the shape of a String
-     * @throws IOException
-     * @throws IllegalArgumentException
-     * @throws InterruptedException
-     * @throws SecurityException
+     * @throws IOException When something goes wrong.
+     * @throws IllegalArgumentException When something goes wrong.
+     * @throws InterruptedException When something goes wrong.
+     * @throws SecurityException When something goes wrong.
      */
-    public HttpResponse<String> sendGet(String mms_id, String api_key) throws IOException, IllegalArgumentException, InterruptedException, SecurityException {
+    public HttpResponse<String> sendGet(String mmsId, String apiKey)
+            throws IOException, IllegalArgumentException, InterruptedException, SecurityException {
 
         HttpRequest request = HttpRequest.newBuilder()
                 .GET()
-                .uri(URI.create(URL_STRING + mms_id))
-                .setHeader(AUTHORIZATION_KEY, APIKEY_KEY + SPACE_KEY + api_key)
+                .uri(URI.create(URL_STRING + mmsId))
+                .setHeader(AUTHORIZATION_KEY, APIKEY_KEY + SPACE_KEY + apiKey)
                 .build();
 
         HttpResponse<String> response = httpClient.send(request, HttpResponse.BodyHandlers.ofString());
@@ -43,21 +44,22 @@ public class AlmaConnection {
     }
 
     /**
-     *
-     * @param mms_id the mms_id of the bib-post you want to update
-     * @param api_key the api_key needed to access the api
+     * Sends a put request to the Alma api.
+     * @param mmsId the mms_id of the bib-post you want to update
+     * @param apiKey the api_key needed to access the api
      * @param xml the new xml that should replace the old bib-post
      * @return the Http-response in the form of a String
-     * @throws IOException
-     * @throws IllegalArgumentException
-     * @throws InterruptedException
-     * @throws SecurityException
+     * @throws IOException When something goes wrong.
+     * @throws IllegalArgumentException When something goes wrong.
+     * @throws InterruptedException When something goes wrong.
+     * @throws SecurityException When something goes wrong.
      */
-    public HttpResponse<String> sendPut(String mms_id, String api_key, String xml) throws IOException, IllegalArgumentException, InterruptedException, SecurityException{
+    public HttpResponse<String> sendPut(String mmsId, String apiKey, String xml)
+            throws IOException, IllegalArgumentException, InterruptedException, SecurityException {
         HttpRequest request = HttpRequest.newBuilder()
                 .PUT(HttpRequest.BodyPublishers.ofString(xml))
-                .uri(URI.create(URL_STRING + mms_id))
-                .setHeader(AUTHORIZATION_KEY, APIKEY_KEY + SPACE_KEY + api_key) // add request header
+                .uri(URI.create(URL_STRING + mmsId))
+                .setHeader(AUTHORIZATION_KEY, APIKEY_KEY + SPACE_KEY + apiKey) // add request header
                 .header(CONTENT_TYPE_KEY, XML_KEY)
                 .build();
         HttpResponse<String> response = httpClient.send(request, HttpResponse.BodyHandlers.ofString());
