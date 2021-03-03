@@ -3,10 +3,14 @@ plugins {
     id 'checkstyle'
     id 'pmd'
     id 'jacoco'
+    id 'com.github.johnrengelman.shadow' version '5.2.0'
 }
 
-group 'org.example'
+group 'no.unit.alma'
 version '1.0-SNAPSHOT'
+
+sourceCompatibility = JavaVersion.VERSION_11  // source-code version and must be <= targetCompatibility
+targetCompatibility = JavaVersion.VERSION_11 // bytecode target version
 
 repositories {
     mavenCentral()
@@ -25,11 +29,22 @@ dependencies {
     testImplementation group: 'org.junit.jupiter', name: 'junit-jupiter', version: '5.6.1'
     testImplementation group: 'org.mockito', name: 'mockito-core', version: '3.3.3'
     testCompile group: 'junit', name: 'junit', version: '4.12'
+
+    shadowJar {
+        archiveClassifier.set('')
+        zip64 true
+    }
 }
 
 test {
     useJUnitPlatform()
+    failFast = true
+    finalizedBy jacocoTestReport
 }
+
+// We don't want a jar, just a fatJar
+jar.enabled = false
+project.tasks.build.dependsOn project.tasks.shadowJar
 
 pmd {
     ruleSetConfig = rootProject.resources.text.fromFile('config/pmd/ruleset.xml')
