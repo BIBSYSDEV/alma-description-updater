@@ -14,7 +14,7 @@ class GetRecordByISBNConnectionTest {
 
     @Test
     public void testConnect() throws IOException {
-        GetRecordByISBNConnection isbnConnection = new GetRecordByISBNConnection();
+        GetRecordByIsbnConnection isbnConnection = new GetRecordByIsbnConnection();
         final URL localFileUrl = GetRecordByISBNConnectionTest.class.getResource(MOCK_XML);
         final InputStreamReader streamReader = isbnConnection.connect(localFileUrl);
         assertNotNull(streamReader);

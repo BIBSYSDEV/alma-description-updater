@@ -55,8 +55,7 @@ public class UpdateAlmaDescriptionHandler implements RequestHandler<Map<String, 
         System.out.println(input);
 
         GatewayResponse gatewayResponse = new GatewayResponse();
-        AlmaConnection almaConnection = new AlmaConnection();
-        XmlParser xmlParser = new XmlParser();
+
         Boolean othersSucceeded = false;
         Boolean othersFailed = false;
         Map<String, String> inputParameters;
@@ -86,6 +85,8 @@ public class UpdateAlmaDescriptionHandler implements RequestHandler<Map<String, 
 
         try {
             /* Step 1. Get a REFERENCE LIST from alma-sru through a lambda. */
+            AlmaConnection almaConnection = new AlmaConnection();
+            XmlParser xmlParser = new XmlParser();
             String isbn = inputParameters.get(ISBN_KEY);
             referenceList = getReferenceListByIsbn(isbn);
             if (referenceList == null) {

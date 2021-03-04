@@ -14,6 +14,7 @@ public class UpdateAlmaDescriptionHandlerTest {
 
     @Test
     public void testMissingParameters() throws Exception{
+        Config.getInstance().setAlmaSruEndpoint("ALMA_SRU_HOST");
         UpdateAlmaDescriptionHandler mockUpdateAlmaHandler = new UpdateAlmaDescriptionHandler();
 
         GatewayResponse result = mockUpdateAlmaHandler.handleRequest(null, null);

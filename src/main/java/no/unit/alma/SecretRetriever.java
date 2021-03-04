@@ -16,19 +16,18 @@ import java.util.Base64;
 
 public class SecretRetriever {
 
-    private class SecretFormat {
-        String almaApiKey;
-    }
+    private static final String SECRET_ERROR_MESSAGE =
+            "Error while retrieving secret from AWS.";
 
     /**
      * This method gives you access to the alma api key,
      * it assumes you have the correct credentials.
      * @return String The api key used to access the Alma api.
+     * @throws SecretRetrieverException when somehting goes wrong.
      */
-    public static String getSecret() {
+    public static String getSecret() throws SecretRetrieverException{
         String secretName = "ALMA_APIKEY";
         Region region = Region.of("eu-west-1");
-        Gson g = new Gson();
 
         // Create a Secrets Manager client
         SecretsManagerClient client = SecretsManagerClient.builder()
@@ -39,8 +38,6 @@ public class SecretRetriever {
         // See https://docs.aws.amazon.com/secretsmanager/latest/apireference/API_GetSecretValue.html
         // We rethrow the exception by default.
 
-        String secret;
-        String decodedBinarySecret;
         GetSecretValueRequest getSecretValueRequest = GetSecretValueRequest.builder()
                 .secretId(secretName)
                 .build();
@@ -48,39 +45,29 @@ public class SecretRetriever {
 
         try {
             getSecretValueResponse = client.getSecretValue(getSecretValueRequest);
-        } catch (DecryptionFailureException e) {
+        } catch (DecryptionFailureException | InternalServiceErrorException | InvalidParameterException | InvalidRequestException | ResourceNotFoundException e) {
             // Secrets Manager can't decrypt the protected secret text using the provided KMS key.
             // Deal with the exception here, and/or rethrow at your discretion.
-            throw e;
-        } catch (InternalServiceErrorException e) {
-            // An error occurred on the server side.
-            // Deal with the exception here, and/or rethrow at your discretion.
-            throw e;
-        } catch (InvalidParameterException e) {
-            // You provided an invalid value for a parameter.
-            // Deal with the exception here, and/or rethrow at your discretion.
-            throw e;
-        } catch (InvalidRequestException e) {
-            // You provided a parameter value that is not valid for the current state of the resource.
-            // Deal with the exception here, and/or rethrow at your discretion.
-            throw e;
-        } catch (ResourceNotFoundException e) {
-            // We can't find the resource that you asked for.
-            // Deal with the exception here, and/or rethrow at your discretion.
-            throw e;
+            throw new SecretRetrieverException(SECRET_ERROR_MESSAGE, e);
+        } finally {
+            client.close();
         }
 
+
+        Gson g = new Gson();
+        String secret;
+        String decodedBinarySecret;
         // Decrypts secret using the associated KMS CMK.
         // Depending on whether the secret is a string or binary, one of these fields will be populated.
         if (getSecretValueResponse.secretString() != null) {
             secret = getSecretValueResponse.secretString();
             SecretFormat secretJson = g.fromJson(secret,SecretFormat.class);
-            return secretJson.almaApiKey;
+            return secretJson.getAlmaApiKey();
         } else {
             decodedBinarySecret = new String(Base64.getDecoder()
                     .decode(getSecretValueResponse.secretBinary().asByteBuffer()).array());
             SecretFormat secretJson = g.fromJson(decodedBinarySecret, SecretFormat.class);
-            return secretJson.almaApiKey;
+            return secretJson.getAlmaApiKey();
         }
     }
 }
