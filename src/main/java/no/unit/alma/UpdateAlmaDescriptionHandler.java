@@ -4,7 +4,9 @@ import java.io.IOException;
 import java.lang.reflect.Type;
 import java.net.URL;
 import java.net.http.HttpResponse;
-import java.util.*;
+import java.util.List;
+import java.util.Map;
+import java.util.Objects;
 import java.util.concurrent.ConcurrentHashMap;
 import java.util.stream.Collectors;
 import com.amazonaws.services.lambda.runtime.Context;
@@ -23,7 +25,7 @@ public class UpdateAlmaDescriptionHandler implements RequestHandler<Map<String, 
 
     public static final String QUERY_STRING_PARAMETERS_KEY = "queryStringParameters";
     public static final String ISBN_KEY = "isbn";
-    public static final String DESCRPTION_KEY = "description";
+    public static final String DESCRIPTION_KEY = "description";
     public static final String URL_KEY = "url";
     public static final String RESPONSE_MESSAGE_KEY = "responseMessage";
     public static final String RESPONSE_STATUS_KEY = "responseStatus";
@@ -81,7 +83,8 @@ public class UpdateAlmaDescriptionHandler implements RequestHandler<Map<String, 
             List<Reference> referenceList;
             referenceList = getReferenceListByIsbn(inputParameters.get(ISBN_KEY));
             if (referenceList == null) {
-                gatewayResponse = createErrorResponse("No reference object retrieved for this ISBN", Response.Status.BAD_REQUEST.getStatusCode());
+                gatewayResponse = createErrorResponse("No reference object retrieved for this ISBN",
+                        Response.Status.BAD_REQUEST.getStatusCode());
                 return gatewayResponse;
             }
             StringBuilder gatewayResponseBody = new StringBuilder(41);
@@ -100,8 +103,9 @@ public class UpdateAlmaDescriptionHandler implements RequestHandler<Map<String, 
                 /* 4. Use the MMS_ID to get a BIB-RECORD from the alma-api. */
                 HttpResponse<String> almaResponse = almaConnection.sendGet(mmsId, secretKey);
                 responseMap = createGatewayResponse(almaResponse.statusCode() == STATUS_CODE_200,
-                        "Got the BIB-post for: " + mmsId + "\n", "Couldn't get the BIB-post for: " + mmsId + ". Alma responded with statuscode: "
-                        + almaResponse.statusCode() + "\n" );
+                        "Got the BIB-post for: " + mmsId + "\n",
+                        "Couldn't get the BIB-post for: " + mmsId + ". Alma responded with statuscode: "
+                        + almaResponse.statusCode() + "\n");
                 gatewayResponseBody.append((String) responseMap.get(RESPONSE_MESSAGE_KEY));
                 gatewayResponse.setStatusCode((int) responseMap.get(RESPONSE_STATUS_KEY));
                 if (almaResponse.statusCode() != STATUS_CODE_200) {
@@ -109,7 +113,7 @@ public class UpdateAlmaDescriptionHandler implements RequestHandler<Map<String, 
                 }
 
                 /* 5. Insert the new link-data into the BIB-RECORD. */
-                Boolean alreadyExists = xmlParser.alreadyExists(inputParameters.get(DESCRPTION_KEY),
+                Boolean alreadyExists = xmlParser.alreadyExists(inputParameters.get(DESCRIPTION_KEY),
                         inputParameters.get(URL_KEY), almaResponse.body());
                 responseMap = createGatewayResponse(!alreadyExists, "",
                         "409 The BIB-post with mms_id: " + mmsId + " is already up to date. \n");
@@ -120,7 +124,7 @@ public class UpdateAlmaDescriptionHandler implements RequestHandler<Map<String, 
                     continue;
                 }
 
-                Document updateNode = xmlParser.create856Node(inputParameters.get(DESCRPTION_KEY),
+                Document updateNode = xmlParser.create856Node(inputParameters.get(DESCRIPTION_KEY),
                                 inputParameters.get(URL_KEY));
 
                 Document updatedDocument = xmlParser.insertUpdatedIntoRecord(almaResponse.body(), updateNode);
@@ -160,7 +164,7 @@ public class UpdateAlmaDescriptionHandler implements RequestHandler<Map<String, 
     public List<Reference> getReferenceListByIsbn(String isbn) throws IOException {
         URL theURL = new URL(Config.getInstance().getAlmaSruEndpoint() + isbn);
         InputStreamReader streamReader = connection.connect(theURL);
-        try{
+        try {
             String referenceString = new BufferedReader(streamReader)
                     .lines()
                     .collect(Collectors.joining(System.lineSeparator()));
@@ -187,10 +191,10 @@ public class UpdateAlmaDescriptionHandler implements RequestHandler<Map<String, 
         }
         Map<String, String> queryStringParameters = (Map<String, String>) input.get(QUERY_STRING_PARAMETERS_KEY);
         if (!queryStringParameters.containsKey(ISBN_KEY)
-                || !queryStringParameters.containsKey(DESCRPTION_KEY)
+                || !queryStringParameters.containsKey(DESCRIPTION_KEY)
                 || !queryStringParameters.containsKey(URL_KEY)
                 || Objects.isNull(queryStringParameters.get(ISBN_KEY))
-                || Objects.isNull(queryStringParameters.get(DESCRPTION_KEY))
+                || Objects.isNull(queryStringParameters.get(DESCRIPTION_KEY))
                 || Objects.isNull(queryStringParameters.get(URL_KEY))
         ) {
             throw new ParameterException(MANDATORY_PARAMETER_MISSING);
@@ -198,7 +202,14 @@ public class UpdateAlmaDescriptionHandler implements RequestHandler<Map<String, 
         return queryStringParameters;
     }
 
-    private Map<String, Object> createGatewayResponse(Boolean condition, String success, String failure){
+    /**
+     * Assigns the correct message and statusCode based on the input condition.
+     * @param condition Boolean that decides which String to use for the message.
+     * @param success The String used in case of the condition being true.
+     * @param failure The String used in case of the condition being false.
+     * @return A Map containing both a message and a statusCode
+     */
+    public Map<String, Object> createGatewayResponse(Boolean condition, String success, String failure) {
         String responseMessage;
         int responseStatus;
         if (condition) {
@@ -223,7 +234,13 @@ public class UpdateAlmaDescriptionHandler implements RequestHandler<Map<String, 
         return payload;
     }
 
-    private GatewayResponse createErrorResponse(String errorMessage, int errorCode){
+    /**
+     * Creates a GatewayResponse object with an errormessage and status code.
+     * @param errorMessage The errormessage.
+     * @param errorCode The status code.
+     * @return A gatewayResponse with information about an error.
+     */
+    public GatewayResponse createErrorResponse(String errorMessage, int errorCode) {
         GatewayResponse gatewayResponse = new GatewayResponse();
         gatewayResponse.setErrorBody(errorMessage);
         gatewayResponse.setStatusCode(errorCode);

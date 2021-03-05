@@ -16,6 +16,7 @@ import java.util.Base64;
 
 public class SecretRetriever {
 
+
     private static final String SECRET_ERROR_MESSAGE =
             "Error while retrieving secret from AWS.";
 
@@ -25,7 +26,7 @@ public class SecretRetriever {
      * @return String The api key used to access the Alma api.
      * @throws SecretRetrieverException when somehting goes wrong.
      */
-    public static String getSecret() throws SecretRetrieverException{
+    public static String getSecret() throws SecretRetrieverException {
         String secretName = "ALMA_APIKEY";
         Region region = Region.of("eu-west-1");
 
@@ -41,18 +42,18 @@ public class SecretRetriever {
         GetSecretValueRequest getSecretValueRequest = GetSecretValueRequest.builder()
                 .secretId(secretName)
                 .build();
-        GetSecretValueResponse getSecretValueResponse = null;
+        GetSecretValueResponse getSecretValueResponse;
 
         try {
             getSecretValueResponse = client.getSecretValue(getSecretValueRequest);
-        } catch (DecryptionFailureException | InternalServiceErrorException | InvalidParameterException | InvalidRequestException | ResourceNotFoundException e) {
+        } catch (DecryptionFailureException | InternalServiceErrorException
+                | InvalidParameterException | InvalidRequestException | ResourceNotFoundException e) {
             // Secrets Manager can't decrypt the protected secret text using the provided KMS key.
             // Deal with the exception here, and/or rethrow at your discretion.
             throw new SecretRetrieverException(SECRET_ERROR_MESSAGE, e);
         } finally {
             client.close();
         }
-
 
         Gson g = new Gson();
         String secret;
@@ -62,12 +63,12 @@ public class SecretRetriever {
         if (getSecretValueResponse.secretString() != null) {
             secret = getSecretValueResponse.secretString();
             SecretFormat secretJson = g.fromJson(secret,SecretFormat.class);
-            return secretJson.getAlmaApiKey();
+            return secretJson.ALMA_APIKEY;
         } else {
             decodedBinarySecret = new String(Base64.getDecoder()
                     .decode(getSecretValueResponse.secretBinary().asByteBuffer()).array());
             SecretFormat secretJson = g.fromJson(decodedBinarySecret, SecretFormat.class);
-            return secretJson.getAlmaApiKey();
+            return secretJson.ALMA_APIKEY;
         }
     }
 }

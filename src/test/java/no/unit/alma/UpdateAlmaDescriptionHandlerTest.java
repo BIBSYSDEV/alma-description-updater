@@ -1,5 +1,6 @@
 package no.unit.alma;
 
+
 import org.junit.jupiter.api.Test;
 
 import java.util.HashMap;
@@ -13,7 +14,7 @@ public class UpdateAlmaDescriptionHandlerTest {
 
 
     @Test
-    public void testMissingParameters() throws Exception{
+    public void testMissingParameters() {
         Config.getInstance().setAlmaSruEndpoint("ALMA_SRU_HOST");
         UpdateAlmaDescriptionHandler mockUpdateAlmaHandler = new UpdateAlmaDescriptionHandler();
 
@@ -36,6 +37,30 @@ public class UpdateAlmaDescriptionHandlerTest {
         result = mockUpdateAlmaHandler.handleRequest(event, null);
         assertEquals(Response.Status.BAD_REQUEST.getStatusCode(), result.getStatusCode());
         assertTrue(result.getBody().contains(UpdateAlmaDescriptionHandler.MANDATORY_PARAMETER_MISSING));
+    }
+
+    @Test
+    public void testCreateGatewayResponse() {
+        UpdateAlmaDescriptionHandler handler = new UpdateAlmaDescriptionHandler();
+        boolean condition = true;
+        String successMessage = "Success";
+        String failureMessage = "Failure";
+
+        Map<String, Object> successResponse = handler.createGatewayResponse(condition, successMessage, failureMessage);
+        assertEquals(successMessage, successResponse.get(handler.RESPONSE_MESSAGE_KEY));
+        Map<String, Object> failResponse = handler.createGatewayResponse(!condition, successMessage, failureMessage);
+        assertEquals(failureMessage, failResponse.get(handler.RESPONSE_MESSAGE_KEY));
+    }
+
+    @Test
+    public void testCreateErrorResponse() {
+        UpdateAlmaDescriptionHandler handler = new UpdateAlmaDescriptionHandler();
+        String errorMessage = "Error";
+        int statusCode = 500;
+        String actualErrorMessage = "{\"error\":\"Error\"}";
+        GatewayResponse gatewayResponse = handler.createErrorResponse(errorMessage, statusCode);
+        assertEquals(actualErrorMessage, gatewayResponse.getBody());
+        assertEquals(statusCode, gatewayResponse.getStatusCode());
     }
 
 }
