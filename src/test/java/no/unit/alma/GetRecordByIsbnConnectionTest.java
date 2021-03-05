@@ -6,16 +6,16 @@ import java.io.IOException;
 import java.io.InputStreamReader;
 import java.net.URL;
 
-import static org.junit.jupiter.api.Assertions.*;
+import static org.junit.jupiter.api.Assertions.assertNotNull;
 
-class GetRecordByISBNConnectionTest {
+class GetRecordByIsbnConnectionTest {
 
-    public static String MOCK_XML = "/Mock_xml.xml";
+    public static final String MOCK_XML = "/Mock_xml.xml";
 
     @Test
     public void testConnect() throws IOException {
-        GetRecordByISBNConnection isbnConnection = new GetRecordByISBNConnection();
-        final URL localFileUrl = GetRecordByISBNConnectionTest.class.getResource(MOCK_XML);
+        GetRecordByIsbnConnection isbnConnection = new GetRecordByIsbnConnection();
+        final URL localFileUrl = GetRecordByIsbnConnectionTest.class.getResource(MOCK_XML);
         final InputStreamReader streamReader = isbnConnection.connect(localFileUrl);
         assertNotNull(streamReader);
         streamReader.close();

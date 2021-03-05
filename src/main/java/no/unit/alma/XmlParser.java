@@ -41,10 +41,6 @@ public class XmlParser {
             + "<subfield code='q'>image/jpeg</subfield>"
             + "</datafield>";
 
-
-    public XmlParser(){
-    }
-
     /**
      * This method creates a Document in the shape of a marc-856 node.
      * @param description The description we want to popluate the node with.
@@ -94,7 +90,7 @@ public class XmlParser {
         int i;
         for (i = 0; i < datafields.getLength(); i++) {
             Node datafield = datafields.item(i);
-            if (getTagNumber(datafield) >= 856) {
+            if (getTagNumber(datafield) >= MARC_TAG_856) {
                 try {
                     doc.getFirstChild().getLastChild().insertBefore(updateNode, datafield);
                     return doc;

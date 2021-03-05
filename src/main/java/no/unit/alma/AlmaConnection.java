@@ -15,7 +15,7 @@ public class AlmaConnection {
     private static final  String XML_KEY = "application/xml";
     private static final  String SPACE_KEY = " ";
 
-    private final HttpClient httpClient = HttpClient.newBuilder()
+    private static final HttpClient httpClient = HttpClient.newBuilder()
             .version(HttpClient.Version.HTTP_2)
             .build();
 
@@ -25,12 +25,10 @@ public class AlmaConnection {
      * @param apiKey the api_key needed to access the api
      * @return the http-response in the shape of a String
      * @throws IOException When something goes wrong.
-     * @throws IllegalArgumentException When something goes wrong.
      * @throws InterruptedException When something goes wrong.
-     * @throws SecurityException When something goes wrong.
      */
     public HttpResponse<String> sendGet(String mmsId, String apiKey)
-            throws IOException, IllegalArgumentException, InterruptedException, SecurityException {
+            throws IOException,  InterruptedException {
 
         HttpRequest request = HttpRequest.newBuilder()
                 .GET()
@@ -50,12 +48,10 @@ public class AlmaConnection {
      * @param xml the new xml that should replace the old bib-post
      * @return the Http-response in the form of a String
      * @throws IOException When something goes wrong.
-     * @throws IllegalArgumentException When something goes wrong.
      * @throws InterruptedException When something goes wrong.
-     * @throws SecurityException When something goes wrong.
      */
     public HttpResponse<String> sendPut(String mmsId, String apiKey, String xml)
-            throws IOException, IllegalArgumentException, InterruptedException, SecurityException {
+            throws IOException, InterruptedException {
         HttpRequest request = HttpRequest.newBuilder()
                 .PUT(HttpRequest.BodyPublishers.ofString(xml))
                 .uri(URI.create(URL_STRING + mmsId))
