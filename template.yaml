@@ -141,6 +141,8 @@ Resources:
       Handler: no.unit.alma.UpdateAlmaDescriptionHandler::handleRequest
       Runtime: java11
       MemorySize: 2048
+      Policies:
+        - AWSSecretsManagerGetSecretValuePolicy: {}
       AutoPublishAlias: live
       DeploymentPreference:
         Type: AllAtOnce # Or Canary10Percent5Minutes, Linear10PercentEvery1Minute, ...
