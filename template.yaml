@@ -48,23 +48,6 @@ Globals:
 
 Resources:
 
-  getSecretsRole:
-    Type: AWS::IAM::ROLE
-    Properties:
-      RoleName: getSecretsRole
-      PolicyDocument:
-        Version: "2012-10-17"
-        Statement:
-          - Effect: Allow
-            Principal:
-              Service:
-              - 'lambda.amazonaws.com'
-              - 'apigateway.amazonaws.com'
-            Action:
-              - 'secretsmanager:GetSecretValue'
-            Resource:
-              - '*'
-
   UpdateAlmaDescriptionAPI:
     Type: AWS::Serverless::Api
     Metadata:
