@@ -48,6 +48,23 @@ Globals:
 
 Resources:
 
+  getSecretsRole:
+    Type: AWS::IAM::ROLE
+    Properties:
+      RoleName: getSecretsRole
+      PolicyDocument:
+        Version: "2012-10-17"
+        Statement:
+          - Effect: Allow
+            Principal:
+              Service:
+              - 'lambda.amazonaws.com'
+              - 'apigateway.amazonaws.com'
+            Action:
+              - 'secretsmanager:GetSecretValue'
+            Resource:
+              - '*'
+
   UpdateAlmaDescriptionAPI:
     Type: AWS::Serverless::Api
     Metadata:
@@ -73,14 +90,14 @@ Resources:
           /:
             put:
               summary:  Update an Alma bib record
-              description:  gets the Alma record by mms_id
+              description:  Updates an alma bib record based on a provided isbn.
               consumes:
                 - application/json
               produces:
                 - application/json
               parameters:
                 - in: body
-                  name: updateData
+                  name: queryStringParameters
                   required: true
                   type: string
                   description: An object containing isbn, description and url.
@@ -141,6 +158,7 @@ Resources:
       Handler: no.unit.alma.UpdateAlmaDescriptionHandler::handleRequest
       Runtime: java11
       MemorySize: 2048
+      Role: !GetAtt getSecretsRole.Arn
       AutoPublishAlias: live
       DeploymentPreference:
         Type: AllAtOnce # Or Canary10Percent5Minutes, Linear10PercentEvery1Minute, ...
