@@ -24,10 +24,10 @@ public class SecretRetriever {
      * This method gives you access to the alma api key,
      * it assumes you have the correct credentials.
      * @return String The api key used to access the Alma api.
-     * @throws SecretRetrieverException when somehting goes wrong.
+     * @throws SecretRetrieverException when something goes wrong.
      */
-    public static String getSecret() throws SecretRetrieverException {
-        String secretName = "ALMA_APIKEY";
+    public static String getAlmaApiKeySecret() throws SecretRetrieverException {
+        final String secretName = "ALMA_APIKEY";
         Region region = Region.of("eu-west-1");
 
         // Create a Secrets Manager client

@@ -4,6 +4,7 @@ import java.io.IOException;
 import java.lang.reflect.Type;
 import java.net.URL;
 import java.net.http.HttpResponse;
+import java.util.HashMap;
 import java.util.List;
 import java.util.Map;
 import java.util.Objects;
@@ -39,9 +40,8 @@ public class UpdateAlmaDescriptionHandler implements RequestHandler<Map<String, 
     private transient Boolean othersSucceeded = false;
     private transient Boolean othersFailed = false;
 
-
-    protected final transient GetRecordByIsbnConnection connection = new GetRecordByIsbnConnection();
-
+    private String secretKey;
+    private Map<String, String> inputParameters;
     /**
      * Main lambda function to update the links in Alma records.
      * Program flow:
@@ -58,24 +58,12 @@ public class UpdateAlmaDescriptionHandler implements RequestHandler<Map<String, 
     @SuppressWarnings("unchecked")
     public GatewayResponse handleRequest(final Map<String, Object> input, Context context) {
         GatewayResponse gatewayResponse = new GatewayResponse();
-        Map<String, String> inputParameters;
 
-        try {
-            Config.getInstance().checkProperties();
-            inputParameters = this.checkParameters(input);
-        } catch (ParameterException e) {
-            DebugUtils.dumpException(e);
-            gatewayResponse = createErrorResponse(e.getMessage(), Response.Status.BAD_REQUEST.getStatusCode());
-            return gatewayResponse;
-        }
+        Map<String, Object> errorMessage = setUpAndCheckVariables(input);
 
-        String secretKey;
-        try {
-            SecretRetriever secretRetriever = new SecretRetriever();
-            secretKey = secretRetriever.getSecret();
-        } catch (SecretRetrieverException e) {
-            gatewayResponse = createErrorResponse("Couldn't retrieve the API-key " + e.getMessage(), 401);
-            return gatewayResponse;
+        if(errorMessage != null){
+            gatewayResponse.setErrorBody((String) errorMessage.get(RESPONSE_MESSAGE_KEY));
+            gatewayResponse.setStatusCode((int) errorMessage.get(RESPONSE_STATUS_KEY));
         }
 
         try {
@@ -91,7 +79,7 @@ public class UpdateAlmaDescriptionHandler implements RequestHandler<Map<String, 
             gatewayResponseBody.append("Got " + referenceList.size() + " reference object(s) from alma-sru \n");
 
             AlmaConnection almaConnection = new AlmaConnection();
-            XmlParser xmlParser = new XmlParser();
+            DocumentXmlParser xmlParser = new DocumentXmlParser();
             Map<String, Object> responseMap;
 
             /* 2. Loop through the LIST. */
@@ -109,6 +97,7 @@ public class UpdateAlmaDescriptionHandler implements RequestHandler<Map<String, 
                 gatewayResponseBody.append((String) responseMap.get(RESPONSE_MESSAGE_KEY));
                 gatewayResponse.setStatusCode((int) responseMap.get(RESPONSE_STATUS_KEY));
                 if (almaResponse.statusCode() != STATUS_CODE_200) {
+                    othersFailed = true;
                     continue;
                 }
 
@@ -156,14 +145,42 @@ public class UpdateAlmaDescriptionHandler implements RequestHandler<Map<String, 
     }
 
     /**
+     * A method for assigning values to the inputparameters and secretkey
+     * @param input The same input received by the handleRequest method
+     * @return returns null if everything works. If not it will return a Map
+     * containing an appropriate errormessage and errorsatus.
+     */
+    private Map<String, Object> setUpAndCheckVariables(Map<String, Object> input){
+        Map<String, Object> response = new HashMap<>();
+        try {
+            Config.getInstance().checkProperties();
+            inputParameters = this.checkParameters(input);
+        } catch (ParameterException e) {
+            DebugUtils.dumpException(e);
+            response.put(RESPONSE_MESSAGE_KEY, e.getMessage());
+            response.put(RESPONSE_STATUS_KEY, Response.Status.BAD_REQUEST.getStatusCode());
+            return response;
+        }
+
+        try {
+            secretKey = SecretRetriever.getAlmaApiKeySecret();
+        } catch (SecretRetrieverException e) {
+            response.put(RESPONSE_MESSAGE_KEY, "Couldn't retrieve the API-key " + e.getMessage());
+            response.put(RESPONSE_STATUS_KEY, 500);
+            return response;
+        }
+        return null;
+    }
+
+    /**
      * Retrieve a list of referenceobjects based on the isbn you enter.
      * @param isbn The isbn you wish to retrieve refrenceobjects based on.
      * @return A list of reference objects matching the isbn, this list will usually contain only one reference object.
      * @throws IOException when something goes wrong
      */
-    public List<Reference> getReferenceListByIsbn(String isbn) throws IOException {
+    private List<Reference> getReferenceListByIsbn(String isbn) throws IOException {
         URL theURL = new URL(Config.getInstance().getAlmaSruEndpoint() + isbn);
-        InputStreamReader streamReader = connection.connect(theURL);
+        InputStreamReader streamReader = new InputStreamReader(theURL.openStream());
         try {
             String referenceString = new BufferedReader(streamReader)
                     .lines()

@@ -64,4 +64,24 @@ public class UpdateAlmaDescriptionHandlerTest {
         assertEquals(statusCode, gatewayResponse.getStatusCode());
     }
 
+    @Test
+    public void testFullRun(){
+        Map<String, String> queryParameters = new HashMap<>();
+        queryParameters.put("isbn", "9788210053412");
+        queryParameters.put("description", "This is a test 3");
+        queryParameters.put("url", "this/is/a/test/3");
+        Map<String, Object> event = new HashMap<>();
+        event.put("queryStringParameters", queryParameters);
+
+        Config.getInstance().setCorsHeader("*");
+
+        UpdateAlmaDescriptionHandler updateHandler = new UpdateAlmaDescriptionHandler();
+
+        GatewayResponse response = updateHandler.handleRequest(event, null);
+
+        System.out.println(response.getBody());
+
+        assertEquals(200, response.getStatusCode());
+    }
+
 }

@@ -21,7 +21,7 @@ import java.io.StringReader;
 import java.io.StringWriter;
 
 
-public class XmlParser {
+public class DocumentXmlParser {
 
     public static final String UPDATE_NODE_ERROR_MESSAGE = "Caught and error while creating the updateNode";
     public static final String ALREADY_EXISTS_ERROR_MESSAGE =
