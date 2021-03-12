@@ -1,5 +1,7 @@
 package no.unit.alma;
 
+import javax.ws.rs.core.HttpHeaders;
+import javax.ws.rs.core.MediaType;
 import java.io.IOException;
 import java.net.URI;
 import java.net.http.HttpClient;
@@ -8,16 +10,21 @@ import java.net.http.HttpResponse;
 
 public class AlmaConnection {
 
-    private static final  String URL_STRING = System.getenv("ALMA_API_HOST");
+    private static AlmaConnection instance = new AlmaConnection();
+
     private static final  String AUTHORIZATION_KEY = "Authorization";
     private static final  String APIKEY_KEY = "apikey";
-    private static final  String CONTENT_TYPE_KEY = "Content-Type";
-    private static final  String XML_KEY = "application/xml";
     private static final  String SPACE_KEY = " ";
 
     private static final HttpClient httpClient = HttpClient.newBuilder()
             .version(HttpClient.Version.HTTP_2)
             .build();
+
+    private AlmaConnection(){};
+
+    public static AlmaConnection getInstance(){
+        return instance;
+    }
 
     /**
      * Sends a get request to the Alma api.
@@ -32,7 +39,7 @@ public class AlmaConnection {
 
         HttpRequest request = HttpRequest.newBuilder()
                 .GET()
-                .uri(URI.create(URL_STRING + mmsId))
+                .uri(URI.create(Config.getInstance().getAlmaApiEndpoint() + mmsId))
                 .setHeader(AUTHORIZATION_KEY, APIKEY_KEY + SPACE_KEY + apiKey)
                 .build();
 
@@ -54,9 +61,9 @@ public class AlmaConnection {
             throws IOException, InterruptedException {
         HttpRequest request = HttpRequest.newBuilder()
                 .PUT(HttpRequest.BodyPublishers.ofString(xml))
-                .uri(URI.create(URL_STRING + mmsId))
+                .uri(URI.create(Config.getInstance().getAlmaApiEndpoint() + mmsId))
                 .setHeader(AUTHORIZATION_KEY, APIKEY_KEY + SPACE_KEY + apiKey) // add request header
-                .header(CONTENT_TYPE_KEY, XML_KEY)
+                .header(HttpHeaders.CONTENT_TYPE, MediaType.APPLICATION_XML)
                 .build();
         HttpResponse<String> response = httpClient.send(request, HttpResponse.BodyHandlers.ofString());
 

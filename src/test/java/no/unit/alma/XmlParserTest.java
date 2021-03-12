@@ -84,7 +84,7 @@ public class XmlParserTest {
 
     @Test
     public void testCreatingUpdateNodeWithAndWithoutType() throws Exception {
-        XmlParser parser = new XmlParser();
+        DocumentXmlParser parser = new DocumentXmlParser();
         Document doc = parser.create856Node(MOCK_DESCRIPTION, MOCK_URL);
         NodeList datafields = doc.getElementsByTagName("datafield");
         NodeList subfields = datafields.item(0).getChildNodes();
@@ -100,7 +100,7 @@ public class XmlParserTest {
     public void testInsertUpdatedIntoRecord() throws Exception {
         String mockXml = setup(CORRECT_XML_FILE);
         String updatedMockXml = setup(UPDATED_XML_FILE);
-        XmlParser parser = new XmlParser();
+        DocumentXmlParser parser = new DocumentXmlParser();
         Document updateDoc = parser.create856Node(MOCK_DESCRIPTION, MOCK_URL);
         Document doc = parser.insertUpdatedIntoRecord(mockXml, updateDoc);
         assertEquals(updatedMockXml, parser.convertDocToString(doc));
@@ -110,7 +110,7 @@ public class XmlParserTest {
     public void testDatafieldAtWrongPlaceInXml() throws Exception {
         String faultyMockXml = setup(FAULTY_XML_FILE);
         String updatedFaultyMockXml = setup(UPDATED_FAULTY_XML_FILE);
-        XmlParser parser = new XmlParser();
+        DocumentXmlParser parser = new DocumentXmlParser();
         Document updateDoc = parser.create856Node(MOCK_DESCRIPTION, MOCK_URL);
         Document doc = parser.insertUpdatedIntoRecord(faultyMockXml, updateDoc);
         assertEquals(updatedFaultyMockXml, parser.convertDocToString(doc));
@@ -119,7 +119,7 @@ public class XmlParserTest {
     @Test
     public void testConvertDocToString() throws Exception {
         String mockXml = setup(CORRECT_XML_FILE);
-        XmlParser parser = new XmlParser();
+        DocumentXmlParser parser = new DocumentXmlParser();
         Document updateDoc = parser.create856Node(MOCK_DESCRIPTION, MOCK_URL);
         Document doc = parser.insertUpdatedIntoRecord(mockXml, updateDoc);
         assertNotNull(parser.convertDocToString(doc));
@@ -128,7 +128,7 @@ public class XmlParserTest {
     @Test
     public void testCreate856Node() throws Exception {
         String theNode = setup(MOCK_UPDATE_NODE);
-        XmlParser xmlParser = new XmlParser();
+        DocumentXmlParser xmlParser = new DocumentXmlParser();
         Document doc = xmlParser.create856Node("Beskrivelse fra forlaget (kort)", "http://innhold.bibsys.no/bilde/forside/?size=mini&id=LITE_150088182.jpg");
         assertEquals(theNode, xmlParser.convertDocToString(doc));
     }
@@ -136,7 +136,7 @@ public class XmlParserTest {
     @Test
     public void testDuplicateLinkAndDescription() throws Exception {
         String mockXml = setup(CORRECT_XML_FILE);
-        XmlParser xmlParser = new XmlParser();
+        DocumentXmlParser xmlParser = new DocumentXmlParser();
         assertTrue(xmlParser.alreadyExists("Beskrivelse fra forlaget (kort)", "http://content.bibsys.no/content/?type=descr_publ_brief&isbn=8210053418", mockXml));
     }
 

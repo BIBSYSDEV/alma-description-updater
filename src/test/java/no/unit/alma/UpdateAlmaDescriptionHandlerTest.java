@@ -16,7 +16,7 @@ public class UpdateAlmaDescriptionHandlerTest {
 
     @Test
     public void testMissingParameters() {
-        Config.getInstance().setAlmaSruEndpoint("ALMA_SRU_HOST");
+        Config.getInstance().setCorsHeader("*");
         UpdateAlmaDescriptionHandler mockUpdateAlmaHandler = new UpdateAlmaDescriptionHandler();
 
         GatewayResponse result = mockUpdateAlmaHandler.handleRequest(null, null);
@@ -55,6 +55,7 @@ public class UpdateAlmaDescriptionHandlerTest {
 
     @Test
     public void testCreateErrorResponse() {
+        Config.getInstance().setCorsHeader("*");
         UpdateAlmaDescriptionHandler handler = new UpdateAlmaDescriptionHandler();
         String errorMessage = "Error";
         int statusCode = 500;
@@ -63,5 +64,5 @@ public class UpdateAlmaDescriptionHandlerTest {
         assertEquals(actualErrorMessage, gatewayResponse.getBody());
         assertEquals(statusCode, gatewayResponse.getStatusCode());
     }
-
+    
 }
