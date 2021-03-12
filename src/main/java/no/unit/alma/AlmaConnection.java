@@ -10,6 +10,8 @@ import java.net.http.HttpResponse;
 
 public class AlmaConnection {
 
+    private static AlmaConnection instance = new AlmaConnection();
+
     private static final  String AUTHORIZATION_KEY = "Authorization";
     private static final  String APIKEY_KEY = "apikey";
     private static final  String SPACE_KEY = " ";
@@ -17,6 +19,12 @@ public class AlmaConnection {
     private static final HttpClient httpClient = HttpClient.newBuilder()
             .version(HttpClient.Version.HTTP_2)
             .build();
+
+    private AlmaConnection(){};
+
+    public static AlmaConnection getInstance(){
+        return instance;
+    }
 
     /**
      * Sends a get request to the Alma api.

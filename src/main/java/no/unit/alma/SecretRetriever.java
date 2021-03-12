@@ -28,7 +28,7 @@ public class SecretRetriever {
      */
     public static String getAlmaApiKeySecret() throws SecretRetrieverException {
         final String secretName = "ALMA_APIKEY";
-        Region region = Region.of("eu-west-1");
+        Region region = Region.EU_WEST_1;
 
         // Create a Secrets Manager client
         SecretsManagerClient client = SecretsManagerClient.builder()

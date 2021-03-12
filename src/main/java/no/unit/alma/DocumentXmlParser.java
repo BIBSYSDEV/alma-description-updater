@@ -43,12 +43,12 @@ public class DocumentXmlParser {
 
     /**
      * This method creates a Document in the shape of a marc-856 node.
-     * @param description The description we want to popluate the node with.
+     * @param specifiedMaterial The specifiedMaterial we want to popluate the node with.
      * @param url The url we want to popluate the node with.
      * @return A document populated with the fields set from the params.
      * @throws ParsingException when something goes wrong.
      */
-    public Document create856Node(String description, String url) throws ParsingException {
+    public Document create856Node(String specifiedMaterial, String url) throws ParsingException {
         try {
             DocumentBuilderFactory dbf = DocumentBuilderFactory.newDefaultInstance();
             DocumentBuilder db = dbf.newDocumentBuilder();
@@ -61,7 +61,7 @@ public class DocumentXmlParser {
             NodeList datafields = doc.getElementsByTagName(DATAFIELD);
             NodeList subfields = datafields.item(0).getChildNodes();
 
-            subfields.item(0).setTextContent(description);
+            subfields.item(0).setTextContent(specifiedMaterial);
             subfields.item(1).setTextContent(url);
 
             if (!url.endsWith(".jpg")) {
@@ -133,15 +133,15 @@ public class DocumentXmlParser {
 
     /**
      * Checks whether or not the xml already contains the update.
-     * @param description The description we want to check if exists.
+     * @param specifiedMaterial The specifiedMaterial we want to check if exists.
      * @param url The url we want to check if exists.
-     * @param xml The xml we want to check if url and description already exists inn.
-     * @return True if both description and url exists on the same 856 node, false if not.
+     * @param xml The xml we want to check if url and specifiedMaterial already exists inn.
+     * @return True if both specifiedMaterial and url exists on the same 856 node, false if not.
      * @throws ParsingException when something goes wrong.
      */
-    public boolean alreadyExists(String description, String url, String xml) throws ParsingException {
+    public boolean alreadyExists(String specifiedMaterial, String url, String xml) throws ParsingException {
         try {
-            boolean descriptionMatches = false;
+            boolean specifiedMaterialMatches = false;
             boolean urlMatches = false;
             Document doc = asDocument(xml);
             NodeList nodeList = doc.getElementsByTagName(DATAFIELD);
@@ -150,19 +150,19 @@ public class DocumentXmlParser {
                     NodeList children = nodeList.item(i).getChildNodes();
                     for (int j = 0; j < children.getLength(); j++) {
                         if (getSubfieldCode(children.item(j)) == MARC_CODE_3
-                                && children.item(j).getTextContent().trim().equals(description.trim())) {
-                            descriptionMatches = true;
+                                && children.item(j).getTextContent().trim().equals(specifiedMaterial.trim())) {
+                            specifiedMaterialMatches = true;
                         }
                         if (getSubfieldCode(children.item(j)) == MARC_CODE_U
                                 && children.item(j).getTextContent().trim().equals(url.trim())) {
                             urlMatches = true;
                         }
                     }
-                    if (descriptionMatches && urlMatches) {
+                    if (specifiedMaterialMatches && urlMatches) {
                         return true;
                     }
                 }
-                descriptionMatches = false;
+                specifiedMaterialMatches = false;
                 urlMatches = false;
             }
             return false;

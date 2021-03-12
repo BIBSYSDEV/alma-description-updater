@@ -16,7 +16,7 @@ public class UpdateAlmaDescriptionHandlerTest {
 
     @Test
     public void testMissingParameters() {
-        Config.getInstance().setAlmaSruEndpoint("ALMA_SRU_HOST");
+        Config.getInstance().setCorsHeader("*");
         UpdateAlmaDescriptionHandler mockUpdateAlmaHandler = new UpdateAlmaDescriptionHandler();
 
         GatewayResponse result = mockUpdateAlmaHandler.handleRequest(null, null);
@@ -55,6 +55,7 @@ public class UpdateAlmaDescriptionHandlerTest {
 
     @Test
     public void testCreateErrorResponse() {
+        Config.getInstance().setCorsHeader("*");
         UpdateAlmaDescriptionHandler handler = new UpdateAlmaDescriptionHandler();
         String errorMessage = "Error";
         int statusCode = 500;
@@ -63,25 +64,5 @@ public class UpdateAlmaDescriptionHandlerTest {
         assertEquals(actualErrorMessage, gatewayResponse.getBody());
         assertEquals(statusCode, gatewayResponse.getStatusCode());
     }
-
-    @Test
-    public void testFullRun(){
-        Map<String, String> queryParameters = new HashMap<>();
-        queryParameters.put("isbn", "9788210053412");
-        queryParameters.put("description", "This is a test 3");
-        queryParameters.put("url", "this/is/a/test/3");
-        Map<String, Object> event = new HashMap<>();
-        event.put("queryStringParameters", queryParameters);
-
-        Config.getInstance().setCorsHeader("*");
-
-        UpdateAlmaDescriptionHandler updateHandler = new UpdateAlmaDescriptionHandler();
-
-        GatewayResponse response = updateHandler.handleRequest(event, null);
-
-        System.out.println(response.getBody());
-
-        assertEquals(200, response.getStatusCode());
-    }
-
+    
 }
