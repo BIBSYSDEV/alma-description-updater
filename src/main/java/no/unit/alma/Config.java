@@ -3,7 +3,6 @@ package no.unit.alma;
 import no.unit.utils.StringUtils;
 import nva.commons.utils.Environment;
 
-import java.util.Optional;
 
 public class Config {
 
