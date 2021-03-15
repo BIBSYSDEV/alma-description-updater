@@ -146,7 +146,7 @@ public class DocumentXmlParser {
     }
 
     /**
-     * Returns wither 956 or 856 based on the values in the marc-tag 035.
+     * Returns either 956 or 856 based on the values in the marc-tag 035.
      * If its 956 the post is electronic and if its 856 its print.
      * @param xml The xml in question.
      * @return An int containing either 956 or 856.
