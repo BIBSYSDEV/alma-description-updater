@@ -59,8 +59,9 @@ public class UpdateAlmaDescriptionHandler implements RequestHandler<Map<String, 
      * 2. Loop through the LIST (and do the following for every OBJECT).
      * 3. Get the MMS_ID from the REFERENCE OBJECT.
      * 4. Use the MMS_ID to get a BIB-RECORD from the alma-api.
-     * 5. Insert the new link-data into the BIB-RECORD.
-     * 6. Push the updated BIB-RECORD back to the alma through a put-request to the api.
+     * 5. Determine whether the post is electronic or print.
+     * 6. Insert the new link-data into the BIB-RECORD.
+     * 7. Push the updated BIB-RECORD back to the alma through a put-request to the api.
      * @param input payload with identifying parameters
      * @return a GatewayResponse
      */
@@ -103,9 +104,12 @@ public class UpdateAlmaDescriptionHandler implements RequestHandler<Map<String, 
                     continue;
                 }
 
-                /* 5. Insert the new link-data into the BIB-RECORD. */
+                /* 5. Determine whether the post is electronic or print. */
+                int marcTag = xmlParser.determineElectronicOrPrint(almaResponse.body());
+
+                /* 6. Insert the new link-data into the BIB-RECORD. */
                 Boolean alreadyExists = xmlParser.alreadyExists(inputParameters.get(SPECIFIEDMATERIAL_KEY),
-                        inputParameters.get(URL_KEY), almaResponse.body());
+                        inputParameters.get(URL_KEY), almaResponse.body(), marcTag);
                 if (alreadyExists) {
                     gatewayResponseBody.append(ALMA_POST_ALREADY_UPDATED + mmsId);
                     gatewayResponse.setStatusCode(HttpStatusCode.BAD_REQUEST);
@@ -113,13 +117,13 @@ public class UpdateAlmaDescriptionHandler implements RequestHandler<Map<String, 
                     continue;
                 }
 
-                Document updateNode = xmlParser.create856Node(inputParameters.get(SPECIFIEDMATERIAL_KEY),
-                                inputParameters.get(URL_KEY));
+                Document updateNode = xmlParser.createNode(inputParameters.get(SPECIFIEDMATERIAL_KEY),
+                                inputParameters.get(URL_KEY), marcTag);
 
-                Document updatedDocument = xmlParser.insertUpdatedIntoRecord(almaResponse.body(), updateNode);
+                Document updatedDocument = xmlParser.insertUpdatedIntoRecord(almaResponse.body(), updateNode, marcTag);
                 String updatedXml = xmlParser.convertDocToString(updatedDocument);
 
-                /* 6. Push the updated BIB-RECORD back to the alma through a put-request to the api. */
+                /* 7. Push the updated BIB-RECORD back to the alma through a put-request to the api. */
                 HttpResponse<String> response = putBibRecordInAlma(gatewayResponse, gatewayResponseBody, mmsId, updatedXml);
 
                 if (response.statusCode() == HttpStatusCode.OK) {

@@ -64,5 +64,5 @@ public class UpdateAlmaDescriptionHandlerTest {
         assertEquals(actualErrorMessage, gatewayResponse.getBody());
         assertEquals(statusCode, gatewayResponse.getStatusCode());
     }
-    
+
 }
