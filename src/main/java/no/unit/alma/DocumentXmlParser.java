@@ -30,31 +30,45 @@ public class DocumentXmlParser {
     public static final String CONVERTING_TO_STRING_ERROR_MESSAGE = "Caught an error while converting to String";
 
     public static final String EMPTY_STRING = "";
+    public static final String ELECTRONIC_VALUE = "(EXLCZ)";
+    public static final int MARC_TAG_035 = 035;
     public static final int MARC_TAG_856 = 856;
+    public static final int MARC_TAG_956 = 956;
     public static final char MARC_CODE_U = 'u';
     public static final char MARC_CODE_3 = '3';
     public static final String MARC_PREFIX = "marc:";
     public static final String DATAFIELD = "datafield";
-    public static final String NODE_TEMPLATE = "<datafield tag='856' ind1='4' ind2='2'>"
+    public static final String NODE_TEMPLATE_856 = "<datafield ind1='4' ind2='2' tag='856'>"
             + "<subfield code='3'>1</subfield>"
             + "<subfield code='u'>2</subfield>"
             + "<subfield code='q'>image/jpeg</subfield>"
             + "</datafield>";
+    public static final String NODE_TEMPLATE_956 = "<datafield ind1='4' ind2='2' tag='956'>"
+            + "<subfield code='3'>1</subfield>"
+            + "<subfield code='u'>2</subfield>"
+            + "<subfield code='q'>image/jpeg</subfield>"
+            + "<subfield code='9'>local</subfield>"
+            + "</datafield>";
 
     /**
-     * This method creates a Document in the shape of a marc-856 node.
+     * This method creates a Document in the shape of a marc-856/956 node.
      * @param specifiedMaterial The specifiedMaterial we want to popluate the node with.
      * @param url The url we want to popluate the node with.
+     * @param marcTag A int determining what whether to make a 856 or a 956 node
      * @return A document populated with the fields set from the params.
      * @throws ParsingException when something goes wrong.
      */
-    public Document create856Node(String specifiedMaterial, String url) throws ParsingException {
+    public Document createNode(String specifiedMaterial, String url, int marcTag) throws ParsingException {
         try {
             DocumentBuilderFactory dbf = DocumentBuilderFactory.newDefaultInstance();
             DocumentBuilder db = dbf.newDocumentBuilder();
 
             InputSource is = new InputSource();
-            is.setCharacterStream(new StringReader(NODE_TEMPLATE));
+            if (marcTag == MARC_TAG_856) {
+                is.setCharacterStream(new StringReader(NODE_TEMPLATE_856));
+            } else {
+                is.setCharacterStream(new StringReader(NODE_TEMPLATE_956));
+            }
 
             Document doc = db.parse(is);
 
@@ -83,14 +97,14 @@ public class DocumentXmlParser {
      * @return Document. The updated document with the added info.
      * @throws ParsingException when something goes wrong.
      */
-    public Document insertUpdatedIntoRecord(String xml, Document update) throws ParsingException {
+    public Document insertUpdatedIntoRecord(String xml, Document update, int marcTag) throws ParsingException {
         Document doc = asDocument(xml);
         Node updateNode = doc.importNode(update.getFirstChild(), true);
         NodeList datafields = doc.getElementsByTagName(DATAFIELD);
         int i;
         for (i = 0; i < datafields.getLength(); i++) {
             Node datafield = datafields.item(i);
-            if (getTagNumber(datafield) >= MARC_TAG_856) {
+            if (getTagNumber(datafield) >= marcTag) {
                 try {
                     doc.getFirstChild().getLastChild().insertBefore(updateNode, datafield);
                     return doc;
@@ -121,7 +135,7 @@ public class DocumentXmlParser {
     }
 
     /**
-     * Extracts the subfiel code from a document node.
+     * Extracts the subfield code from a document node.
      * @param node the node containing the code.
      * @return the char the code consists of.
      */
@@ -132,6 +146,30 @@ public class DocumentXmlParser {
     }
 
     /**
+     * Returns wither 956 or 856 based on the values in the marc-tag 035.
+     * If its 956 the post is electronic and if its 856 its print.
+     * @param xml The xml in question.
+     * @return An int containing either 956 or 856.
+     * @throws ParsingException When something goes wrong.
+     */
+    public int determineElectronicOrPrint(String xml) throws ParsingException{
+        Document doc = asDocument(xml);
+        NodeList datafields = doc.getElementsByTagName(DATAFIELD);
+        for (int i = 0; i < datafields.getLength(); i++) {
+            Node datafield = datafields.item(i);
+            if (getTagNumber(datafield) >= MARC_TAG_035) {
+                NodeList children = datafield.getChildNodes();
+                for(int j = 0; j < children.getLength(); j++){
+                    if(children.item(j).getTextContent().contains(ELECTRONIC_VALUE)){
+                        return MARC_TAG_956;
+                    }
+                }
+            }
+        }
+        return MARC_TAG_856;
+    }
+
+    /**
      * Checks whether or not the xml already contains the update.
      * @param specifiedMaterial The specifiedMaterial we want to check if exists.
      * @param url The url we want to check if exists.
@@ -139,14 +177,14 @@ public class DocumentXmlParser {
      * @return True if both specifiedMaterial and url exists on the same 856 node, false if not.
      * @throws ParsingException when something goes wrong.
      */
-    public boolean alreadyExists(String specifiedMaterial, String url, String xml) throws ParsingException {
+    public boolean alreadyExists(String specifiedMaterial, String url, String xml, int marcTag) throws ParsingException {
         try {
             boolean specifiedMaterialMatches = false;
             boolean urlMatches = false;
             Document doc = asDocument(xml);
             NodeList nodeList = doc.getElementsByTagName(DATAFIELD);
             for (int i = 0; i < nodeList.getLength(); i++) {
-                if (getTagNumber(nodeList.item(i)) == MARC_TAG_856) {
+                if (getTagNumber(nodeList.item(i)) == marcTag) {
                     NodeList children = nodeList.item(i).getChildNodes();
                     for (int j = 0; j < children.getLength(); j++) {
                         if (getSubfieldCode(children.item(j)) == MARC_CODE_3

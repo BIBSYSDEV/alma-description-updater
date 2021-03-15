@@ -3,6 +3,7 @@ package no.unit.alma;
 
 import org.junit.jupiter.api.Test;
 
+import java.net.http.HttpResponse;
 import java.util.HashMap;
 import java.util.Map;
 

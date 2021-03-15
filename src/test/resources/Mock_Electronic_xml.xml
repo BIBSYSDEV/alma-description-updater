@@ -1,0 +1,196 @@
+<?xml version="1.0" encoding="UTF-8" standalone="yes"?>
+<bib>
+    <mms_id>991325803064702201</mms_id>
+    <record_format>marc21</record_format>
+    <linked_record_id/>"
+    <title>Hobbiten : Smaugs ødemark i bilder</title>
+    <author>Fisher, Jude</author>
+    <isbn>9788210053412</isbn>
+    <network_numbers>
+        <network_number>(NO-OsBA)0370957</network_number>
+        <network_number>(NO-TrBIB)132580306</network_number>
+        <network_number>132580306-47bibsys_network</network_number>
+    </network_numbers>
+    <place_of_publication>Oslo</place_of_publication>
+    <date_of_publication>2013</date_of_publication>
+    <publisher_const>Tiden</publisher_const>
+    <holdings link="https://api-eu.hosted.exlibrisgroup.com/almaws/v1/bibs/991325803064702201/holdings"/>
+    <created_by>import</created_by>
+    <created_date>2015-11-02Z</created_date>
+    <last_modified_by>System</last_modified_by>
+    <last_modified_date>2020-06-24Z</last_modified_date>
+    <suppress_from_publishing>false</suppress_from_publishing>
+    <suppress_from_external_search>false</suppress_from_external_search>
+    <sync_with_oclc>NONE</sync_with_oclc>
+    <sync_with_libraries_australia>NONE</sync_with_libraries_australia>
+    <originating_system>ILS</originating_system>
+    <originating_system_id>132580306-47bibsys_network</originating_system_id>
+    <cataloging_level desc="kat3">90</cataloging_level>
+    <record>
+        <recordSchema>marcxml</recordSchema>
+        <recordPacking>xml</recordPacking>
+        <recordData>
+            <record xmlns="http://www.loc.gov/MARC21/slim">
+                <leader>01464nam 2200349 i 4500</leader>
+                <controlfield tag="001">999920217605202201</controlfield>
+                <controlfield tag="006">m o d |</controlfield>
+                <controlfield tag="007">cr cnu||||||||</controlfield>
+                <controlfield tag="008">170117t20172017enka ob 001 0 eng d</controlfield>
+                <datafield ind1=" " ind2=" " tag="020">
+                    <subfield code="a">0-12-804108-0</subfield>
+                </datafield>
+                <datafield ind1=" " ind2=" " tag="035">
+                    <subfield code="a">(CKB)3710000001000620</subfield>
+                </datafield>
+                <datafield ind1=" " ind2=" " tag="035">
+                    <subfield code="a">(MiAaPQ)EBC4774474</subfield>
+                </datafield>
+                <datafield ind1=" " ind2=" " tag="035">
+                    <subfield code="a">(EXLCZ)993710000001000620</subfield>
+                </datafield>
+                <datafield ind1=" " ind2=" " tag="040">
+                    <subfield code="a">MiAaPQ</subfield>
+                    <subfield code="b">eng</subfield>
+                    <subfield code="e">rda</subfield>
+                    <subfield code="e">pn</subfield>
+                    <subfield code="c">MiAaPQ</subfield>
+                    <subfield code="d">MiAaPQ</subfield>
+                </datafield>
+                <datafield ind1=" " ind2="4" tag="050">
+                    <subfield code="a">NX180.C65</subfield>
+                    <subfield code="b">.T466 2017</subfield>
+                </datafield>
+                <datafield ind1="0" ind2=" " tag="082">
+                    <subfield code="a">700.287</subfield>
+                    <subfield code="2">23</subfield>
+                </datafield>
+                <datafield ind1="1" ind2=" " tag="100">
+                    <subfield code="a">Thomson, Paula,</subfield>
+                    <subfield code="e">author.</subfield>
+                </datafield>
+                <datafield ind1="1" ind2="0" tag="245">
+                    <subfield code="a">Creativity and the performing artist :</subfield>
+                    <subfield code="b">behind the mask /</subfield>
+                    <subfield code="c">Paula Thomson, S. Victoria Jaque.</subfield>
+                </datafield>
+                <datafield ind1=" " ind2="1" tag="264">
+                    <subfield code="a">London, [England] :</subfield>
+                    <subfield code="b">Academic Press,</subfield>
+                    <subfield code="c">2017.</subfield>
+                </datafield>
+                <datafield ind1=" " ind2="4" tag="264">
+                    <subfield code="c">©2017</subfield>
+                </datafield>
+                <datafield ind1=" " ind2=" " tag="300">
+                    <subfield code="a">1 online resource (502 pages) :</subfield>
+                    <subfield code="b">illustrations, tables</subfield>
+                </datafield>
+                <datafield ind1=" " ind2=" " tag="336">
+                    <subfield code="a">text</subfield>
+                    <subfield code="2">rdacontent</subfield>
+                </datafield>
+                <datafield ind1=" " ind2=" " tag="337">
+                    <subfield code="a">computer</subfield>
+                    <subfield code="2">rdamedia</subfield>
+                </datafield>
+                <datafield ind1=" " ind2=" " tag="338">
+                    <subfield code="a">online resource</subfield>
+                    <subfield code="2">rdacarrier</subfield>
+                </datafield>
+                <datafield ind1=" " ind2=" " tag="504">
+                    <subfield code="a">Includes bibliographical references and index.</subfield>
+                </datafield>
+                <datafield ind1=" " ind2=" " tag="588">
+                    <subfield code="a">Description based on print version record.</subfield>
+                </datafield>
+                <datafield ind1=" " ind2="0" tag="650">
+                    <subfield code="a">Communication and the arts.</subfield>
+                </datafield>
+                <datafield ind1=" " ind2="0" tag="650">
+                    <subfield code="a">Creative ability</subfield>
+                    <subfield code="x">Social aspects.</subfield>
+                </datafield>
+                <datafield ind1=" " ind2="4" tag="655">
+                    <subfield code="a">Electronic books.</subfield>
+                </datafield>
+                <datafield ind1=" " ind2=" " tag="776">
+                    <subfield code="z">0-12-804051-3</subfield>
+                </datafield>
+                <datafield ind1="1" ind2=" " tag="700">
+                    <subfield code="a">Jaque, S. Victoria ,</subfield>
+                    <subfield code="e">author.</subfield>
+                </datafield>
+                <datafield ind1="0" ind2="1" tag="852">
+                    <subfield code="a">47BIBSYS_HIOA</subfield>
+                    <subfield code="6">999919974062702212</subfield>
+                    <subfield code="9">E</subfield>
+                </datafield>
+                <datafield ind1="0" ind2="1" tag="852">
+                    <subfield code="a">47BIBSYS_UBIS</subfield>
+                    <subfield code="6">999920039806902208</subfield>
+                    <subfield code="9">E</subfield>
+                </datafield>
+                <datafield ind1="0" ind2="1" tag="852">
+                    <subfield code="a">47BIBSYS_HH</subfield>
+                    <subfield code="6">999919995810802214</subfield>
+                    <subfield code="9">E</subfield>
+                </datafield>
+                <datafield ind1="0" ind2="1" tag="852">
+                    <subfield code="a">47BIBSYS_HVO</subfield>
+                    <subfield code="6">999919945320202220</subfield>
+                    <subfield code="9">E</subfield>
+                </datafield>
+                <datafield ind1="0" ind2="1" tag="852">
+                    <subfield code="a">47BIBSYS_HIB</subfield>
+                    <subfield code="6">999919810629402221</subfield>
+                    <subfield code="9">P</subfield>
+                </datafield>
+                <datafield ind1="0" ind2="1" tag="852">
+                    <subfield code="a">47BIBSYS_UBB</subfield>
+                    <subfield code="6">999920203349602207</subfield>
+                    <subfield code="9">E</subfield>
+                </datafield>
+                <datafield ind1="0" ind2="1" tag="852">
+                    <subfield code="a">47BIBSYS_BI</subfield>
+                    <subfield code="6">999920027011702215</subfield>
+                    <subfield code="9">E</subfield>
+                </datafield>
+                <datafield ind1="0" ind2="1" tag="852">
+                    <subfield code="a">47BIBSYS_HIT</subfield>
+                    <subfield code="6">999920015698402210</subfield>
+                    <subfield code="9">E</subfield>
+                </datafield>
+                <datafield ind1="0" ind2="1" tag="852">
+                    <subfield code="a">47BIBSYS_UBTO</subfield>
+                    <subfield code="6">999920229558202205</subfield>
+                    <subfield code="9">E</subfield>
+                </datafield>
+                <datafield ind1="0" ind2="1" tag="852">
+                    <subfield code="a">47BIBSYS_UBIN</subfield>
+                    <subfield code="6">999920042536702211</subfield>
+                    <subfield code="9">E</subfield>
+                </datafield>
+                <datafield ind1="0" ind2="1" tag="852">
+                    <subfield code="a">47BIBSYS_HIM</subfield>
+                    <subfield code="6">999919907019302223</subfield>
+                    <subfield code="9">E</subfield>
+                </datafield>
+                <datafield ind1="0" ind2="1" tag="852">
+                    <subfield code="a">47BIBSYS_NB</subfield>
+                    <subfield code="6">999920108539402202</subfield>
+                    <subfield code="9">E</subfield>
+                </datafield>
+                <datafield ind1="0" ind2="1" tag="852">
+                    <subfield code="a">47BIBSYS_HIO</subfield>
+                    <subfield code="6">999919981420502218</subfield>
+                    <subfield code="9">E</subfield>
+                </datafield>
+                <datafield ind1=" " ind2=" " tag="906">
+                    <subfield code="a">BOOK</subfield>
+                </datafield>
+            </record>
+        </recordData>
+        <recordIdentifier>999920217605202201</recordIdentifier>
+        <recordPosition>1</recordPosition>
+    </record>
+</bib>

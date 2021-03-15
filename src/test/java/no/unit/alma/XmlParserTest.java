@@ -17,12 +17,15 @@ public class XmlParserTest {
 
     public static final int NUMBER_OF_SUBFIELDS_2 = 2;
     public static final int NUMBER_OF_SUBFIELDS_3 = 3;
+    public static final int MARC_TAG_856 = 856;
+    public static final int MARC_TAG_956 = 956;
 
     public static final String MOCK_UPDATE_NODE = "/Update_node.xml";
     public static final String FAULTY_XML_FILE = "/Faulty_xml.xml";
     public static final String CORRECT_XML_FILE = "/Mock_xml.xml";
     public static final String UPDATED_XML_FILE = "/Updated_xml.xml";
     public static final String UPDATED_FAULTY_XML_FILE = "/Updated_faulty_xml.xml";
+    public static final String MOCK_ELECTRONIC_XML_FILE = "/Mock_Electronic_xml.xml";
 
     public static final String MOCK_DESCRIPTION = "This is the description";
     public static final String MOCK_URL = "This/is/the/url";
@@ -85,11 +88,11 @@ public class XmlParserTest {
     @Test
     public void testCreatingUpdateNodeWithAndWithoutType() throws Exception {
         DocumentXmlParser parser = new DocumentXmlParser();
-        Document doc = parser.create856Node(MOCK_DESCRIPTION, MOCK_URL);
+        Document doc = parser.createNode(MOCK_DESCRIPTION, MOCK_URL, DocumentXmlParser.MARC_TAG_856);
         NodeList datafields = doc.getElementsByTagName("datafield");
         NodeList subfields = datafields.item(0).getChildNodes();
         assertEquals(NUMBER_OF_SUBFIELDS_2, subfields.getLength());
-        Document doc2 = parser.create856Node(MOCK_DESCRIPTION, MOCK_URL + ".jpg");
+        Document doc2 = parser.createNode(MOCK_DESCRIPTION, MOCK_URL + ".jpg", DocumentXmlParser.MARC_TAG_856);
         NodeList datafields2 = doc2.getElementsByTagName("datafield");
         NodeList subfields2 = datafields2.item(0).getChildNodes();
         assertEquals(NUMBER_OF_SUBFIELDS_3, subfields2.getLength());
@@ -101,8 +104,8 @@ public class XmlParserTest {
         String mockXml = setup(CORRECT_XML_FILE);
         String updatedMockXml = setup(UPDATED_XML_FILE);
         DocumentXmlParser parser = new DocumentXmlParser();
-        Document updateDoc = parser.create856Node(MOCK_DESCRIPTION, MOCK_URL);
-        Document doc = parser.insertUpdatedIntoRecord(mockXml, updateDoc);
+        Document updateDoc = parser.createNode(MOCK_DESCRIPTION, MOCK_URL, DocumentXmlParser.MARC_TAG_856);
+        Document doc = parser.insertUpdatedIntoRecord(mockXml, updateDoc, DocumentXmlParser.MARC_TAG_856);
         assertEquals(updatedMockXml, parser.convertDocToString(doc));
     }
 
@@ -111,8 +114,8 @@ public class XmlParserTest {
         String faultyMockXml = setup(FAULTY_XML_FILE);
         String updatedFaultyMockXml = setup(UPDATED_FAULTY_XML_FILE);
         DocumentXmlParser parser = new DocumentXmlParser();
-        Document updateDoc = parser.create856Node(MOCK_DESCRIPTION, MOCK_URL);
-        Document doc = parser.insertUpdatedIntoRecord(faultyMockXml, updateDoc);
+        Document updateDoc = parser.createNode(MOCK_DESCRIPTION, MOCK_URL, DocumentXmlParser.MARC_TAG_856);
+        Document doc = parser.insertUpdatedIntoRecord(faultyMockXml, updateDoc, DocumentXmlParser.MARC_TAG_856);
         assertEquals(updatedFaultyMockXml, parser.convertDocToString(doc));
     }
 
@@ -120,8 +123,8 @@ public class XmlParserTest {
     public void testConvertDocToString() throws Exception {
         String mockXml = setup(CORRECT_XML_FILE);
         DocumentXmlParser parser = new DocumentXmlParser();
-        Document updateDoc = parser.create856Node(MOCK_DESCRIPTION, MOCK_URL);
-        Document doc = parser.insertUpdatedIntoRecord(mockXml, updateDoc);
+        Document updateDoc = parser.createNode(MOCK_DESCRIPTION, MOCK_URL, DocumentXmlParser.MARC_TAG_856);
+        Document doc = parser.insertUpdatedIntoRecord(mockXml, updateDoc, DocumentXmlParser.MARC_TAG_856);
         assertNotNull(parser.convertDocToString(doc));
     }
 
@@ -129,7 +132,7 @@ public class XmlParserTest {
     public void testCreate856Node() throws Exception {
         String theNode = setup(MOCK_UPDATE_NODE);
         DocumentXmlParser xmlParser = new DocumentXmlParser();
-        Document doc = xmlParser.create856Node("Beskrivelse fra forlaget (kort)", "http://innhold.bibsys.no/bilde/forside/?size=mini&id=LITE_150088182.jpg");
+        Document doc = xmlParser.createNode("Beskrivelse fra forlaget (kort)", "http://innhold.bibsys.no/bilde/forside/?size=mini&id=LITE_150088182.jpg", DocumentXmlParser.MARC_TAG_856);
         assertEquals(theNode, xmlParser.convertDocToString(doc));
     }
 
@@ -137,7 +140,16 @@ public class XmlParserTest {
     public void testDuplicateLinkAndDescription() throws Exception {
         String mockXml = setup(CORRECT_XML_FILE);
         DocumentXmlParser xmlParser = new DocumentXmlParser();
-        assertTrue(xmlParser.alreadyExists("Beskrivelse fra forlaget (kort)", "http://content.bibsys.no/content/?type=descr_publ_brief&isbn=8210053418", mockXml));
+        assertTrue(xmlParser.alreadyExists("Beskrivelse fra forlaget (kort)", "http://content.bibsys.no/content/?type=descr_publ_brief&isbn=8210053418", mockXml, DocumentXmlParser.MARC_TAG_856));
+    }
+
+    @Test
+    public void testDetermineElectronicOrPrint() throws Exception{
+        String mockPrint = setup(CORRECT_XML_FILE);
+        String mockElectronic = setup(MOCK_ELECTRONIC_XML_FILE);
+        DocumentXmlParser xmlParser = new DocumentXmlParser();
+        assertEquals(MARC_TAG_856, xmlParser.determineElectronicOrPrint(mockPrint));
+        assertEquals(MARC_TAG_956, xmlParser.determineElectronicOrPrint(mockElectronic));
     }
 
 }
