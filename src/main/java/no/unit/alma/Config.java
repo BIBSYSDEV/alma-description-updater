@@ -3,6 +3,7 @@ package no.unit.alma;
 import no.unit.utils.StringUtils;
 import nva.commons.utils.Environment;
 
+
 public class Config {
 
     public static final String MISSING_ENVIRONMENT_VARIABLES =
@@ -27,7 +28,12 @@ public class Config {
         static {
             INSTANCE.setAlmaApiEndpoint(envHandler.readEnv(ALMA_API_KEY));
             INSTANCE.setAlmaSruEndpoint(envHandler.readEnv(ALMA_SRU_HOST_KEY));
-            INSTANCE.setCorsHeader(envHandler.readEnv(CORS_ALLOW_ORIGIN_HEADER_ENVIRONMENT_NAME));
+            try{
+                INSTANCE.setCorsHeader(envHandler.readEnv(CORS_ALLOW_ORIGIN_HEADER_ENVIRONMENT_NAME));
+            } catch (IllegalStateException e) {
+                INSTANCE.setCorsHeader("*");
+            }
+
         }
     }
 
