@@ -135,7 +135,7 @@ Resources:
     Properties:
       Environment:
         Variables:
-          ALLOWED_ORIGIN:  '*'
+          ALLOWED_ORIGIN: '*'
           ALMA_API_HOST: !Ref AlmaBibsEndpointREST
           ALMA_SRU_HOST: !Ref AlmaSruLambda
       Handler: no.unit.alma.UpdateAlmaDescriptionHandler::handleRequest
