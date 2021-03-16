@@ -86,8 +86,7 @@ public class UpdateAlmaDescriptionHandlerTest {
 
     @Test
     public void testCheckProperties() throws Exception {
-        UpdateAlmaDescriptionHandler handler = new UpdateAlmaDescriptionHandler();
-        assertTrue(handler.checkProperties());
+        assertTrue(mockedHandler.checkProperties());
     }
 
 }
