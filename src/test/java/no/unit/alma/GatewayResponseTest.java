@@ -1,9 +1,14 @@
 package no.unit.alma;
 
+import nva.commons.utils.Environment;
 import org.junit.jupiter.api.Assertions;
+import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.Test;
 
 import javax.ws.rs.core.Response;
+
+import static org.mockito.Mockito.mock;
+import static org.mockito.Mockito.when;
 
 
 class GatewayResponseTest {
@@ -13,28 +18,35 @@ class GatewayResponseTest {
     public static final String MOCK_BODY = "mock";
     public static final String ERROR_BODY = "error";
     public static final String ERROR_JSON = "{\"error\":\"error\"}";
+    Environment mockEnv;
+    GatewayResponse mockedGR;
 
-    @Test
-    public void testErrorResponse() {
-        GatewayResponse gatewayResponse = new GatewayResponse();
-        gatewayResponse.setBody(null);
-        gatewayResponse.setErrorBody(ERROR_BODY);
-        gatewayResponse.setStatusCode(Response.Status.BAD_REQUEST.getStatusCode());
-        Assertions.assertEquals(ERROR_JSON, gatewayResponse.getBody());
+    private void initEnv() {
+        when(mockEnv.readEnv("ALLOWED_ORIGIN")).thenReturn("Allow-origins");
+        when(mockEnv.readEnv("ALMA_SRU_HOST")).thenReturn("Alma-sru-dot-com");
+        when(mockEnv.readEnv("ALMA_API_HOST")).thenReturn("Alma-api-dpot-com");
+    }
+
+    @BeforeEach
+    public void init() {
+        mockEnv = mock(Environment.class);
+        initEnv();
+        mockedGR = new GatewayResponse(mockEnv);
     }
 
     @Test
-    public void testNoCorsHeaders() {
-        final Config config = Config.getInstance();
-        config.setCorsHeader(EMPTY_STRING);
-        final String corsHeader = config.getCorsHeader();
-        GatewayResponse gatewayResponse = new GatewayResponse(MOCK_BODY, Response.Status.BAD_REQUEST.getStatusCode());
-        Assertions.assertFalse(gatewayResponse.getHeaders().containsKey(GatewayResponse.CORS_ALLOW_ORIGIN_HEADER));
-        Assertions.assertFalse(gatewayResponse.getHeaders().containsValue(corsHeader));
+    public void testErrorResponse() {
+        mockedGR.setBody(null);
+        mockedGR.setErrorBody(ERROR_BODY);
+        mockedGR.setStatusCode(Response.Status.BAD_REQUEST.getStatusCode());
+        Assertions.assertEquals(ERROR_JSON, mockedGR.getBody());
+    }
 
-        config.setCorsHeader(CORS_HEADER);
-        GatewayResponse gatewayResponse1 = new GatewayResponse(MOCK_BODY, Response.Status.BAD_REQUEST.getStatusCode());
-        Assertions.assertTrue(gatewayResponse1.getHeaders().containsKey(GatewayResponse.CORS_ALLOW_ORIGIN_HEADER));
+    @Test
+    public void testSuccessResponse() {
+        mockedGR.setBody(MOCK_BODY);
+        mockedGR.setStatusCode(Response.Status.OK.getStatusCode());
+        Assertions.assertEquals(MOCK_BODY, mockedGR.getBody());
     }
 
 }
