@@ -22,7 +22,7 @@ public final class AlmaConnection {
 
     private AlmaConnection(){};
 
-    public static AlmaConnection getInstance(){
+    public static AlmaConnection getInstance() {
         return instance;
     }
 
@@ -61,7 +61,7 @@ public final class AlmaConnection {
             throws IOException, InterruptedException {
         HttpRequest request = HttpRequest.newBuilder()
                 .PUT(HttpRequest.BodyPublishers.ofString(xml))
-                .uri(URI.create(url+ mmsId))
+                .uri(URI.create(url + mmsId))
                 .setHeader(AUTHORIZATION_KEY, APIKEY_KEY + SPACE_KEY + apiKey) // add request header
                 .header(HttpHeaders.CONTENT_TYPE, MediaType.APPLICATION_XML)
                 .build();

@@ -58,8 +58,8 @@ public class UpdateAlmaDescriptionHandler implements RequestHandler<Map<String, 
     private transient String almaApiHost;
     private transient String almaSruHost;
 
-    public UpdateAlmaDescriptionHandler(Environment envHandler){ this.envHandler = envHandler;};
-    public UpdateAlmaDescriptionHandler() { envHandler = new Environment();}
+    public UpdateAlmaDescriptionHandler(Environment envHandler) { this.envHandler = envHandler; };
+    public UpdateAlmaDescriptionHandler() { envHandler = new Environment(); }
 
     /**
      * Main lambda function to update the links in Alma records.
@@ -81,7 +81,7 @@ public class UpdateAlmaDescriptionHandler implements RequestHandler<Map<String, 
 
         Map<String, Object> errorMessage = initVariables(input);
 
-        if(errorMessage != null){
+        if(errorMessage != null) {
             gatewayResponse.setErrorBody((String) errorMessage.get(RESPONSE_MESSAGE_KEY));
             gatewayResponse.setStatusCode((int) errorMessage.get(RESPONSE_STATUS_KEY));
             return gatewayResponse;
@@ -199,7 +199,7 @@ public class UpdateAlmaDescriptionHandler implements RequestHandler<Map<String, 
      * @return returns null if everything works. If not it will return a Map
      * containing an appropriate errormessage and errorsatus.
      */
-    private Map<String, Object> initVariables(Map<String, Object> input){
+    private Map<String, Object> initVariables(Map<String, Object> input) {
         Map<String, Object> response = new ConcurrentHashMap<>();
         try {
             checkProperties();
