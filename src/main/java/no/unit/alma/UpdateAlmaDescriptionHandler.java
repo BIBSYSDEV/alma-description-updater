@@ -4,7 +4,6 @@ import java.io.IOException;
 import java.lang.reflect.Type;
 import java.net.URL;
 import java.net.http.HttpResponse;
-import java.util.HashMap;
 import java.util.List;
 import java.util.Map;
 import java.util.Objects;
@@ -16,6 +15,7 @@ import com.google.gson.Gson;
 import com.google.gson.GsonBuilder;
 import com.google.gson.reflect.TypeToken;
 import no.unit.marc.Reference;
+import nva.commons.utils.Environment;
 import org.w3c.dom.Document;
 import software.amazon.awssdk.http.HttpStatusCode;
 
@@ -34,6 +34,8 @@ public class UpdateAlmaDescriptionHandler implements RequestHandler<Map<String, 
     public static final String RESPONSE_STATUS_KEY = "responseStatus";
     public static final String ALMA_GET_SUCCESS_MESSAGE = "Got the BIB-post for: ";
     public static final String ALMA_GET_FAILURE_MESSAGE = "Couldn't get the BIB-post for: ";
+    public static final String ALMA_SRU_HOST_KEY = "ALMA_SRU_HOST";
+    public static final String ALMA_API_KEY = "ALMA_API_HOST";
 
     public static final String MISSING_EVENT_ELEMENT_QUERYSTRINGPARAMETERS =
             "Missing event element 'queryStringParameters'.";
@@ -50,8 +52,15 @@ public class UpdateAlmaDescriptionHandler implements RequestHandler<Map<String, 
     private transient Boolean othersSucceeded = false;
     private transient Boolean othersFailed = false;
 
-    private String secretKey;
-    private Map<String, String> inputParameters;
+    private transient String secretKey;
+    private transient Map<String, String> inputParameters;
+    private transient final Environment envHandler;
+    private transient String almaApiHost;
+    private transient String almaSruHost;
+
+    public UpdateAlmaDescriptionHandler(Environment envHandler){ this.envHandler = envHandler;};
+    public UpdateAlmaDescriptionHandler() { envHandler = new Environment();}
+
     /**
      * Main lambda function to update the links in Alma records.
      * Program flow:
@@ -152,7 +161,7 @@ public class UpdateAlmaDescriptionHandler implements RequestHandler<Map<String, 
      */
     private HttpResponse<String> getBibRecordFromAlma(GatewayResponse gatewayResponse, StringBuilder gatewayResponseBody, String mmsId) throws InterruptedException, IOException {
         Map<String, Object> responseMap;
-        HttpResponse<String> almaResponse = AlmaConnection.getInstance().sendGet(mmsId, secretKey);
+        HttpResponse<String> almaResponse = AlmaConnection.getInstance().sendGet(mmsId, secretKey, almaApiHost);
         responseMap = createGatewayResponse(almaResponse.statusCode() == HttpStatusCode.OK,
                 ALMA_GET_SUCCESS_MESSAGE + mmsId + System.lineSeparator(),
                 ALMA_GET_FAILURE_MESSAGE + mmsId + ALMA_GET_RESPONDED_WITH_STATUSCODE
@@ -174,7 +183,7 @@ public class UpdateAlmaDescriptionHandler implements RequestHandler<Map<String, 
      */
     private HttpResponse<String> putBibRecordInAlma(GatewayResponse gatewayResponse, StringBuilder gatewayResponseBody, String mmsId, String updatedXml) throws InterruptedException, IOException {
         Map<String, Object> responseMap;
-        HttpResponse<String> almaResponse = AlmaConnection.getInstance().sendPut(mmsId, secretKey, updatedXml);
+        HttpResponse<String> almaResponse = AlmaConnection.getInstance().sendPut(mmsId, secretKey, updatedXml, almaApiHost);
         responseMap = createGatewayResponse(almaResponse.statusCode() == HttpStatusCode.OK,
                 ALMA_PUT_SUCCESS_MESSAGE + mmsId + System.lineSeparator(),
                 ALMA_PUT_FAILURE_MESSAGE + mmsId + ALMA_GET_RESPONDED_WITH_STATUSCODE
@@ -191,11 +200,11 @@ public class UpdateAlmaDescriptionHandler implements RequestHandler<Map<String, 
      * containing an appropriate errormessage and errorsatus.
      */
     private Map<String, Object> initVariables(Map<String, Object> input){
-        Map<String, Object> response = new HashMap<>();
+        Map<String, Object> response = new ConcurrentHashMap<>();
         try {
-            Config.getInstance().checkProperties();
+            checkProperties();
             inputParameters = this.checkParameters(input);
-        } catch (ParameterException e) {
+        } catch (RuntimeException e) {
             DebugUtils.dumpException(e);
             response.put(RESPONSE_MESSAGE_KEY, e.getMessage());
             response.put(RESPONSE_STATUS_KEY, Response.Status.BAD_REQUEST.getStatusCode());
@@ -212,6 +221,12 @@ public class UpdateAlmaDescriptionHandler implements RequestHandler<Map<String, 
         return null;
     }
 
+    public boolean checkProperties() {
+        almaApiHost = envHandler.readEnv(ALMA_API_KEY);
+        almaSruHost = envHandler.readEnv(ALMA_SRU_HOST_KEY);
+        return true;
+    }
+
     /**
      * Retrieve a list of referenceobjects based on the isbn you enter.
      * @param isbn The isbn you wish to retrieve refrenceobjects based on.
@@ -219,7 +234,7 @@ public class UpdateAlmaDescriptionHandler implements RequestHandler<Map<String, 
      * @throws IOException when something goes wrong
      */
     private List<Reference> getReferenceListByIsbn(String isbn) throws IOException {
-        URL theURL = new URL(Config.getInstance().getAlmaSruEndpoint() + isbn);
+        URL theURL = new URL(almaSruHost + isbn);
         InputStreamReader streamReader = new InputStreamReader(theURL.openStream());
         try {
             String referenceString = new BufferedReader(streamReader)

@@ -144,7 +144,7 @@ public class XmlParserTest {
     }
 
     @Test
-    public void testDetermineElectronicOrPrint() throws Exception{
+    public void testDetermineElectronicOrPrint() throws Exception {
         String mockPrint = setup(CORRECT_XML_FILE);
         String mockElectronic = setup(MOCK_ELECTRONIC_XML_FILE);
         DocumentXmlParser xmlParser = new DocumentXmlParser();

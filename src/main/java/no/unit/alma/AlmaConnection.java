@@ -8,7 +8,7 @@ import java.net.http.HttpClient;
 import java.net.http.HttpRequest;
 import java.net.http.HttpResponse;
 
-public class AlmaConnection {
+public final class AlmaConnection {
 
     private static AlmaConnection instance = new AlmaConnection();
 
@@ -34,12 +34,12 @@ public class AlmaConnection {
      * @throws IOException When something goes wrong.
      * @throws InterruptedException When something goes wrong.
      */
-    public HttpResponse<String> sendGet(String mmsId, String apiKey)
+    public HttpResponse<String> sendGet(String mmsId, String apiKey, String url)
             throws IOException,  InterruptedException {
 
         HttpRequest request = HttpRequest.newBuilder()
                 .GET()
-                .uri(URI.create(Config.getInstance().getAlmaApiEndpoint() + mmsId))
+                .uri(URI.create(url + mmsId))
                 .setHeader(AUTHORIZATION_KEY, APIKEY_KEY + SPACE_KEY + apiKey)
                 .build();
 
@@ -57,11 +57,11 @@ public class AlmaConnection {
      * @throws IOException When something goes wrong.
      * @throws InterruptedException When something goes wrong.
      */
-    public HttpResponse<String> sendPut(String mmsId, String apiKey, String xml)
+    public HttpResponse<String> sendPut(String mmsId, String apiKey, String xml, String url)
             throws IOException, InterruptedException {
         HttpRequest request = HttpRequest.newBuilder()
                 .PUT(HttpRequest.BodyPublishers.ofString(xml))
-                .uri(URI.create(Config.getInstance().getAlmaApiEndpoint() + mmsId))
+                .uri(URI.create(url+ mmsId))
                 .setHeader(AUTHORIZATION_KEY, APIKEY_KEY + SPACE_KEY + apiKey) // add request header
                 .header(HttpHeaders.CONTENT_TYPE, MediaType.APPLICATION_XML)
                 .build();

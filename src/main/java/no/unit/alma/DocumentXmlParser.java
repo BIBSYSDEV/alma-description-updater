@@ -31,7 +31,7 @@ public class DocumentXmlParser {
 
     public static final String EMPTY_STRING = "";
     public static final String ELECTRONIC_VALUE = "(EXLCZ)";
-    public static final int MARC_TAG_035 = 035;
+    public static final int MARC_TAG_035 = 35;
     public static final int MARC_TAG_856 = 856;
     public static final int MARC_TAG_956 = 956;
     public static final char MARC_CODE_U = 'u';
@@ -157,7 +157,7 @@ public class DocumentXmlParser {
         NodeList datafields = doc.getElementsByTagName(DATAFIELD);
         for (int i = 0; i < datafields.getLength(); i++) {
             Node datafield = datafields.item(i);
-            if (getTagNumber(datafield) >= MARC_TAG_035) {
+            if (getTagNumber(datafield) == MARC_TAG_035) {
                 NodeList children = datafield.getChildNodes();
                 for(int j = 0; j < children.getLength(); j++){
                     if(children.item(j).getTextContent().contains(ELECTRONIC_VALUE)){
