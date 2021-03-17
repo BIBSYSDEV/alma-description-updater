@@ -96,7 +96,7 @@ public class UpdateAlmaDescriptionHandler implements RequestHandler<Map<String, 
                 return gatewayResponse;
             }
             StringBuilder gatewayResponseBody = new StringBuilder(41);
-            gatewayResponseBody.append(referenceList.size() + NUMBER_OF_REFERENCE_OBJECTS_MESSAGE + System.lineSeparator());
+            gatewayResponseBody.append(referenceList.size()).append(NUMBER_OF_REFERENCE_OBJECTS_MESSAGE).append(System.lineSeparator());
 
             DocumentXmlParser xmlParser = new DocumentXmlParser();
 
@@ -162,7 +162,7 @@ public class UpdateAlmaDescriptionHandler implements RequestHandler<Map<String, 
     private HttpResponse<String> getBibRecordFromAlma(GatewayResponse gatewayResponse, StringBuilder gatewayResponseBody, String mmsId) throws InterruptedException, IOException {
         Map<String, Object> responseMap;
         HttpResponse<String> almaResponse = AlmaConnection.getInstance().sendGet(mmsId, secretKey, almaApiHost);
-        responseMap = createGatewayResponse(almaResponse.statusCode() == HttpStatusCode.OK,
+        responseMap = createGatewayResponse(almaResponse.statusCode(),
                 ALMA_GET_SUCCESS_MESSAGE + mmsId + System.lineSeparator(),
                 ALMA_GET_FAILURE_MESSAGE + mmsId + ALMA_GET_RESPONDED_WITH_STATUSCODE
                         + almaResponse.statusCode() + System.lineSeparator());
@@ -184,7 +184,7 @@ public class UpdateAlmaDescriptionHandler implements RequestHandler<Map<String, 
     private HttpResponse<String> putBibRecordInAlma(GatewayResponse gatewayResponse, StringBuilder gatewayResponseBody, String mmsId, String updatedXml) throws InterruptedException, IOException {
         Map<String, Object> responseMap;
         HttpResponse<String> almaResponse = AlmaConnection.getInstance().sendPut(mmsId, secretKey, updatedXml, almaApiHost);
-        responseMap = createGatewayResponse(almaResponse.statusCode() == HttpStatusCode.OK,
+        responseMap = createGatewayResponse(almaResponse.statusCode(),
                 ALMA_PUT_SUCCESS_MESSAGE + mmsId + System.lineSeparator(),
                 ALMA_PUT_FAILURE_MESSAGE + mmsId + ALMA_GET_RESPONDED_WITH_STATUSCODE
                         + almaResponse.statusCode() + System.lineSeparator());
@@ -276,28 +276,20 @@ public class UpdateAlmaDescriptionHandler implements RequestHandler<Map<String, 
 
     /**
      * Assigns the correct message and statusCode based on the input condition.
-     * @param condition Boolean that decides which String to use for the message.
+     * @param status Status-code to determine what String input to use.
      * @param success The String used in case of the condition being true.
      * @param failure The String used in case of the condition being false.
      * @return A Map containing both a message and a statusCode
      */
-    public Map<String, Object> createGatewayResponse(Boolean condition, String success, String failure) {
+    public Map<String, Object> createGatewayResponse(int status, String success, String failure) {
         String responseMessage;
         int responseStatus;
-        if (condition) {
+        if (status == HttpStatusCode.OK) {
             responseMessage = success;
-            if (othersFailed) {
-                responseStatus = RESPONSE_STATUS_MULTI_STATUS_CODE;
-            } else {
-                responseStatus = HttpStatusCode.OK;
-            }
+            responseStatus = othersFailed ? RESPONSE_STATUS_MULTI_STATUS_CODE : HttpStatusCode.OK;
         } else {
             responseMessage = failure;
-            if (othersSucceeded) {
-                responseStatus = RESPONSE_STATUS_MULTI_STATUS_CODE;
-            } else {
-                responseStatus = HttpStatusCode.BAD_REQUEST;
-            }
+            responseStatus = othersSucceeded ? RESPONSE_STATUS_MULTI_STATUS_CODE : HttpStatusCode.BAD_REQUEST;
         }
 
         Map<String, Object> payload = new ConcurrentHashMap<>();

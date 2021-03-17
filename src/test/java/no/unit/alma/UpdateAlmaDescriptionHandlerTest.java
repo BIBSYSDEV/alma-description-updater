@@ -4,6 +4,7 @@ package no.unit.alma;
 import nva.commons.utils.Environment;
 import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.Test;
+import software.amazon.awssdk.http.HttpStatusCode;
 
 import java.util.HashMap;
 import java.util.Map;
@@ -62,15 +63,14 @@ public class UpdateAlmaDescriptionHandlerTest {
 
     @Test
     public void testCreateGatewayResponse() {
-        boolean condition = true;
         String successMessage = "Success";
         String failureMessage = "Failure";
 
         Map<String, Object> successResponse =
-                mockedHandler.createGatewayResponse(condition, successMessage, failureMessage);
+                mockedHandler.createGatewayResponse(HttpStatusCode.OK, successMessage, failureMessage);
         assertEquals(successMessage, successResponse.get(mockedHandler.RESPONSE_MESSAGE_KEY));
         Map<String, Object> failResponse =
-                mockedHandler.createGatewayResponse(!condition, successMessage, failureMessage);
+                mockedHandler.createGatewayResponse(HttpStatusCode.BAD_REQUEST, successMessage, failureMessage);
         assertEquals(failureMessage, failResponse.get(mockedHandler.RESPONSE_MESSAGE_KEY));
     }
 
