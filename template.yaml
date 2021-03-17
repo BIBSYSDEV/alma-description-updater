@@ -134,8 +134,6 @@ Resources:
       Policies:
         - AWSSecretsManagerGetSecretValuePolicy:
             SecretArn: '*'
-      DeploymentPreference:
-        Type: AllAtOnce # Or Canary10Percent5Minutes, Linear10PercentEvery1Minute, ...
       Events:
         GetAlmaSruRecordEvent:
           Type: Api # More info about API Event Source: https://github.com/awslabs/serverless-application-model/blob/master/versions/2016-10-31.md#api
