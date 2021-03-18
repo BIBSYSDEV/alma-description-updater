@@ -20,7 +20,7 @@ Parameters:
   AlmaSruLambda:
     Type: String
     Description: Url endpoint to the alma sru proxy lambda
-    Default: 'https://api.sandbox.bibs.aws.unit.no/alma?isbn='
+    Default: 'https://api.bibs.aws.unit.no/alma?isbn='
 
 Conditions:
   HasDomainName: !Not [!Equals [!Ref CustomDomain, '']]
