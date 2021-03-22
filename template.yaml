@@ -78,7 +78,7 @@ Resources:
                 uri:
                   Fn::Sub: arn:aws:apigateway:${AWS::Region}:lambda:path/2015-03-31/functions/${UpdateAlmaDescriptionFunction.Arn}/invocations
                 responses: {}
-                httpMethod: PUT
+                httpMethod: POST
                 type: AWS_PROXY
               responses:
                 '200':
