@@ -73,7 +73,7 @@ Resources:
                   name: queryStringParameters
                   required: true
                   type: string
-                  description: An object containing isbn, description and url.
+                  description: An object containing isbn, specifiedMaterial and url.
               x-amazon-apigateway-integration:
                 uri:
                   Fn::Sub: arn:aws:apigateway:${AWS::Region}:lambda:path/2015-03-31/functions/${UpdateAlmaDescriptionFunction.Arn}/invocations
@@ -83,6 +83,12 @@ Resources:
               responses:
                 '200':
                   description: Event logg
+                  content:
+                    application/json:
+                      schema:
+                        $ref: '#/components/schemas/updateAlmaResponseBody'
+                '207':
+                  description: Event logg with success and failure
                   content:
                     application/json:
                       schema:
