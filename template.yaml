@@ -70,10 +70,20 @@ Resources:
                 - application/json
               parameters:
                 - in: body
-                  name: queryStringParameters
+                  name: isbn
                   required: true
                   type: string
-                  description: An object containing isbn, specifiedMaterial and url.
+                  description: ISBN.
+                - in: body
+                  name: specifiedMaterial
+                  required: true
+                  type: string
+                  description: Explination of what is contained by the url.
+                - in: body
+                  name: url
+                  required: true
+                  type: string
+                  description: url.
               x-amazon-apigateway-integration:
                 uri:
                   Fn::Sub: arn:aws:apigateway:${AWS::Region}:lambda:path/2015-03-31/functions/${UpdateAlmaDescriptionFunction.Arn}/invocations
