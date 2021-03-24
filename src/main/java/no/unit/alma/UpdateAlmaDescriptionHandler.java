@@ -12,6 +12,7 @@ import com.amazonaws.services.lambda.runtime.Context;
 import com.amazonaws.services.lambda.runtime.RequestHandler;
 import com.google.gson.Gson;
 import com.google.gson.GsonBuilder;
+import com.google.gson.JsonElement;
 import com.google.gson.reflect.TypeToken;
 import no.unit.marc.Reference;
 import nva.commons.utils.Environment;
@@ -53,7 +54,7 @@ public class UpdateAlmaDescriptionHandler implements RequestHandler<Map<String, 
     private transient Boolean othersFailed = false;
 
     private transient String secretKey;
-    private transient Map<String, String> inputParameters;
+    private transient UpdatePayload inputParameters;
     private transient final Environment envHandler;
     private transient String almaApiHost;
     private transient String almaSruHost;
@@ -89,7 +90,7 @@ public class UpdateAlmaDescriptionHandler implements RequestHandler<Map<String, 
 
         try {
             /* Step 1. Get a REFERENCE LIST from alma-sru through a lambda. */
-            List<Reference> referenceList = getReferenceListByIsbn(inputParameters.get(ISBN_KEY));
+            List<Reference> referenceList = getReferenceListByIsbn(inputParameters.getIsbn());
             if (referenceList == null) {
                 gatewayResponse = createErrorResponse(NO_REFERENCE_OBJECT_RETRIEVED_MESSAGE,
                         Response.Status.BAD_REQUEST.getStatusCode());
@@ -117,8 +118,8 @@ public class UpdateAlmaDescriptionHandler implements RequestHandler<Map<String, 
                 int marcTag = xmlParser.determineElectronicOrPrint(almaResponse.body());
 
                 /* 6. Insert the new link-data into the BIB-RECORD. */
-                Boolean alreadyExists = xmlParser.alreadyExists(inputParameters.get(SPECIFIEDMATERIAL_KEY),
-                        inputParameters.get(URL_KEY), almaResponse.body(), marcTag);
+                Boolean alreadyExists = xmlParser.alreadyExists(inputParameters.getSpecifiedMaterial(),
+                        inputParameters.getUrl(), almaResponse.body(), marcTag);
                 if (alreadyExists) {
                     gatewayResponseBody.append(ALMA_POST_ALREADY_UPDATED + mmsId);
                     gatewayResponse.setStatusCode(HttpStatusCode.BAD_REQUEST);
@@ -126,8 +127,8 @@ public class UpdateAlmaDescriptionHandler implements RequestHandler<Map<String, 
                     continue;
                 }
 
-                Document updateNode = xmlParser.createNode(inputParameters.get(SPECIFIEDMATERIAL_KEY),
-                        inputParameters.get(URL_KEY), marcTag);
+                Document updateNode = xmlParser.createNode(inputParameters.getSpecifiedMaterial(),
+                        inputParameters.getUrl(), marcTag);
 
                 Document updatedDocument = xmlParser.insertUpdatedIntoRecord(almaResponse.body(), updateNode, marcTag);
                 String updatedXml = xmlParser.convertDocToString(updatedDocument);
@@ -259,11 +260,11 @@ public class UpdateAlmaDescriptionHandler implements RequestHandler<Map<String, 
     private void checkParameters(Map<String, Object> input) {
         if (input == null
                 || input.get(BODY_KEY) == null
-                || true
         ) {
             throw new ParameterException(MISSING_EVENT_ELEMENT_BODY);
         }
-        inputParameters = (Map<String, String>) input.get(BODY_KEY);
+        Gson g = new Gson();
+        inputParameters = g.fromJson((JsonElement) input.get(BODY_KEY), UpdatePayload.class);
     }
 
     /**
