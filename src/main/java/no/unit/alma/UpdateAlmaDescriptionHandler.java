@@ -23,12 +23,13 @@ import java.io.BufferedReader;
 import java.io.InputStreamReader;
 
 
-public class UpdateAlmaDescriptionHandler implements RequestHandler<UpdatePayload, GatewayResponse> {
+public class UpdateAlmaDescriptionHandler implements RequestHandler<Map<String, Object>, GatewayResponse> {
 
     public static final String QUERY_STRING_PARAMETERS_KEY = "queryStringParameters";
     public static final String ISBN_KEY = "isbn";
     public static final String SPECIFIEDMATERIAL_KEY = "specifiedMaterial";
     public static final String URL_KEY = "url";
+    public static final String BODY_KEY = "body";
     public static final String RESPONSE_MESSAGE_KEY = "responseMessage";
     public static final String RESPONSE_STATUS_KEY = "responseStatus";
     public static final String ALMA_GET_SUCCESS_MESSAGE = "Got the BIB-post for: ";
@@ -36,8 +37,8 @@ public class UpdateAlmaDescriptionHandler implements RequestHandler<UpdatePayloa
     public static final String ALMA_SRU_HOST_KEY = "ALMA_SRU_HOST";
     public static final String ALMA_API_KEY = "ALMA_API_HOST";
 
-    public static final String MISSING_EVENT_ELEMENT_QUERYSTRINGPARAMETERS =
-            "Missing event element 'queryStringParameters'.";
+    public static final String MISSING_EVENT_ELEMENT_BODY =
+            "Missing event element 'body'.";
     public static final String MANDATORY_PARAMETER_MISSING =
             "Mandatory parameter 'isbn', 'specifiedMaterial' or 'url' is missing.";
     public static final String ALMA_GET_RESPONDED_WITH_STATUSCODE = ". Alma responded with statuscode: ";
@@ -52,6 +53,7 @@ public class UpdateAlmaDescriptionHandler implements RequestHandler<UpdatePayloa
     private transient Boolean othersFailed = false;
 
     private transient String secretKey;
+    private transient Map<String, String> inputParameters;
     private transient final Environment envHandler;
     private transient String almaApiHost;
     private transient String almaSruHost;
@@ -74,7 +76,7 @@ public class UpdateAlmaDescriptionHandler implements RequestHandler<UpdatePayloa
      */
     @Override
     @SuppressWarnings("unchecked")
-    public GatewayResponse handleRequest(final UpdatePayload input, Context context) {
+    public GatewayResponse handleRequest(final Map<String, Object> input, Context context) {
         GatewayResponse gatewayResponse = new GatewayResponse();
 
         Map<String, Object> errorMessage = initVariables(input);
@@ -87,7 +89,7 @@ public class UpdateAlmaDescriptionHandler implements RequestHandler<UpdatePayloa
 
         try {
             /* Step 1. Get a REFERENCE LIST from alma-sru through a lambda. */
-            List<Reference> referenceList = getReferenceListByIsbn(input.getIsbn());
+            List<Reference> referenceList = getReferenceListByIsbn(inputParameters.get(ISBN_KEY));
             if (referenceList == null) {
                 gatewayResponse = createErrorResponse(NO_REFERENCE_OBJECT_RETRIEVED_MESSAGE,
                         Response.Status.BAD_REQUEST.getStatusCode());
@@ -115,8 +117,8 @@ public class UpdateAlmaDescriptionHandler implements RequestHandler<UpdatePayloa
                 int marcTag = xmlParser.determineElectronicOrPrint(almaResponse.body());
 
                 /* 6. Insert the new link-data into the BIB-RECORD. */
-                Boolean alreadyExists = xmlParser.alreadyExists(input.getSpecifiedMaterial(),
-                        input.getUrl(), almaResponse.body(), marcTag);
+                Boolean alreadyExists = xmlParser.alreadyExists(inputParameters.get(SPECIFIEDMATERIAL_KEY),
+                        inputParameters.get(URL_KEY), almaResponse.body(), marcTag);
                 if (alreadyExists) {
                     gatewayResponseBody.append(ALMA_POST_ALREADY_UPDATED + mmsId);
                     gatewayResponse.setStatusCode(HttpStatusCode.BAD_REQUEST);
@@ -124,8 +126,8 @@ public class UpdateAlmaDescriptionHandler implements RequestHandler<UpdatePayloa
                     continue;
                 }
 
-                Document updateNode = xmlParser.createNode(input.getSpecifiedMaterial(),
-                                input.getUrl(), marcTag);
+                Document updateNode = xmlParser.createNode(inputParameters.get(SPECIFIEDMATERIAL_KEY),
+                        inputParameters.get(URL_KEY), marcTag);
 
                 Document updatedDocument = xmlParser.insertUpdatedIntoRecord(almaResponse.body(), updateNode, marcTag);
                 String updatedXml = xmlParser.convertDocToString(updatedDocument);
@@ -197,14 +199,14 @@ public class UpdateAlmaDescriptionHandler implements RequestHandler<UpdatePayloa
      * @return returns null if everything works. If not it will return a Map
      * containing an appropriate errormessage and errorsatus.
      */
-    private Map<String, Object> initVariables(UpdatePayload input) {
+    private Map<String, Object> initVariables(Map<String, Object> input) {
         Map<String, Object> response = new ConcurrentHashMap<>();
         try {
             checkProperties();
             this.checkParameters(input);
         } catch (RuntimeException e) {
             DebugUtils.dumpException(e);
-            response.put(RESPONSE_MESSAGE_KEY, input.getIsbn() + input.getSpecifiedMaterial() + input.getUrl() + " This is the message");
+            response.put(RESPONSE_MESSAGE_KEY, e.getMessage());
             response.put(RESPONSE_STATUS_KEY, Response.Status.BAD_REQUEST.getStatusCode());
             return response;
         }
@@ -254,14 +256,13 @@ public class UpdateAlmaDescriptionHandler implements RequestHandler<UpdatePayloa
     }
 
     @SuppressWarnings("unchecked")
-    private void checkParameters(UpdatePayload input) {
+    private void checkParameters(Map<String, Object> input) {
         if (input == null
-                || input.getIsbn() == null
-                || input.getSpecifiedMaterial() == null
-                || input.getUrl() == null
+                || input.get(BODY_KEY) == null
         ) {
-            throw new ParameterException(MANDATORY_PARAMETER_MISSING);
+            throw new ParameterException(MISSING_EVENT_ELEMENT_BODY);
         }
+        inputParameters = (Map<String, String>) input.get(BODY_KEY);
     }
 
     /**
