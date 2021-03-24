@@ -24,7 +24,7 @@ import java.io.BufferedReader;
 import java.io.InputStreamReader;
 
 
-public class UpdateAlmaDescriptionHandler implements RequestHandler<Map<String, Object>, GatewayResponse> {
+public class UpdateAlmaDescriptionHandler implements RequestHandler<Map<String, String>, GatewayResponse> {
 
     public static final String QUERY_STRING_PARAMETERS_KEY = "queryStringParameters";
     public static final String ISBN_KEY = "isbn";
@@ -53,7 +53,6 @@ public class UpdateAlmaDescriptionHandler implements RequestHandler<Map<String, 
     private transient Boolean othersFailed = false;
 
     private transient String secretKey;
-    private transient Map<String, String> inputParameters;
     private transient final Environment envHandler;
     private transient String almaApiHost;
     private transient String almaSruHost;
@@ -76,7 +75,7 @@ public class UpdateAlmaDescriptionHandler implements RequestHandler<Map<String, 
      */
     @Override
     @SuppressWarnings("unchecked")
-    public GatewayResponse handleRequest(final Map<String, Object> input, Context context) {
+    public GatewayResponse handleRequest(final Map<String, String> input, Context context) {
         GatewayResponse gatewayResponse = new GatewayResponse();
 
         Map<String, Object> errorMessage = initVariables(input);
@@ -89,7 +88,7 @@ public class UpdateAlmaDescriptionHandler implements RequestHandler<Map<String, 
 
         try {
             /* Step 1. Get a REFERENCE LIST from alma-sru through a lambda. */
-            List<Reference> referenceList = getReferenceListByIsbn(inputParameters.get(ISBN_KEY));
+            List<Reference> referenceList = getReferenceListByIsbn(input.get(ISBN_KEY));
             if (referenceList == null) {
                 gatewayResponse = createErrorResponse(NO_REFERENCE_OBJECT_RETRIEVED_MESSAGE,
                         Response.Status.BAD_REQUEST.getStatusCode());
@@ -117,8 +116,8 @@ public class UpdateAlmaDescriptionHandler implements RequestHandler<Map<String, 
                 int marcTag = xmlParser.determineElectronicOrPrint(almaResponse.body());
 
                 /* 6. Insert the new link-data into the BIB-RECORD. */
-                Boolean alreadyExists = xmlParser.alreadyExists(inputParameters.get(SPECIFIEDMATERIAL_KEY),
-                        inputParameters.get(URL_KEY), almaResponse.body(), marcTag);
+                Boolean alreadyExists = xmlParser.alreadyExists(input.get(SPECIFIEDMATERIAL_KEY),
+                        input.get(URL_KEY), almaResponse.body(), marcTag);
                 if (alreadyExists) {
                     gatewayResponseBody.append(ALMA_POST_ALREADY_UPDATED + mmsId);
                     gatewayResponse.setStatusCode(HttpStatusCode.BAD_REQUEST);
@@ -126,8 +125,8 @@ public class UpdateAlmaDescriptionHandler implements RequestHandler<Map<String, 
                     continue;
                 }
 
-                Document updateNode = xmlParser.createNode(inputParameters.get(SPECIFIEDMATERIAL_KEY),
-                                inputParameters.get(URL_KEY), marcTag);
+                Document updateNode = xmlParser.createNode(input.get(SPECIFIEDMATERIAL_KEY),
+                                input.get(URL_KEY), marcTag);
 
                 Document updatedDocument = xmlParser.insertUpdatedIntoRecord(almaResponse.body(), updateNode, marcTag);
                 String updatedXml = xmlParser.convertDocToString(updatedDocument);
@@ -199,11 +198,11 @@ public class UpdateAlmaDescriptionHandler implements RequestHandler<Map<String, 
      * @return returns null if everything works. If not it will return a Map
      * containing an appropriate errormessage and errorsatus.
      */
-    private Map<String, Object> initVariables(Map<String, Object> input) {
+    private Map<String, Object> initVariables(Map<String, String> input) {
         Map<String, Object> response = new ConcurrentHashMap<>();
         try {
             checkProperties();
-            inputParameters = this.checkParameters(input);
+            this.checkParameters(input);
         } catch (RuntimeException e) {
             DebugUtils.dumpException(e);
             response.put(RESPONSE_MESSAGE_KEY, e.getMessage());
@@ -256,22 +255,16 @@ public class UpdateAlmaDescriptionHandler implements RequestHandler<Map<String, 
     }
 
     @SuppressWarnings("unchecked")
-    private Map<String, String> checkParameters(Map<String, Object> input) {
-        if (Objects.isNull(input) || !input.containsKey(QUERY_STRING_PARAMETERS_KEY)
-                || Objects.isNull(input.get(QUERY_STRING_PARAMETERS_KEY))) {
-            throw new ParameterException(MISSING_EVENT_ELEMENT_QUERYSTRINGPARAMETERS);
-        }
-        Map<String, String> queryStringParameters = (Map<String, String>) input.get(QUERY_STRING_PARAMETERS_KEY);
-        if (!queryStringParameters.containsKey(ISBN_KEY)
-                || !queryStringParameters.containsKey(SPECIFIEDMATERIAL_KEY)
-                || !queryStringParameters.containsKey(URL_KEY)
-                || Objects.isNull(queryStringParameters.get(ISBN_KEY))
-                || Objects.isNull(queryStringParameters.get(SPECIFIEDMATERIAL_KEY))
-                || Objects.isNull(queryStringParameters.get(URL_KEY))
+    private void checkParameters(Map<String, String> input) {
+        if (!input.containsKey(ISBN_KEY)
+                || !input.containsKey(SPECIFIEDMATERIAL_KEY)
+                || !input.containsKey(URL_KEY)
+                || Objects.isNull(input.get(ISBN_KEY))
+                || Objects.isNull(input.get(SPECIFIEDMATERIAL_KEY))
+                || Objects.isNull(input.get(URL_KEY))
         ) {
             throw new ParameterException(MANDATORY_PARAMETER_MISSING);
         }
-        return queryStringParameters;
     }
 
     /**
