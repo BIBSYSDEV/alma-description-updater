@@ -204,7 +204,7 @@ public class UpdateAlmaDescriptionHandler implements RequestHandler<UpdatePayloa
             this.checkParameters(input);
         } catch (RuntimeException e) {
             DebugUtils.dumpException(e);
-            response.put(RESPONSE_MESSAGE_KEY, e.getMessage());
+            response.put(RESPONSE_MESSAGE_KEY, input.toString());
             response.put(RESPONSE_STATUS_KEY, Response.Status.BAD_REQUEST.getStatusCode());
             return response;
         }
