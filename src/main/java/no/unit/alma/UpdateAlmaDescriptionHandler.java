@@ -6,7 +6,6 @@ import java.net.URL;
 import java.net.http.HttpResponse;
 import java.util.List;
 import java.util.Map;
-import java.util.Objects;
 import java.util.concurrent.ConcurrentHashMap;
 import java.util.stream.Collectors;
 import com.amazonaws.services.lambda.runtime.Context;
@@ -24,7 +23,7 @@ import java.io.BufferedReader;
 import java.io.InputStreamReader;
 
 
-public class UpdateAlmaDescriptionHandler implements RequestHandler<Map<String, String>, GatewayResponse> {
+public class UpdateAlmaDescriptionHandler implements RequestHandler<UpdatePayload, GatewayResponse> {
 
     public static final String QUERY_STRING_PARAMETERS_KEY = "queryStringParameters";
     public static final String ISBN_KEY = "isbn";
@@ -75,7 +74,7 @@ public class UpdateAlmaDescriptionHandler implements RequestHandler<Map<String, 
      */
     @Override
     @SuppressWarnings("unchecked")
-    public GatewayResponse handleRequest(final Map<String, String> input, Context context) {
+    public GatewayResponse handleRequest(final UpdatePayload input, Context context) {
         GatewayResponse gatewayResponse = new GatewayResponse();
 
         Map<String, Object> errorMessage = initVariables(input);
@@ -88,7 +87,7 @@ public class UpdateAlmaDescriptionHandler implements RequestHandler<Map<String, 
 
         try {
             /* Step 1. Get a REFERENCE LIST from alma-sru through a lambda. */
-            List<Reference> referenceList = getReferenceListByIsbn(input.get(ISBN_KEY));
+            List<Reference> referenceList = getReferenceListByIsbn(input.getIsbn());
             if (referenceList == null) {
                 gatewayResponse = createErrorResponse(NO_REFERENCE_OBJECT_RETRIEVED_MESSAGE,
                         Response.Status.BAD_REQUEST.getStatusCode());
@@ -116,8 +115,8 @@ public class UpdateAlmaDescriptionHandler implements RequestHandler<Map<String, 
                 int marcTag = xmlParser.determineElectronicOrPrint(almaResponse.body());
 
                 /* 6. Insert the new link-data into the BIB-RECORD. */
-                Boolean alreadyExists = xmlParser.alreadyExists(input.get(SPECIFIEDMATERIAL_KEY),
-                        input.get(URL_KEY), almaResponse.body(), marcTag);
+                Boolean alreadyExists = xmlParser.alreadyExists(input.getSpecifiedMaterial(),
+                        input.getUrl(), almaResponse.body(), marcTag);
                 if (alreadyExists) {
                     gatewayResponseBody.append(ALMA_POST_ALREADY_UPDATED + mmsId);
                     gatewayResponse.setStatusCode(HttpStatusCode.BAD_REQUEST);
@@ -125,8 +124,8 @@ public class UpdateAlmaDescriptionHandler implements RequestHandler<Map<String, 
                     continue;
                 }
 
-                Document updateNode = xmlParser.createNode(input.get(SPECIFIEDMATERIAL_KEY),
-                                input.get(URL_KEY), marcTag);
+                Document updateNode = xmlParser.createNode(input.getSpecifiedMaterial(),
+                                input.getUrl(), marcTag);
 
                 Document updatedDocument = xmlParser.insertUpdatedIntoRecord(almaResponse.body(), updateNode, marcTag);
                 String updatedXml = xmlParser.convertDocToString(updatedDocument);
@@ -198,7 +197,7 @@ public class UpdateAlmaDescriptionHandler implements RequestHandler<Map<String, 
      * @return returns null if everything works. If not it will return a Map
      * containing an appropriate errormessage and errorsatus.
      */
-    private Map<String, Object> initVariables(Map<String, String> input) {
+    private Map<String, Object> initVariables(UpdatePayload input) {
         Map<String, Object> response = new ConcurrentHashMap<>();
         try {
             checkProperties();
@@ -255,13 +254,11 @@ public class UpdateAlmaDescriptionHandler implements RequestHandler<Map<String, 
     }
 
     @SuppressWarnings("unchecked")
-    private void checkParameters(Map<String, String> input) {
-        if (!input.containsKey(ISBN_KEY)
-                || !input.containsKey(SPECIFIEDMATERIAL_KEY)
-                || !input.containsKey(URL_KEY)
-                || Objects.isNull(input.get(ISBN_KEY))
-                || Objects.isNull(input.get(SPECIFIEDMATERIAL_KEY))
-                || Objects.isNull(input.get(URL_KEY))
+    private void checkParameters(UpdatePayload input) {
+        if (input == null
+                || input.getIsbn() == null
+                || input.getSpecifiedMaterial() == null
+                || input.getUrl() == null
         ) {
             throw new ParameterException(MANDATORY_PARAMETER_MISSING);
         }
