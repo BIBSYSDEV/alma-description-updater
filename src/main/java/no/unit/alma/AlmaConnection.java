@@ -20,7 +20,9 @@ public final class AlmaConnection {
             .version(HttpClient.Version.HTTP_2)
             .build();
 
-    private AlmaConnection(){};
+    private AlmaConnection(){
+
+    }
 
     public static AlmaConnection getInstance() {
         return instance;

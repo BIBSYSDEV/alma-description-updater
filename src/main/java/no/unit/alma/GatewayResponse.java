@@ -22,15 +22,19 @@ public class GatewayResponse {
     private String body;
     private transient Map<String, String> headers;
     private int statusCode;
-    private transient final Environment envHandler;
+    private final transient Environment envHandler;
 
-
+    /**
+     * Constructor that accepts an Environment variable, mainly used for testing.
+     * @param envHandler the Environment variable to be submitted to the constructor.
+     */
     public GatewayResponse(Environment envHandler) {
         this.envHandler = envHandler;
         this.statusCode = Response.Status.INTERNAL_SERVER_ERROR.getStatusCode();
         this.body = EMPTY_JSON;
         this.generateDefaultHeaders();
     }
+
     /**
      * GatewayResponse contains response status, response headers and body with payload resp. error messages.
      */
@@ -88,7 +92,7 @@ public class GatewayResponse {
         String corsAllowDomain;
         try {
             corsAllowDomain = envHandler.readEnv(ALLOWED_ORIGIN_KEY);
-        } catch(IllegalStateException e){
+        } catch (IllegalStateException e) {
             //We need to catch this but dont want to handle it
             corsAllowDomain = "";
         }
@@ -100,9 +104,4 @@ public class GatewayResponse {
         headers.put("Access-Control-Allow-Headers", HttpHeaders.CONTENT_TYPE);
         this.headers = Map.copyOf(headers);
     }
-
-    public String simpleMethod(){
-        return envHandler.readEnv(ALLOWED_ORIGIN_KEY);
-    }
-
 }

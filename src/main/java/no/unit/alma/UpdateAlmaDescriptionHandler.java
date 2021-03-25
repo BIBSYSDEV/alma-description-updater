@@ -44,7 +44,8 @@ public class UpdateAlmaDescriptionHandler implements RequestHandler<Map<String, 
     public static final String ALMA_GET_RESPONDED_WITH_STATUSCODE = ". Alma responded with statuscode: ";
     public static final String ALMA_PUT_SUCCESS_MESSAGE = "Updated the BIB-post in alma with id: ";
     public static final String ALMA_PUT_FAILURE_MESSAGE = "Failed to updated the BIB-post with id: ";
-    public static final String ALMA_POST_ALREADY_UPDATED = "The BIB-post with is already up-to-date, post with mms_id: ";
+    public static final String ALMA_POST_ALREADY_UPDATED = "The BIB-post with is already up-to-date, "
+            + "post with mms_id: ";
     public static final int RESPONSE_STATUS_MULTI_STATUS_CODE = 207;
     public static final String NO_REFERENCE_OBJECT_RETRIEVED_MESSAGE = "No reference object retrieved for this ISBN";
     public static final String NUMBER_OF_REFERENCE_OBJECTS_MESSAGE = " reference object(s) retrieved from alma-sru.";
@@ -54,12 +55,17 @@ public class UpdateAlmaDescriptionHandler implements RequestHandler<Map<String, 
 
     private transient String secretKey;
     private transient Map<String, String> inputParameters;
-    private transient final Environment envHandler;
+    private final transient  Environment envHandler;
     private transient String almaApiHost;
     private transient String almaSruHost;
 
-    public UpdateAlmaDescriptionHandler(Environment envHandler) { this.envHandler = envHandler; };
-    public UpdateAlmaDescriptionHandler() { envHandler = new Environment(); }
+    public UpdateAlmaDescriptionHandler(Environment envHandler) {
+        this.envHandler = envHandler;
+    }
+
+    public UpdateAlmaDescriptionHandler() {
+        envHandler = new Environment();
+    }
 
     /**
      * Main lambda function to update the links in Alma records.
@@ -81,7 +87,7 @@ public class UpdateAlmaDescriptionHandler implements RequestHandler<Map<String, 
 
         Map<String, Object> errorMessage = initVariables(input);
 
-        if(errorMessage != null) {
+        if (errorMessage != null) {
             gatewayResponse.setErrorBody((String) errorMessage.get(RESPONSE_MESSAGE_KEY));
             gatewayResponse.setStatusCode((int) errorMessage.get(RESPONSE_STATUS_KEY));
             return gatewayResponse;
@@ -96,7 +102,8 @@ public class UpdateAlmaDescriptionHandler implements RequestHandler<Map<String, 
                 return gatewayResponse;
             }
             StringBuilder gatewayResponseBody = new StringBuilder(41);
-            gatewayResponseBody.append(referenceList.size()).append(NUMBER_OF_REFERENCE_OBJECTS_MESSAGE).append(System.lineSeparator());
+            gatewayResponseBody.append(referenceList.size()).append(NUMBER_OF_REFERENCE_OBJECTS_MESSAGE)
+                    .append(System.lineSeparator());
 
             DocumentXmlParser xmlParser = new DocumentXmlParser();
 
@@ -133,7 +140,8 @@ public class UpdateAlmaDescriptionHandler implements RequestHandler<Map<String, 
                 String updatedXml = xmlParser.convertDocToString(updatedDocument);
 
                 /* 7. Push the updated BIB-RECORD back to the alma through a put-request to the api. */
-                HttpResponse<String> response = putBibRecordInAlma(gatewayResponse, gatewayResponseBody, mmsId, updatedXml);
+                HttpResponse<String> response = putBibRecordInAlma(gatewayResponse, gatewayResponseBody, mmsId,
+                        updatedXml);
 
                 if (response.statusCode() == HttpStatusCode.OK) {
                     othersSucceeded = true;
@@ -159,7 +167,9 @@ public class UpdateAlmaDescriptionHandler implements RequestHandler<Map<String, 
      * @throws InterruptedException When something goes wrong.
      * @throws IOException When something goes wrong.
      */
-    private HttpResponse<String> getBibRecordFromAlma(GatewayResponse gatewayResponse, StringBuilder gatewayResponseBody, String mmsId) throws InterruptedException, IOException {
+    private HttpResponse<String> getBibRecordFromAlma(GatewayResponse gatewayResponse,
+                                                      StringBuilder gatewayResponseBody, String mmsId)
+            throws InterruptedException, IOException {
         Map<String, Object> responseMap;
         HttpResponse<String> almaResponse = AlmaConnection.getInstance().sendGet(mmsId, secretKey, almaApiHost);
         responseMap = createGatewayResponse(almaResponse.statusCode(),
@@ -181,9 +191,12 @@ public class UpdateAlmaDescriptionHandler implements RequestHandler<Map<String, 
      * @throws InterruptedException When something goes wrong.
      * @throws IOException When something goes wrong.
      */
-    private HttpResponse<String> putBibRecordInAlma(GatewayResponse gatewayResponse, StringBuilder gatewayResponseBody, String mmsId, String updatedXml) throws InterruptedException, IOException {
+    private HttpResponse<String> putBibRecordInAlma(GatewayResponse gatewayResponse,
+                                                    StringBuilder gatewayResponseBody, String mmsId, String updatedXml)
+            throws InterruptedException, IOException {
         Map<String, Object> responseMap;
-        HttpResponse<String> almaResponse = AlmaConnection.getInstance().sendPut(mmsId, secretKey, updatedXml, almaApiHost);
+        HttpResponse<String> almaResponse = AlmaConnection.getInstance().sendPut(mmsId, secretKey,
+                updatedXml, almaApiHost);
         responseMap = createGatewayResponse(almaResponse.statusCode(),
                 ALMA_PUT_SUCCESS_MESSAGE + mmsId + System.lineSeparator(),
                 ALMA_PUT_FAILURE_MESSAGE + mmsId + ALMA_GET_RESPONDED_WITH_STATUSCODE
@@ -194,19 +207,21 @@ public class UpdateAlmaDescriptionHandler implements RequestHandler<Map<String, 
     }
 
     /**
-     * A method for assigning values to the inputparameters and secretkey
+     * A method for assigning values to the inputparameters and secretkey.
      * @param input The same input received by the handleRequest method
      * @return returns null if everything works. If not it will return a Map
-     * containing an appropriate errormessage and errorsatus.
+     *     containing an appropriate errormessage and errorsatus.
      */
     private Map<String, Object> initVariables(Map<String, Object> input) {
         Map<String, Object> response = new ConcurrentHashMap<>();
+        othersFailed = false;
+        othersSucceeded = false;
         try {
             checkProperties();
             this.checkParameters(input);
         } catch (RuntimeException e) {
             DebugUtils.dumpException(e);
-            response.put(RESPONSE_MESSAGE_KEY, e.getMessage() + " --- " + input.get(BODY_KEY));
+            response.put(RESPONSE_MESSAGE_KEY, e.getMessage());
             response.put(RESPONSE_STATUS_KEY, Response.Status.BAD_REQUEST.getStatusCode());
             return response;
         }
@@ -221,6 +236,10 @@ public class UpdateAlmaDescriptionHandler implements RequestHandler<Map<String, 
         return null;
     }
 
+    /**
+     * Stores the systemvariable properties.
+     * @return It returnes a boolean indicating that it retrieved the systemvariables.
+     */
     public boolean checkProperties() {
         almaApiHost = envHandler.readEnv(ALMA_API_KEY);
         almaSruHost = envHandler.readEnv(ALMA_SRU_HOST_KEY);
