@@ -1,6 +1,7 @@
 package no.unit.alma;
 
 
+import com.google.gson.Gson;
 import nva.commons.utils.Environment;
 import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.Test;
@@ -66,4 +67,13 @@ public class UpdateAlmaDescriptionHandlerTest {
         assertTrue(mockedHandler.checkProperties());
     }
 
+    /**
+    @Test
+    public void testConvertStringToJSON() throws Exception {
+        Gson gson = new Gson();
+        String input = "{\r\n    \"isbn\": \"9788210053412\",\r\n    \"specifiedMaterial\": \"This is a test8\",\r\n    \"url\": \"this/is/a/test8.jpg\"\r\n}";
+        Map<String,String> attributes = gson.fromJson(input,Map.class);
+        System.out.println(attributes.get("isbn"));
+    }
+    */
 }
