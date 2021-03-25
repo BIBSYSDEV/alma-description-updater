@@ -152,15 +152,15 @@ public class DocumentXmlParser {
      * @return An int containing either 956 or 856.
      * @throws ParsingException When something goes wrong.
      */
-    public int determineElectronicOrPrint(String xml) throws ParsingException{
+    public int determineElectronicOrPrint(String xml) throws ParsingException {
         Document doc = asDocument(xml);
         NodeList datafields = doc.getElementsByTagName(DATAFIELD);
         for (int i = 0; i < datafields.getLength(); i++) {
             Node datafield = datafields.item(i);
             if (getTagNumber(datafield) == MARC_TAG_035) {
                 NodeList children = datafield.getChildNodes();
-                for(int j = 0; j < children.getLength(); j++){
-                    if(children.item(j).getTextContent().contains(ELECTRONIC_VALUE)){
+                for (int j = 0; j < children.getLength(); j++) {
+                    if (children.item(j).getTextContent().contains(ELECTRONIC_VALUE)) {
                         return MARC_TAG_956;
                     }
                 }
@@ -177,7 +177,8 @@ public class DocumentXmlParser {
      * @return True if both specifiedMaterial and url exists on the same 856 node, false if not.
      * @throws ParsingException when something goes wrong.
      */
-    public boolean alreadyExists(String specifiedMaterial, String url, String xml, int marcTag) throws ParsingException {
+    public boolean alreadyExists(String specifiedMaterial, String url, String xml, int marcTag)
+            throws ParsingException {
         try {
             boolean specifiedMaterialMatches = false;
             boolean urlMatches = false;
