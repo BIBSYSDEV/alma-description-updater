@@ -54,7 +54,7 @@ Resources:
       StageName: v1
       EndpointConfiguration:
         Type: REGIONAL
-      Policy:
+      Policies:
         Version: 2012-10-17
         Statement:
           - Effect: Allow
