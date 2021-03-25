@@ -23,7 +23,7 @@ import java.io.BufferedReader;
 import java.io.InputStreamReader;
 
 
-public class UpdateAlmaDescriptionHandler implements RequestHandler<Map<String, String>, GatewayResponse> {
+public class UpdateAlmaDescriptionHandler implements RequestHandler<Map<String, Object>, GatewayResponse> {
 
     public static final String QUERY_STRING_PARAMETERS_KEY = "queryStringParameters";
     public static final String ISBN_KEY = "isbn";
@@ -76,7 +76,7 @@ public class UpdateAlmaDescriptionHandler implements RequestHandler<Map<String, 
      */
     @Override
     @SuppressWarnings("unchecked")
-    public GatewayResponse handleRequest(final Map<String, String> input, Context context) {
+    public GatewayResponse handleRequest(final Map<String, Object> input, Context context) {
         GatewayResponse gatewayResponse = new GatewayResponse();
 
         Map<String, Object> errorMessage = initVariables(input);
@@ -199,14 +199,14 @@ public class UpdateAlmaDescriptionHandler implements RequestHandler<Map<String, 
      * @return returns null if everything works. If not it will return a Map
      * containing an appropriate errormessage and errorsatus.
      */
-    private Map<String, Object> initVariables(Map<String, String> input) {
+    private Map<String, Object> initVariables(Map<String, Object> input) {
         Map<String, Object> response = new ConcurrentHashMap<>();
         try {
             checkProperties();
             this.checkParameters(input);
         } catch (RuntimeException e) {
             DebugUtils.dumpException(e);
-            response.put(RESPONSE_MESSAGE_KEY, e.getMessage());
+            response.put(RESPONSE_MESSAGE_KEY, e.getMessage() + " --- " + input.get(BODY_KEY));
             response.put(RESPONSE_STATUS_KEY, Response.Status.BAD_REQUEST.getStatusCode());
             return response;
         }
@@ -256,14 +256,14 @@ public class UpdateAlmaDescriptionHandler implements RequestHandler<Map<String, 
     }
 
     @SuppressWarnings("unchecked")
-    private void checkParameters(Map<String, String> input) {
+    private void checkParameters(Map<String, Object> input) {
         if (input == null
                 || input.get(BODY_KEY) == null
         ) {
             throw new ParameterException(MISSING_EVENT_ELEMENT_BODY);
         }
         Gson g = new Gson();
-        inputParameters = g.fromJson(input.get(BODY_KEY), Map.class);
+        inputParameters = g.fromJson((String) input.get(BODY_KEY), Map.class);
     }
 
     /**
