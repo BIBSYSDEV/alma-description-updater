@@ -21,6 +21,8 @@ Parameters:
     Type: String
     Description: Url endpoint to the alma sru proxy lambda
     Default: 'https://api.bibs.aws.unit.no/alma?isbn='
+  CFNUserGroup:
+    Type: String
 
 Conditions:
   HasDomainName: !Not [!Equals [!Ref CustomDomain, '']]
@@ -37,6 +39,30 @@ Globals:
     EndpointConfiguration: REGIONAL
 
 Resources:
+
+  authPolicy:
+    Type: 'AWS::IAM::Policy'
+    Properties:
+      PolicyName: CFNUsers
+      PolicyDocument:
+        Version: "2012-10-17"
+        Statement:
+          - Effect: Allow
+            Action: 'execute-api:Invoke'
+            Resource: !Sub 'arn:aws:execute-api:${AWS::Region}:${AWS::AccountId}:${APIID}/*'
+              - APIID: !Ref UpdateAlmaDescriptionAPI
+          - Effect: Deny
+            Action: 'execute-api:Invoke'
+            Resource: !Sub 'arn:aws:execute-api:${AWS::Region}:${AWS::AccountId}:${APIID}/*'
+              - APIID: !Ref UpdateAlmaDescriptionAPI
+            Condition:
+              NotIpAddress:
+                'aws:SourceIp':
+                  - 35.156.26.140
+                  - 80.212.255.137
+                  - 158.36.131.0/24
+      Groups:
+        - !Ref CFNUserGroup
 
   UpdateAlmaDescriptionAPI:
     Type: AWS::Serverless::Api
@@ -55,22 +81,7 @@ Resources:
       EndpointConfiguration:
         Type: REGIONAL
       Auth:
-        ResourcePolicy:
-          CustomStatements:
-            - Effect: Allow
-              Action: 'execute-api:Invoke'
-              Resource: 'arn:aws:execute-api:eu-west-1:979605241843:j0s8urpvjl/*'
-              Principal: '*'
-            - Effect: Deny
-              Principal: '*'
-              Action: 'execute-api:Invoke'
-              Resource: 'arn:aws:execute-api:eu-west-1:979605241843:j0s8urpvjl/*'
-              Condition:
-                NotIpAddress:
-                  'aws:SourceIp':
-                    - 35.156.26.140
-                    - 80.212.255.137
-                    - 158.36.131.0/24
+        ResourcePolicy: !Ref authPolicy
       DefinitionBody:
         openapi: 3.0.3
         info:
