@@ -58,9 +58,11 @@ Resources:
         ResourcePolicy:
           CustomStatements:
             - Effect: Allow
+              Principal: '*'
               Action: 'execute-api:Invoke'
               Resource: 'arn:aws:execute-api:eu-west-1:979605241843:j0s8urpvjl/*'
             - Effect: Deny
+              Principal: '*'
               Action: 'execute-api:Invoke'
               Resource: 'arn:aws:execute-api:eu-west-1:979605241843:j0s8urpvjl/*'
               Condition:
