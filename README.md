@@ -1,2 +1,2 @@
 # alma-description-updater
-Lambda that updates the description for posts in alma
+Lambda that updates the description for posts in alma.
