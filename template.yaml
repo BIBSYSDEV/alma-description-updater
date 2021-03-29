@@ -60,11 +60,11 @@ Resources:
             - Effect: Allow
               Principal: '*'
               Action: 'execute-api:Invoke'
-              Resource: 'arn:aws:execute-api:eu-west-1:979605241843:j0s8urpvjl/*'
+              Resource: !Sub 'arn:aws:execute-api:${AWS::Region}:${AWS::AccountId}:*/*'
             - Effect: Deny
               Principal: '*'
               Action: 'execute-api:Invoke'
-              Resource: 'arn:aws:execute-api:eu-west-1:979605241843:j0s8urpvjl/*'
+              Resource: !Sub 'arn:aws:execute-api:${AWS::Region}:${AWS::AccountId}:*/*'
               Condition:
                 NotIpAddress:
                   'aws:SourceIp':
