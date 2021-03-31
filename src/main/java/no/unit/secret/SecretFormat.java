@@ -1,4 +1,4 @@
-package no.unit.alma;
+package no.unit.secret;
 
 
 public class SecretFormat {

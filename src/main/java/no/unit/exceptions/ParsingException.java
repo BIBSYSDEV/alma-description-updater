@@ -1,4 +1,4 @@
-package no.unit.alma;
+package no.unit.exceptions;
 
 public class ParsingException extends Exception {
     public ParsingException(String message, Exception e) {

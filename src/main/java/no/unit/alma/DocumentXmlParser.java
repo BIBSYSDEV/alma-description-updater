@@ -1,5 +1,6 @@
 package no.unit.alma;
 
+import no.unit.exceptions.ParsingException;
 import org.w3c.dom.Document;
 import org.w3c.dom.Node;
 import org.w3c.dom.NodeList;

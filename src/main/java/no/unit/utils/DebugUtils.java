@@ -1,4 +1,4 @@
-package no.unit.alma;
+package no.unit.utils;
 
 import java.io.PrintWriter;
 import java.io.StringWriter;
