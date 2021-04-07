@@ -1,16 +1,18 @@
 package no.unit.dynamo;
 
+import no.unit.exceptions.DynamoDbException;
+import nva.commons.utils.Environment;
+
 import java.time.Instant;
 import java.time.temporal.ChronoUnit;
 import java.util.ArrayList;
+import java.util.IllformedLocaleException;
 import java.util.List;
-import java.util.Map;
-import java.util.concurrent.ConcurrentHashMap;
 
 public class DynamoDbHelperClass {
 
-    private final String STANDARD_IMAGE_URL = "https://contents.bibsys.no/content/images/";
-    private final String STANDARD_CONTENT_URL = "https://contents.bibsys.no/content/";
+    private final String IMAGE_URL_KEY = "STANDARD_IMAGE_URL";
+    private final String CONTENT_URL_KEY = "STANDARD_CONTENT_URL";
 
 
     private final String SMALL_KEY = "small";
@@ -26,8 +28,22 @@ public class DynamoDbHelperClass {
     private final String LONG_DESCRIPTION = "Forlagets beskrivelse (lang)";
     private final String CONTENTS_DESCRIPTION = "Innholdsfortegnelse";
 
+    private transient String image_url;
+    private transient String content_url;
+    private final transient Environment envHandler;
 
-    public List<UpdatePayload> createLinks(List<DynamoDbItem> items) {
+
+    public DynamoDbHelperClass(Environment envHandler) {
+        this.envHandler = envHandler;
+        SetEnv();
+    }
+
+    public DynamoDbHelperClass() {
+        this.envHandler = new Environment();
+        SetEnv();
+    }
+
+    public List<UpdatePayload> createLinks(List<DynamoDbItem> items) throws DynamoDbException{
         List<UpdatePayload> payloads = new ArrayList<>();
         for(DynamoDbItem item : items){
             if(item.getDescription_short() != null) payloads
@@ -46,11 +62,16 @@ public class DynamoDbHelperClass {
         return payloads;
     }
 
-    public UpdatePayload createImageLink(String imageSize, String isbn) {
+    public UpdatePayload createImageLink(String imageSize, String isbn) throws DynamoDbException {
         UpdatePayload payload = new UpdatePayload();
+        String link = "";
         String secondLinkPart = isbn.substring(isbn.length() - 2, isbn.length() - 1);
         String firstLinkPart = isbn.substring(isbn.length() - 1);
-        String link = String.format(STANDARD_IMAGE_URL + imageSize + "/%s/%s/%s.jpg", firstLinkPart, secondLinkPart, isbn);
+        try {
+            link = String.format(envHandler.readEnv(IMAGE_URL_KEY) + imageSize + "/%s/%s/%s.jpg", firstLinkPart, secondLinkPart, isbn);
+        } catch (IllegalStateException e) {
+            throw new DynamoDbException("No env-variable set for " + IMAGE_URL_KEY, e);
+        }
         String specifiedMaterial;
         switch (imageSize){
             case(SMALL_KEY):
@@ -68,9 +89,14 @@ public class DynamoDbHelperClass {
         return payload;
     }
 
-    public UpdatePayload createContentLink(String contentType, String isbn) {
+    public UpdatePayload createContentLink(String contentType, String isbn) throws DynamoDbException {
         UpdatePayload payload = new UpdatePayload();
-        String link = String.format(STANDARD_CONTENT_URL + isbn + "?type=" + contentType.toUpperCase());
+        String link = "";
+        try {
+            link = String.format(envHandler.readEnv(CONTENT_URL_KEY) + isbn + "?type=" + contentType.toUpperCase());
+        } catch (IllegalStateException e) {
+            throw new DynamoDbException("No env-variable set for " + CONTENT_URL_KEY, e);
+        }
         String specifiedMaterial;
         switch (contentType.toLowerCase()){
             case(SHORT_KEY):
@@ -88,11 +114,14 @@ public class DynamoDbHelperClass {
         return payload;
     }
 
-    public String getDateAsString(){
+    public String getYesterDaysDate() {
         Instant now = Instant.now();
         Instant yesterday = now.minus(1, ChronoUnit.DAYS);
-        System.out.println(now);
-        System.out.println(yesterday);
         return yesterday.toString();
+    }
+
+    private void SetEnv() throws IllegalStateException{
+        image_url = envHandler.readEnv(IMAGE_URL_KEY);
+        content_url = envHandler.readEnv(CONTENT_URL_KEY);
     }
 }

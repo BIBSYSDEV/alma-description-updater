@@ -21,6 +21,14 @@ Parameters:
     Type: String
     Description: Url endpoint to the alma sru proxy lambda
     Default: 'https://api.bibs.aws.unit.no/alma?isbn='
+  ImageUrlStart:
+    Type: String
+    Description: The start of the url where images are stored.
+    Default: 'https://contents.bibsys.no/content/images/'
+  ContentUrlStart:
+    Type: String
+    Description: The start of the url where summaries and content-tables are stored.
+    Default: 'https://contents.bibsys.no/content/'
 
 Conditions:
   HasDomainName: !Not [!Equals [!Ref CustomDomain, '']]
@@ -161,6 +169,8 @@ Resources:
           ALLOWED_ORIGIN: '*'
           ALMA_API_HOST: !Ref AlmaBibsEndpointREST
           ALMA_SRU_HOST: !Ref AlmaSruLambda
+          STANDARD_IMAGE_URL: !Ref
+          STANDARD_CONTENT_URL: !Ref
       Handler: no.unit.alma.UpdateAlmaDescriptionHandler::handleRequest
       Runtime: java11
       MemorySize: 2048

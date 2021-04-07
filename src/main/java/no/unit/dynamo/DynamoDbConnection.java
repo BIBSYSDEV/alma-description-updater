@@ -4,15 +4,12 @@ import com.amazonaws.client.builder.AwsClientBuilder;
 import com.amazonaws.services.dynamodbv2.AmazonDynamoDB;
 import com.amazonaws.services.dynamodbv2.AmazonDynamoDBClientBuilder;
 import com.amazonaws.services.dynamodbv2.document.*;
-import com.amazonaws.services.dynamodbv2.document.spec.GetItemSpec;
-import com.amazonaws.services.dynamodbv2.document.spec.QuerySpec;
 import com.amazonaws.services.dynamodbv2.document.spec.ScanSpec;
 import com.amazonaws.services.dynamodbv2.document.utils.ValueMap;
 import com.google.gson.Gson;
+import no.unit.exceptions.DynamoDbException;
+import nva.commons.utils.Environment;
 
-import javax.xml.stream.events.EndDocument;
-import java.time.Instant;
-import java.time.temporal.ChronoUnit;
 import java.util.*;
 
 
@@ -23,38 +20,15 @@ public class DynamoDbConnection {
     public static final String CONTENTS_KEY = "contents";
     public static final String TIME_KEY = ":time";
 
-    public DynamoDbHelperClass dynamoHelper = new DynamoDbHelperClass();
+    public DynamoDbHelperClass dynamoHelper;
+
+    public DynamoDbConnection(){ dynamoHelper = new DynamoDbHelperClass(); }
+
+    public DynamoDbConnection(Environment envhandler){ dynamoHelper = new DynamoDbHelperClass(envhandler); }
+
     Gson g = new Gson();
 
-    public Item getItemsFromDynamoDB(String isbnNumber) throws Exception {
-
-        AmazonDynamoDB client = AmazonDynamoDBClientBuilder.standard()
-                .withEndpointConfiguration(new AwsClientBuilder.
-                        EndpointConfiguration(ENDPOINT, REGION))
-                .build();
-
-        DynamoDB dynamoDB = new DynamoDB(client);
-
-        Table contentsTable = dynamoDB.getTable(CONTENTS_KEY);
-
-        GetItemSpec spec = new GetItemSpec().withPrimaryKey("isbn", isbnNumber);
-
-        try {
-            System.out.println("Attempting to read the item...");
-            Item outcome = contentsTable.getItem(spec);
-            System.out.println("GetItem succeeded: " + outcome);
-            return outcome;
-
-        }
-        catch (Exception e) {
-            System.err.println("Unable to read item: " + isbnNumber);
-            System.err.println(e.getMessage());
-            return null;
-        }
-
-    }
-
-    public List<DynamoDbItem> getAllRecordsFromYesterday(String tableColumn) throws Exception {
+    public List<DynamoDbItem> getAllRecordsFromYesterday(String tableColumn) throws DynamoDbException {
         List<DynamoDbItem> dynamoDbItemList = new ArrayList<>();
 
         AmazonDynamoDB client = AmazonDynamoDBClientBuilder.standard()
@@ -65,7 +39,7 @@ public class DynamoDbConnection {
 
         Table table = dynamoDB.getTable(CONTENTS_KEY);
 
-        String yesterday = dynamoHelper.getDateAsString();
+        String yesterday = dynamoHelper.getYesterDaysDate();
 
         ScanSpec scanSpec = new ScanSpec()
                 .withFilterExpression(tableColumn + " > " + TIME_KEY)
@@ -84,8 +58,7 @@ public class DynamoDbConnection {
 
         }
         catch (Exception e) {
-            System.err.println("Unable to scan the table:");
-            System.err.println(e.getMessage());
+            throw new DynamoDbException("Unable to scan the table:", e);
         }
         return dynamoDbItemList;
     }

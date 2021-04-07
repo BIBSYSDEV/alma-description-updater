@@ -13,6 +13,11 @@ import com.amazonaws.services.lambda.runtime.RequestHandler;
 import com.google.gson.Gson;
 import com.google.gson.GsonBuilder;
 import com.google.gson.reflect.TypeToken;
+import no.unit.dynamo.DynamoDbConnection;
+import no.unit.dynamo.DynamoDbHelperClass;
+import no.unit.dynamo.DynamoDbItem;
+import no.unit.dynamo.UpdatePayload;
+import no.unit.exceptions.DynamoDbException;
 import no.unit.exceptions.ParameterException;
 import no.unit.exceptions.ParsingException;
 import no.unit.exceptions.SecretRetrieverException;
@@ -30,7 +35,6 @@ import java.io.InputStreamReader;
 
 public class UpdateAlmaDescriptionHandler implements RequestHandler<Map<String, Object>, GatewayResponse> {
 
-    public static final String QUERY_STRING_PARAMETERS_KEY = "queryStringParameters";
     public static final String ISBN_KEY = "isbn";
     public static final String SPECIFIEDMATERIAL_KEY = "specifiedMaterial";
     public static final String URL_KEY = "url";
@@ -41,6 +45,7 @@ public class UpdateAlmaDescriptionHandler implements RequestHandler<Map<String, 
     public static final String ALMA_GET_FAILURE_MESSAGE = "Couldn't get the BIB-post for: ";
     public static final String ALMA_SRU_HOST_KEY = "ALMA_SRU_HOST";
     public static final String ALMA_API_KEY = "ALMA_API_HOST";
+    public static final String MODIFIED_KEY = "modified";
 
     public static final String MISSING_EVENT_ELEMENT_BODY =
             "Missing event element 'body'.";
@@ -63,6 +68,8 @@ public class UpdateAlmaDescriptionHandler implements RequestHandler<Map<String, 
     private final transient  Environment envHandler;
     private transient String almaApiHost;
     private transient String almaSruHost;
+    private DynamoDbConnection dbConnection = new DynamoDbConnection();
+    private DynamoDbHelperClass dynamoDbHelper = new DynamoDbHelperClass();
 
     public UpdateAlmaDescriptionHandler(Environment envHandler) {
         this.envHandler = envHandler;
@@ -161,6 +168,12 @@ public class UpdateAlmaDescriptionHandler implements RequestHandler<Map<String, 
             gatewayResponse = createErrorResponse(e.getMessage(), HttpStatusCode.INTERNAL_SERVER_ERROR);
         }
         return gatewayResponse;
+    }
+
+    public List<UpdatePayload> getPayloadList() throws DynamoDbException {
+        List<DynamoDbItem> dynamoDbItems = dbConnection.getAllRecordsFromYesterday(MODIFIED_KEY);
+        List<UpdatePayload> payloadList = dynamoDbHelper.createLinks(dynamoDbItems);
+        return payloadList;
     }
 
     /**
