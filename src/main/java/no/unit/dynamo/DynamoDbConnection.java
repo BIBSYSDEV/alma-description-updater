@@ -28,6 +28,13 @@ public class DynamoDbConnection {
 
     Gson g = new Gson();
 
+    /**
+     * A method for extracting items from dynamoDB.
+     *     It will only extract items that has been modified or created within the last 24 hours.
+     * @param tableColumn Either 'modified' or 'created'
+     * @return A list of DynamoDbItems
+     * @throws DynamoDbException When something goes wrong
+     */
     public List<DynamoDbItem> getAllRecordsFromYesterday(String tableColumn) throws DynamoDbException {
         List<DynamoDbItem> dynamoDbItemList = new ArrayList<>();
 
@@ -39,7 +46,7 @@ public class DynamoDbConnection {
 
         Table table = dynamoDB.getTable(CONTENTS_KEY);
 
-        String yesterday = dynamoHelper.getYesterDaysDate();
+        String yesterday = dynamoHelper.getYesterdaysDate();
 
         ScanSpec scanSpec = new ScanSpec()
                 .withFilterExpression(tableColumn + " > " + TIME_KEY)

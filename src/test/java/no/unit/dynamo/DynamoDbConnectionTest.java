@@ -1,20 +1,12 @@
 package no.unit.dynamo;
 
-import com.amazonaws.services.dynamodbv2.document.Item;
-import com.google.gson.Gson;
-import no.unit.dynamo.DynamoDbConnection;
-import no.unit.dynamo.DynamoDbHelperClass;
-import no.unit.dynamo.DynamoDbItem;
-import no.unit.dynamo.UpdatePayload;
 import nva.commons.utils.Environment;
 import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.Test;
 
 import java.util.Iterator;
 import java.util.List;
-import java.util.Map;
 
-import static org.junit.jupiter.api.Assertions.*;
 import static org.mockito.Mockito.mock;
 import static org.mockito.Mockito.when;
 

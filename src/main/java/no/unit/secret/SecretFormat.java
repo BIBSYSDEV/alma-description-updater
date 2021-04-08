@@ -1,6 +1,8 @@
 package no.unit.secret;
 
+import nva.commons.utils.JacocoGenerated;
 
+@JacocoGenerated
 public class SecretFormat {
 
     //CHECKSTYLE:OFF

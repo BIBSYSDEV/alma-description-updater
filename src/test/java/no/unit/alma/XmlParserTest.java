@@ -110,6 +110,25 @@ public class XmlParserTest {
     }
 
     @Test
+    public void testGetTagNumber() throws Exception {
+        DocumentXmlParser parser = new DocumentXmlParser();
+        Document doc = parser.createNode(MOCK_DESCRIPTION, MOCK_URL, DocumentXmlParser.MARC_TAG_856);
+        NodeList datafields = doc.getElementsByTagName("datafield");
+        assertEquals(DocumentXmlParser.MARC_TAG_856, parser.getTagNumber(datafields.item(0)));
+    }
+
+    @Test
+    public void testGetSubfieldCode() throws Exception {
+        DocumentXmlParser parser = new DocumentXmlParser();
+        Document doc = parser.createNode(MOCK_DESCRIPTION, MOCK_URL, DocumentXmlParser.MARC_TAG_856);
+        NodeList datafields = doc.getElementsByTagName("datafield");
+        assertEquals(DocumentXmlParser.MARC_CODE_3, parser
+                .getSubfieldCode(datafields.item(0).getChildNodes().item(0)));
+        assertEquals(DocumentXmlParser.MARC_CODE_U, parser
+                .getSubfieldCode(datafields.item(0).getChildNodes().item(1)));
+    }
+
+    @Test
     public void testDatafieldAtWrongPlaceInXml() throws Exception {
         String faultyMockXml = setup(FAULTY_XML_FILE);
         String updatedFaultyMockXml = setup(UPDATED_FAULTY_XML_FILE);

@@ -1,5 +1,6 @@
 package no.unit.alma;
 
+import com.amazonaws.services.dynamodbv2.xspec.S;
 import nva.commons.utils.Environment;
 import org.junit.jupiter.api.Assertions;
 import org.junit.jupiter.api.BeforeEach;
@@ -18,6 +19,8 @@ class GatewayResponseTest {
     public static final String MOCK_BODY = "mock";
     public static final String ERROR_BODY = "error";
     public static final String ERROR_JSON = "{\"error\":\"error\"}";
+    public static final String FIRST_PART_OF_STRING = "First part of string, ";
+    public static final String SECOND_PART_OF_STRING = "Second part of string";
     Environment mockEnv;
     GatewayResponse mockedGR;
 
@@ -47,6 +50,17 @@ class GatewayResponseTest {
         mockedGR.setBody(MOCK_BODY);
         mockedGR.setStatusCode(Response.Status.OK.getStatusCode());
         Assertions.assertEquals(MOCK_BODY, mockedGR.getBody());
+    }
+
+    @Test
+    public void testAppendBody() {
+        StringBuilder stringBuilder = new StringBuilder();
+        stringBuilder.append(FIRST_PART_OF_STRING);
+        stringBuilder.append(SECOND_PART_OF_STRING);
+        GatewayResponse response = new GatewayResponse();
+        response.setBody(FIRST_PART_OF_STRING);
+        response.appendBody(SECOND_PART_OF_STRING);
+        Assertions.assertEquals(stringBuilder.toString(), response.getBody());
     }
 
 }

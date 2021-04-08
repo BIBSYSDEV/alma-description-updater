@@ -1,5 +1,7 @@
 package no.unit.utils;
 
+import nva.commons.utils.JacocoGenerated;
+
 import java.io.PrintWriter;
 import java.io.StringWriter;
 
@@ -21,6 +23,7 @@ public class DebugUtils {
      * From org.apache.commons.lang3.exception.ExceptionUtils.getStackTrace
      * in org.apache.commons:commons-lang3:3.9
      */
+    @JacocoGenerated
     public static String getStackTrace(final Throwable throwable) {
         final StringWriter sw = new StringWriter();
         final PrintWriter pw = new PrintWriter(sw, true);

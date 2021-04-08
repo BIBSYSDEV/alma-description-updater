@@ -2,11 +2,11 @@ package no.unit.dynamo;
 
 import no.unit.exceptions.DynamoDbException;
 import nva.commons.utils.Environment;
+import nva.commons.utils.JacocoGenerated;
 
 import java.time.Instant;
 import java.time.temporal.ChronoUnit;
 import java.util.ArrayList;
-import java.util.IllformedLocaleException;
 import java.util.List;
 
 public class DynamoDbHelperClass {
@@ -28,21 +28,24 @@ public class DynamoDbHelperClass {
     private final String LONG_DESCRIPTION = "Forlagets beskrivelse (lang)";
     private final String CONTENTS_DESCRIPTION = "Innholdsfortegnelse";
 
-    private transient String image_url;
-    private transient String content_url;
     private final transient Environment envHandler;
 
 
     public DynamoDbHelperClass(Environment envHandler) {
         this.envHandler = envHandler;
-        SetEnv();
     }
 
     public DynamoDbHelperClass() {
         this.envHandler = new Environment();
-        SetEnv();
     }
 
+    /**
+     * Creates a list of UpdatePayload items based on a list of DynamoDbItems.
+     *     Each DynamoDbItem may result in several UpdatePayload items.
+     * @param items The list which to extract and create UpdatePayload items from.
+     * @return A list of UpdatePayload items.
+     * @throws DynamoDbException When something goes wrong.
+     */
     public List<UpdatePayload> createLinks(List<DynamoDbItem> items) throws DynamoDbException{
         List<UpdatePayload> payloads = new ArrayList<>();
         for(DynamoDbItem item : items){
@@ -62,6 +65,13 @@ public class DynamoDbHelperClass {
         return payloads;
     }
 
+    /**
+     * Creates a UpdatePayload Item containing the correct isbn, link and specifiedMaterial.
+     * @param imageSize The size of the Image to create a link for.
+     * @param isbn The isbn to create the UpdatePayload item for.
+     * @return A UpdatePayload item.
+     * @throws DynamoDbException When the environment variable hasn't been set.
+     */
     public UpdatePayload createImageLink(String imageSize, String isbn) throws DynamoDbException {
         UpdatePayload payload = new UpdatePayload();
         String link = "";
@@ -89,6 +99,13 @@ public class DynamoDbHelperClass {
         return payload;
     }
 
+    /**
+     * Creates a UpdatePayload Item containing the correct isbn, link and specifiedMaterial.
+     * @param contentType The type of content to create a link for.
+     * @param isbn The isbn to create the UpdatePayload item for.
+     * @return A UpdatePayload item.
+     * @throws DynamoDbException When the environment variable hasn't been set.
+     */
     public UpdatePayload createContentLink(String contentType, String isbn) throws DynamoDbException {
         UpdatePayload payload = new UpdatePayload();
         String link = "";
@@ -114,14 +131,14 @@ public class DynamoDbHelperClass {
         return payload;
     }
 
-    public String getYesterDaysDate() {
+    /**
+     * Returns the full date exactly 24 hours ago as a string.
+     * @return The date 24 hours ago.
+     */
+    @JacocoGenerated
+    public String getYesterdaysDate() {
         Instant now = Instant.now();
         Instant yesterday = now.minus(1, ChronoUnit.DAYS);
         return yesterday.toString();
-    }
-
-    private void SetEnv() throws IllegalStateException{
-        image_url = envHandler.readEnv(IMAGE_URL_KEY);
-        content_url = envHandler.readEnv(CONTENT_URL_KEY);
     }
 }

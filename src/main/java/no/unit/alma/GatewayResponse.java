@@ -3,6 +3,7 @@ package no.unit.alma;
 import com.google.gson.JsonObject;
 import no.unit.utils.StringUtils;
 import nva.commons.utils.Environment;
+import nva.commons.utils.JacocoGenerated;
 
 import javax.ws.rs.core.HttpHeaders;
 import javax.ws.rs.core.MediaType;
@@ -54,23 +55,27 @@ public class GatewayResponse {
         this.body = body;
         this.generateDefaultHeaders();
     }
-
+    @JacocoGenerated
     public String getBody() {
         return body;
     }
 
+    @JacocoGenerated
     public Map<String, String> getHeaders() {
         return headers;
     }
 
+    @JacocoGenerated
     public int getStatusCode() {
         return statusCode;
     }
 
+    @JacocoGenerated
     public void setBody(String body) {
         this.body = body;
     }
 
+    @JacocoGenerated
     public void setStatusCode(int status) {
         this.statusCode = status;
     }
@@ -84,6 +89,10 @@ public class GatewayResponse {
         JsonObject json = new JsonObject();
         json.addProperty(ERROR_KEY, message);
         this.body = json.toString();
+    }
+
+    public void appendBody(String body) {
+        this.body += body;
     }
 
     private void generateDefaultHeaders() {

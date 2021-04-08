@@ -1,4 +1,4 @@
-package no.unit.alma;
+package no.unit.utils;
 
 import no.unit.utils.DebugUtils;
 import org.junit.jupiter.api.Test;

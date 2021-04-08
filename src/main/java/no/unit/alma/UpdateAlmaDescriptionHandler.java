@@ -25,6 +25,7 @@ import no.unit.marc.Reference;
 import no.unit.secret.SecretRetriever;
 import no.unit.utils.DebugUtils;
 import nva.commons.utils.Environment;
+import nva.commons.utils.JacocoGenerated;
 import org.w3c.dom.Document;
 import software.amazon.awssdk.http.HttpStatusCode;
 
@@ -35,10 +36,6 @@ import java.io.InputStreamReader;
 
 public class UpdateAlmaDescriptionHandler implements RequestHandler<Map<String, Object>, GatewayResponse> {
 
-    public static final String ISBN_KEY = "isbn";
-    public static final String SPECIFIEDMATERIAL_KEY = "specifiedMaterial";
-    public static final String URL_KEY = "url";
-    public static final String BODY_KEY = "body";
     public static final String RESPONSE_MESSAGE_KEY = "responseMessage";
     public static final String RESPONSE_STATUS_KEY = "responseStatus";
     public static final String ALMA_GET_SUCCESS_MESSAGE = "Got the BIB-post for: ";
@@ -47,27 +44,19 @@ public class UpdateAlmaDescriptionHandler implements RequestHandler<Map<String, 
     public static final String ALMA_API_KEY = "ALMA_API_HOST";
     public static final String MODIFIED_KEY = "modified";
 
-    public static final String MISSING_EVENT_ELEMENT_BODY =
-            "Missing event element 'body'.";
-    public static final String MANDATORY_PARAMETER_MISSING =
-            "Mandatory parameter 'isbn', 'specifiedMaterial' or 'url' is missing.";
     public static final String ALMA_GET_RESPONDED_WITH_STATUSCODE = ". Alma responded with statuscode: ";
     public static final String ALMA_PUT_SUCCESS_MESSAGE = "Updated the BIB-post in alma with id: ";
     public static final String ALMA_PUT_FAILURE_MESSAGE = "Failed to updated the BIB-post with id: ";
     public static final String ALMA_POST_ALREADY_UPDATED = "The BIB-post with is already up-to-date, "
             + "post with mms_id: ";
-    public static final int RESPONSE_STATUS_MULTI_STATUS_CODE = 207;
     public static final String NO_REFERENCE_OBJECT_RETRIEVED_MESSAGE = "No reference object retrieved for this ISBN";
     public static final String NUMBER_OF_REFERENCE_OBJECTS_MESSAGE = " reference object(s) retrieved from alma-sru.";
 
-    private transient Boolean othersSucceeded = false;
-    private transient Boolean othersFailed = false;
-
     private transient String secretKey;
-    private transient Map<String, String> inputParameters;
     private final transient  Environment envHandler;
     private transient String almaApiHost;
     private transient String almaSruHost;
+    private List<UpdatePayload> payloadItems;
     private DynamoDbConnection dbConnection = new DynamoDbConnection();
     private DynamoDbHelperClass dynamoDbHelper = new DynamoDbHelperClass();
 
@@ -82,6 +71,8 @@ public class UpdateAlmaDescriptionHandler implements RequestHandler<Map<String, 
     /**
      * Main lambda function to update the links in Alma records.
      * Program flow:
+     * Get an UpdatePayload LIST from dynamoDB based on modified date.
+     * For each item in that list do as follows:
      * 1. Get a REFERENCE LIST from alma-sru through a lambda.
      * 2. Loop through the LIST (and do the following for every OBJECT).
      * 3. Get the MMS_ID from the REFERENCE OBJECT.
@@ -106,70 +97,86 @@ public class UpdateAlmaDescriptionHandler implements RequestHandler<Map<String, 
         }
 
         try {
-            /* Step 1. Get a REFERENCE LIST from alma-sru through a lambda. */
-            List<Reference> referenceList = getReferenceListByIsbn(inputParameters.get(ISBN_KEY));
-            if (referenceList == null) {
-                gatewayResponse = createErrorResponse(NO_REFERENCE_OBJECT_RETRIEVED_MESSAGE,
-                        Response.Status.BAD_REQUEST.getStatusCode());
-                return gatewayResponse;
-            }
-            StringBuilder gatewayResponseBody = new StringBuilder(41);
-            gatewayResponseBody.append(referenceList.size()).append(NUMBER_OF_REFERENCE_OBJECTS_MESSAGE)
-                    .append(System.lineSeparator());
-
-            DocumentXmlParser xmlParser = new DocumentXmlParser();
-
-            /* 2. Loop through the LIST. */
-            for (Reference reference : referenceList) {
-
-                /* 3. Get the MMS_ID from the REFERENCE OBJECT. */
-                String mmsId = reference.getId();
-
-                /* 4. Use the MMS_ID to get a BIB-RECORD from the alma-api. */
-                HttpResponse<String> almaResponse = getBibRecordFromAlma(gatewayResponse, gatewayResponseBody, mmsId);
-                if (almaResponse.statusCode() != HttpStatusCode.OK) {
-                    othersFailed = true;
-                    continue;
-                }
-
-                /* 5. Determine whether the post is electronic or print. */
-                int marcTag = xmlParser.determineElectronicOrPrint(almaResponse.body());
-
-                /* 6. Insert the new link-data into the BIB-RECORD. */
-                Boolean alreadyExists = xmlParser.alreadyExists(inputParameters.get(SPECIFIEDMATERIAL_KEY),
-                        inputParameters.get(URL_KEY), almaResponse.body(), marcTag);
-                if (alreadyExists) {
-                    gatewayResponseBody.append(ALMA_POST_ALREADY_UPDATED + mmsId);
-                    gatewayResponse.setStatusCode(HttpStatusCode.BAD_REQUEST);
-                    othersFailed = true;
-                    continue;
-                }
-
-                Document updateNode = xmlParser.createNode(inputParameters.get(SPECIFIEDMATERIAL_KEY),
-                        inputParameters.get(URL_KEY), marcTag);
-
-                Document updatedDocument = xmlParser.insertUpdatedIntoRecord(almaResponse.body(), updateNode, marcTag);
-                String updatedXml = xmlParser.convertDocToString(updatedDocument);
-
-                /* 7. Push the updated BIB-RECORD back to the alma through a put-request to the api. */
-                HttpResponse<String> response = putBibRecordInAlma(gatewayResponse, gatewayResponseBody, mmsId,
-                        updatedXml);
-
-                if (response.statusCode() == HttpStatusCode.OK) {
-                    othersSucceeded = true;
-                } else {
-                    othersFailed = true;
-                }
-            }
-            gatewayResponse.setBody(gatewayResponseBody.toString());
-        } catch (ParsingException | IOException | IllegalArgumentException
-                | InterruptedException | SecurityException e) {
-            DebugUtils.dumpException(e);
-            gatewayResponse = createErrorResponse(e.getMessage(), HttpStatusCode.INTERNAL_SERVER_ERROR);
+            payloadItems = getPayloadList();
+        } catch(DynamoDbException e) {
+            gatewayResponse = createErrorResponse(e.getMessage(),
+                    Response.Status.INTERNAL_SERVER_ERROR.getStatusCode());
+            return gatewayResponse;
         }
+
+        StringBuilder gatewayResponseBody = new StringBuilder(41);
+
+        for(UpdatePayload payloadItem : payloadItems) {
+            try {
+                /* Step 1. Get a REFERENCE LIST from alma-sru through a lambda. */
+                List<Reference> referenceList = getReferenceListByIsbn(payloadItem.getIsbn());
+                if (referenceList == null) {
+                    gatewayResponseBody.append(NO_REFERENCE_OBJECT_RETRIEVED_MESSAGE + payloadItem.getIsbn());
+                    continue;
+                }
+                gatewayResponseBody.append(referenceList.size()).append(NUMBER_OF_REFERENCE_OBJECTS_MESSAGE)
+                        .append(System.lineSeparator());
+
+                DocumentXmlParser xmlParser = new DocumentXmlParser();
+
+                /* 2. Loop through the LIST. */
+                for (Reference reference : referenceList) {
+
+                    /* 3. Get the MMS_ID from the REFERENCE OBJECT. */
+                    String mmsId = reference.getId();
+
+                    /* 4. Use the MMS_ID to get a BIB-RECORD from the alma-api. */
+                    HttpResponse<String> almaResponse = getBibRecordFromAlma(gatewayResponse, gatewayResponseBody, mmsId);
+                    if (almaResponse.statusCode() != HttpStatusCode.OK) {
+                        continue;
+                    }
+
+                    /* 5. Determine whether the post is electronic or print. */
+                    int marcTag = xmlParser.determineElectronicOrPrint(almaResponse.body());
+
+                    /* 6. Insert the new link-data into the BIB-RECORD. */
+                    Boolean alreadyExists = xmlParser.alreadyExists(payloadItem.getSpecifiedMaterial(),
+                            payloadItem.getLink(), almaResponse.body(), marcTag);
+                    if (alreadyExists) {
+                        gatewayResponseBody.append(ALMA_POST_ALREADY_UPDATED + mmsId).append(System.lineSeparator());
+                        gatewayResponse.setStatusCode(HttpStatusCode.BAD_REQUEST);
+                        continue;
+                    }
+
+                    Document updateNode = xmlParser.createNode(payloadItem.getSpecifiedMaterial(),
+                            payloadItem.getLink(), marcTag);
+
+                    Document updatedDocument = xmlParser.insertUpdatedIntoRecord(almaResponse.body(), updateNode, marcTag);
+                    String updatedXml = xmlParser.convertDocToString(updatedDocument);
+
+                    /* 7. Push the updated BIB-RECORD back to the alma through a put-request to the api. */
+                    HttpResponse<String> response = putBibRecordInAlma(gatewayResponse, gatewayResponseBody, mmsId,
+                            updatedXml);
+
+                    if (response.statusCode() == HttpStatusCode.OK) {
+                        gatewayResponseBody.append(mmsId + ": Has been updated").append(System.lineSeparator());
+                    } else {
+                        gatewayResponseBody.append(mmsId + ": Faild to update, with statuscode: " + response.statusCode())
+                                .append(System.lineSeparator());
+                    }
+                }
+                gatewayResponse.appendBody(gatewayResponseBody.toString());
+            } catch (ParsingException | IOException | IllegalArgumentException
+                    | InterruptedException | SecurityException e) {
+                DebugUtils.dumpException(e);
+                gatewayResponse.appendBody(e.getMessage());
+            }
+        }
+
         return gatewayResponse;
     }
 
+    /**
+     * Create a list of UpdatePayload items based on items retrieved from dynamoDB.
+     * @return A list of UpdatePayload items.
+     * @throws DynamoDbException When something goes wrong.
+     */
+    @JacocoGenerated
     public List<UpdatePayload> getPayloadList() throws DynamoDbException {
         List<DynamoDbItem> dynamoDbItems = dbConnection.getAllRecordsFromYesterday(MODIFIED_KEY);
         List<UpdatePayload> payloadList = dynamoDbHelper.createLinks(dynamoDbItems);
@@ -194,7 +201,7 @@ public class UpdateAlmaDescriptionHandler implements RequestHandler<Map<String, 
                 ALMA_GET_SUCCESS_MESSAGE + mmsId + System.lineSeparator(),
                 ALMA_GET_FAILURE_MESSAGE + mmsId + ALMA_GET_RESPONDED_WITH_STATUSCODE
                         + almaResponse.statusCode() + System.lineSeparator());
-        gatewayResponseBody.append((String) responseMap.get(RESPONSE_MESSAGE_KEY));
+        gatewayResponseBody.append((String) responseMap.get(RESPONSE_MESSAGE_KEY)).append(System.lineSeparator());
         gatewayResponse.setStatusCode((int) responseMap.get(RESPONSE_STATUS_KEY));
         return almaResponse;
     }
@@ -219,7 +226,7 @@ public class UpdateAlmaDescriptionHandler implements RequestHandler<Map<String, 
                 ALMA_PUT_SUCCESS_MESSAGE + mmsId + System.lineSeparator(),
                 ALMA_PUT_FAILURE_MESSAGE + mmsId + ALMA_GET_RESPONDED_WITH_STATUSCODE
                         + almaResponse.statusCode() + System.lineSeparator());
-        gatewayResponseBody.append((String) responseMap.get(RESPONSE_MESSAGE_KEY));
+        gatewayResponseBody.append((String) responseMap.get(RESPONSE_MESSAGE_KEY)).append(System.lineSeparator());
         gatewayResponse.setStatusCode((int) responseMap.get(RESPONSE_STATUS_KEY));
         return almaResponse;
     }
@@ -232,11 +239,8 @@ public class UpdateAlmaDescriptionHandler implements RequestHandler<Map<String, 
      */
     private Map<String, Object> initVariables(Map<String, Object> input) {
         Map<String, Object> response = new ConcurrentHashMap<>();
-        othersFailed = false;
-        othersSucceeded = false;
         try {
             checkProperties();
-            this.checkParameters(input);
         } catch (RuntimeException e) {
             DebugUtils.dumpException(e);
             response.put(RESPONSE_MESSAGE_KEY, e.getMessage());
@@ -292,16 +296,6 @@ public class UpdateAlmaDescriptionHandler implements RequestHandler<Map<String, 
         }
     }
 
-    @SuppressWarnings("unchecked")
-    private void checkParameters(Map<String, Object> input) {
-        if (input == null
-                || input.get(BODY_KEY) == null
-        ) {
-            throw new ParameterException(MISSING_EVENT_ELEMENT_BODY);
-        }
-        Gson g = new Gson();
-        inputParameters = g.fromJson((String) input.get(BODY_KEY), Map.class);
-    }
 
     /**
      * Assigns the correct message and statusCode based on the input condition.
@@ -315,10 +309,10 @@ public class UpdateAlmaDescriptionHandler implements RequestHandler<Map<String, 
         int responseStatus;
         if (status == HttpStatusCode.OK) {
             responseMessage = success;
-            responseStatus = othersFailed ? RESPONSE_STATUS_MULTI_STATUS_CODE : HttpStatusCode.OK;
+            responseStatus = HttpStatusCode.OK;
         } else {
             responseMessage = failure;
-            responseStatus = othersSucceeded ? RESPONSE_STATUS_MULTI_STATUS_CODE : HttpStatusCode.BAD_REQUEST;
+            responseStatus = HttpStatusCode.BAD_REQUEST;
         }
 
         Map<String, Object> payload = new ConcurrentHashMap<>();
