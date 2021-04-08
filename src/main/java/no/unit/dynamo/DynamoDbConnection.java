@@ -3,14 +3,20 @@ package no.unit.dynamo;
 import com.amazonaws.client.builder.AwsClientBuilder;
 import com.amazonaws.services.dynamodbv2.AmazonDynamoDB;
 import com.amazonaws.services.dynamodbv2.AmazonDynamoDBClientBuilder;
-import com.amazonaws.services.dynamodbv2.document.*;
+import com.amazonaws.services.dynamodbv2.document.DynamoDB;
+import com.amazonaws.services.dynamodbv2.document.Table;
+import com.amazonaws.services.dynamodbv2.document.ScanOutcome;
+import com.amazonaws.services.dynamodbv2.document.ItemCollection;
+import com.amazonaws.services.dynamodbv2.document.Item;
 import com.amazonaws.services.dynamodbv2.document.spec.ScanSpec;
 import com.amazonaws.services.dynamodbv2.document.utils.ValueMap;
 import com.google.gson.Gson;
 import no.unit.exceptions.DynamoDbException;
 import nva.commons.utils.Environment;
 
-import java.util.*;
+import java.util.List;
+import java.util.Iterator;
+import java.util.ArrayList;
 
 
 public class DynamoDbConnection {
@@ -20,13 +26,18 @@ public class DynamoDbConnection {
     public static final String CONTENTS_KEY = "contents";
     public static final String TIME_KEY = ":time";
 
-    public DynamoDbHelperClass dynamoHelper;
+    private final transient DynamoDbHelperClass dynamoHelper;
 
-    public DynamoDbConnection(){ dynamoHelper = new DynamoDbHelperClass(); }
+    private final transient Gson gson = new Gson();
 
-    public DynamoDbConnection(Environment envhandler){ dynamoHelper = new DynamoDbHelperClass(envhandler); }
+    public DynamoDbConnection() {
+        dynamoHelper = new DynamoDbHelperClass();
+    }
 
-    Gson g = new Gson();
+    public DynamoDbConnection(Environment envhandler) {
+        dynamoHelper = new DynamoDbHelperClass(envhandler);
+    }
+
 
     /**
      * A method for extracting items from dynamoDB.
@@ -59,12 +70,10 @@ public class DynamoDbConnection {
             while (iter.hasNext()) {
                 Item item = iter.next();
                 String itemJson = item.toJSON();
-                DynamoDbItem dynamoItem = g.fromJson(itemJson, DynamoDbItem.class);
+                DynamoDbItem dynamoItem = gson.fromJson(itemJson, DynamoDbItem.class);
                 dynamoDbItemList.add(dynamoItem);
             }
-
-        }
-        catch (Exception e) {
+        } catch (Exception e) {
             throw new DynamoDbException("Unable to scan the table:", e);
         }
         return dynamoDbItemList;

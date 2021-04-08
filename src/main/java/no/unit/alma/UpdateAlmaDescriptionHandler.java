@@ -18,7 +18,6 @@ import no.unit.dynamo.DynamoDbHelperClass;
 import no.unit.dynamo.DynamoDbItem;
 import no.unit.dynamo.UpdatePayload;
 import no.unit.exceptions.DynamoDbException;
-import no.unit.exceptions.ParameterException;
 import no.unit.exceptions.ParsingException;
 import no.unit.exceptions.SecretRetrieverException;
 import no.unit.marc.Reference;
@@ -56,9 +55,8 @@ public class UpdateAlmaDescriptionHandler implements RequestHandler<Map<String, 
     private final transient  Environment envHandler;
     private transient String almaApiHost;
     private transient String almaSruHost;
-    private List<UpdatePayload> payloadItems;
-    private DynamoDbConnection dbConnection = new DynamoDbConnection();
-    private DynamoDbHelperClass dynamoDbHelper = new DynamoDbHelperClass();
+    private final transient DynamoDbConnection dbConnection = new DynamoDbConnection();
+    private final transient DynamoDbHelperClass dynamoDbHelper = new DynamoDbHelperClass();
 
     public UpdateAlmaDescriptionHandler(Environment envHandler) {
         this.envHandler = envHandler;
@@ -88,7 +86,7 @@ public class UpdateAlmaDescriptionHandler implements RequestHandler<Map<String, 
     public GatewayResponse handleRequest(final Map<String, Object> input, Context context) {
         GatewayResponse gatewayResponse = new GatewayResponse();
 
-        Map<String, Object> errorMessage = initVariables(input);
+        Map<String, Object> errorMessage = initVariables();
 
         if (errorMessage != null) {
             gatewayResponse.setErrorBody((String) errorMessage.get(RESPONSE_MESSAGE_KEY));
@@ -96,17 +94,20 @@ public class UpdateAlmaDescriptionHandler implements RequestHandler<Map<String, 
             return gatewayResponse;
         }
 
+        List<UpdatePayload> payloadItems;
+
         try {
             payloadItems = getPayloadList();
-        } catch(DynamoDbException e) {
+        } catch (DynamoDbException e) {
             gatewayResponse = createErrorResponse(e.getMessage(),
                     Response.Status.INTERNAL_SERVER_ERROR.getStatusCode());
             return gatewayResponse;
         }
 
         StringBuilder gatewayResponseBody = new StringBuilder(41);
+        DocumentXmlParser xmlParser = new DocumentXmlParser();
 
-        for(UpdatePayload payloadItem : payloadItems) {
+        for (UpdatePayload payloadItem : payloadItems) {
             try {
                 /* Step 1. Get a REFERENCE LIST from alma-sru through a lambda. */
                 List<Reference> referenceList = getReferenceListByIsbn(payloadItem.getIsbn());
@@ -117,8 +118,6 @@ public class UpdateAlmaDescriptionHandler implements RequestHandler<Map<String, 
                 gatewayResponseBody.append(referenceList.size()).append(NUMBER_OF_REFERENCE_OBJECTS_MESSAGE)
                         .append(System.lineSeparator());
 
-                DocumentXmlParser xmlParser = new DocumentXmlParser();
-
                 /* 2. Loop through the LIST. */
                 for (Reference reference : referenceList) {
 
@@ -126,7 +125,8 @@ public class UpdateAlmaDescriptionHandler implements RequestHandler<Map<String, 
                     String mmsId = reference.getId();
 
                     /* 4. Use the MMS_ID to get a BIB-RECORD from the alma-api. */
-                    HttpResponse<String> almaResponse = getBibRecordFromAlma(gatewayResponse, gatewayResponseBody, mmsId);
+                    HttpResponse<String> almaResponse = getBibRecordFromAlma(gatewayResponse,
+                            gatewayResponseBody, mmsId);
                     if (almaResponse.statusCode() != HttpStatusCode.OK) {
                         continue;
                     }
@@ -146,7 +146,8 @@ public class UpdateAlmaDescriptionHandler implements RequestHandler<Map<String, 
                     Document updateNode = xmlParser.createNode(payloadItem.getSpecifiedMaterial(),
                             payloadItem.getLink(), marcTag);
 
-                    Document updatedDocument = xmlParser.insertUpdatedIntoRecord(almaResponse.body(), updateNode, marcTag);
+                    Document updatedDocument = xmlParser.insertUpdatedIntoRecord(almaResponse.body(),
+                            updateNode, marcTag);
                     String updatedXml = xmlParser.convertDocToString(updatedDocument);
 
                     /* 7. Push the updated BIB-RECORD back to the alma through a put-request to the api. */
@@ -154,9 +155,10 @@ public class UpdateAlmaDescriptionHandler implements RequestHandler<Map<String, 
                             updatedXml);
 
                     if (response.statusCode() == HttpStatusCode.OK) {
-                        gatewayResponseBody.append(mmsId + ": Has been updated").append(System.lineSeparator());
+                        gatewayResponseBody.append(mmsId).append(": Has been updated").append(System.lineSeparator());
                     } else {
-                        gatewayResponseBody.append(mmsId + ": Faild to update, with statuscode: " + response.statusCode())
+                        gatewayResponseBody.append(mmsId).append(": Faild to update, with statuscode: ")
+                                .append(response.statusCode())
                                 .append(System.lineSeparator());
                     }
                 }
@@ -232,12 +234,11 @@ public class UpdateAlmaDescriptionHandler implements RequestHandler<Map<String, 
     }
 
     /**
-     * A method for assigning values to the inputparameters and secretkey.
-     * @param input The same input received by the handleRequest method
+     * A method for assigning values to the secretkey and checking the environment variables.
      * @return returns null if everything works. If not it will return a Map
      *     containing an appropriate errormessage and errorsatus.
      */
-    private Map<String, Object> initVariables(Map<String, Object> input) {
+    private Map<String, Object> initVariables() {
         Map<String, Object> response = new ConcurrentHashMap<>();
         try {
             checkProperties();

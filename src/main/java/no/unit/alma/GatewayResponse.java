@@ -55,6 +55,7 @@ public class GatewayResponse {
         this.body = body;
         this.generateDefaultHeaders();
     }
+
     @JacocoGenerated
     public String getBody() {
         return body;

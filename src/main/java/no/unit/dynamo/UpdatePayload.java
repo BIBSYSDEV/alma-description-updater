@@ -39,6 +39,7 @@ public class UpdatePayload {
         this.specifiedMaterial = specifiedMaterial;
     }
 
+    @Override
     @JacocoGenerated
     public String toString() {
         return "ISBN: " + isbn + "\nLink: " + link + "\nSpecifiedMaterial: " + specifiedMaterial;

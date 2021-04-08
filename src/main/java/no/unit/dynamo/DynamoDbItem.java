@@ -5,19 +5,19 @@ import nva.commons.utils.JacocoGenerated;
 @JacocoGenerated
 public class DynamoDbItem {
 
-    private String isbn;
-    private String title;
-    private String created;
-    private String source;
-    private String description_short;
-    private String date_of_publication;
-    private String image_large;
-    private String description_long;
-    private String modified;
-    private String image_small;
-    private String table_of_contents;
-    private String author;
-    private String image_original;
+    private transient String isbn;
+    private transient String title;
+    private transient String created;
+    private transient String source;
+    private transient String descriptionShort;
+    private transient String dateOfPublication;
+    private transient String imageLarge;
+    private transient String descriptionLong;
+    private transient String modified;
+    private transient String imageSmall;
+    private transient String tableOfContents;
+    private transient String author;
+    private transient String imageOriginal;
 
     @JacocoGenerated
     public String getIsbn() {
@@ -40,23 +40,23 @@ public class DynamoDbItem {
     }
 
     @JacocoGenerated
-    public String getDescription_short() {
-        return description_short;
+    public String getDescriptionShort() {
+        return descriptionShort;
     }
 
     @JacocoGenerated
-    public String getDate_of_publication() {
-        return date_of_publication;
+    public String getDateOfPublication() {
+        return dateOfPublication;
     }
 
     @JacocoGenerated
-    public String getImage_large() {
-        return image_large;
+    public String getImageLarge() {
+        return imageLarge;
     }
 
     @JacocoGenerated
-    public String getDescription_long() {
-        return description_long;
+    public String getDescriptionLong() {
+        return descriptionLong;
     }
 
     @JacocoGenerated
@@ -65,13 +65,13 @@ public class DynamoDbItem {
     }
 
     @JacocoGenerated
-    public String getImage_small() {
-        return image_small;
+    public String getImageSmall() {
+        return imageSmall;
     }
 
     @JacocoGenerated
-    public String getTable_of_contents() {
-        return table_of_contents;
+    public String getTableOfContents() {
+        return tableOfContents;
     }
 
     @JacocoGenerated
@@ -80,18 +80,19 @@ public class DynamoDbItem {
     }
 
     @JacocoGenerated
-    public String getImage_original() {
-        return image_original;
+    public String getImageOriginal() {
+        return imageOriginal;
     }
 
+    @Override
     @JacocoGenerated
     public String toString() {
         return "isbn: " + isbn + "\ntitle: " + title + "\ncreated: " + created + "\nsource: "
-                + source + "\ndescShort: " + description_short + "\nDate_publication: "
-                + date_of_publication + "\nimage_large: " + image_large + "\nDescLong: "
-                + description_long + "\nmodified: " + modified + "\nimage_small: "
-                + image_small + "\ncontents: " + table_of_contents + "\nauthor: " + author
-                + "\nimage_original: " + image_original;
+                + source + "\ndescShort: " + descriptionShort + "\nDate_publication: "
+                + dateOfPublication + "\nimage_large: " + imageLarge + "\nDescLong: "
+                + descriptionLong + "\nmodified: " + modified + "\nimage_small: "
+                + imageSmall + "\ncontents: " + tableOfContents + "\nauthor: " + author
+                + "\nimage_original: " + imageOriginal;
     }
 
 }

@@ -2,7 +2,6 @@ package no.unit.secret;
 
 import com.google.gson.Gson;
 import no.unit.exceptions.SecretRetrieverException;
-import no.unit.secret.SecretFormat;
 import software.amazon.awssdk.regions.Region;
 import software.amazon.awssdk.services.secretsmanager.SecretsManagerClient;
 import software.amazon.awssdk.services.secretsmanager.model.GetSecretValueRequest;
