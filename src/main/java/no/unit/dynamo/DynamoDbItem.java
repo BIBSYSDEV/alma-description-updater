@@ -84,6 +84,34 @@ public class DynamoDbItem {
         return imageOriginal;
     }
 
+    public void setIsbn(String isbn) {
+        this.isbn = isbn;
+    }
+
+    public void setDescriptionShort(String descriptionShort) {
+        this.descriptionShort = descriptionShort;
+    }
+
+    public void setImageLarge(String imageLarge) {
+        this.imageLarge = imageLarge;
+    }
+
+    public void setDescriptionLong(String descriptionLong) {
+        this.descriptionLong = descriptionLong;
+    }
+
+    public void setImageSmall(String imageSmall) {
+        this.imageSmall = imageSmall;
+    }
+
+    public void setTableOfContents(String tableOfContents) {
+        this.tableOfContents = tableOfContents;
+    }
+
+    public void setImageOriginal(String imageOriginal) {
+        this.imageOriginal = imageOriginal;
+    }
+
     @Override
     @JacocoGenerated
     public String toString() {

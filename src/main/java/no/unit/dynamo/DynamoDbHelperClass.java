@@ -151,4 +151,34 @@ public class DynamoDbHelperClass {
         Instant yesterday = now.minus(1, ChronoUnit.DAYS);
         return yesterday.toString();
     }
+
+    /**
+     * Method to fill the actually updated fields of a DynamoDbItem.
+     * @param newVersion DynamoDbItem containing the new version of the db-record.
+     * @param oldVersion DynamoDbItem containing the old version of the db-record.
+     * @return A DynamoDbItem with only the field of interest filed.
+     */
+    public DynamoDbItem extractDiffs(DynamoDbItem newVersion, DynamoDbItem oldVersion) {
+        DynamoDbItem returnVersion = new DynamoDbItem();
+        returnVersion.setIsbn(newVersion.getIsbn());
+        if (!newVersion.getDescriptionShort().equals(oldVersion.getDescriptionShort())) {
+            returnVersion.setDescriptionShort(newVersion.getDescriptionShort());
+        }
+        if (!newVersion.getDescriptionLong().equals(oldVersion.getDescriptionLong())) {
+            returnVersion.setDescriptionLong(newVersion.getDescriptionLong());
+        }
+        if (!newVersion.getTableOfContents().equals(oldVersion.getTableOfContents())) {
+            returnVersion.setTableOfContents(newVersion.getTableOfContents());
+        }
+        if (!newVersion.getImageSmall().equals(oldVersion.getImageSmall())) {
+            returnVersion.setImageSmall(newVersion.getImageSmall());
+        }
+        if (!newVersion.getImageOriginal().equals(oldVersion.getImageOriginal())) {
+            returnVersion.setImageOriginal(newVersion.getImageOriginal());
+        }
+        if (!newVersion.getImageLarge().equals(oldVersion.getImageLarge())) {
+            returnVersion.setImageLarge(newVersion.getImageLarge());
+        }
+        return returnVersion;
+    }
 }
