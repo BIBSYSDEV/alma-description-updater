@@ -84,14 +84,6 @@ class DynamoDbHelperClassTest {
     }
 
     @Test
-    void createLinksTest() throws Exception {
-        DynamoDbConnection dbConnection = new DynamoDbConnection(mockEnv);
-        List<DynamoDbItem> dynamoDbItemList = dbConnection.getAllRecordsFromYesterday(MODIFIED_KEY);
-        List<UpdatePayload> payloadList = mockDynamoDbHelper.createLinks(dynamoDbItemList);
-        printList(payloadList);
-    }
-
-    @Test
     void extractDiffsTest() throws Exception {
         Gson gson = new Gson();
         ObjectMapper objectMapper = new ObjectMapper();

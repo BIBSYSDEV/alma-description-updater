@@ -57,6 +57,7 @@ public class UpdateAlmaDescriptionHandler implements RequestHandler<Map<String, 
     private transient String almaSruHost;
     private final transient DynamoDbConnection dbConnection = new DynamoDbConnection();
     private final transient DynamoDbHelperClass dynamoDbHelper = new DynamoDbHelperClass();
+    private final transient DocumentXmlParser xmlParser = new DocumentXmlParser();
 
     public UpdateAlmaDescriptionHandler(Environment envHandler) {
         this.envHandler = envHandler;
@@ -69,15 +70,18 @@ public class UpdateAlmaDescriptionHandler implements RequestHandler<Map<String, 
     /**
      * Main lambda function to update the links in Alma records.
      * Program flow:
-     * Get an UpdatePayload LIST from dynamoDB based on modified date.
-     * For each item in that list do as follows:
-     * 1. Get a REFERENCE LIST from alma-sru through a lambda.
-     * 2. Loop through the LIST (and do the following for every OBJECT).
-     * 3. Get the MMS_ID from the REFERENCE OBJECT.
-     * 4. Use the MMS_ID to get a BIB-RECORD from the alma-api.
-     * 5. Determine whether the post is electronic or print.
-     * 6. Insert the new link-data into the BIB-RECORD.
-     * 7. Push the updated BIB-RECORD back to the alma through a put-request to the api.
+     * 1. Create an UpdatePayload LIST from the input.
+     * 2. Get a REFERENCE LIST from alma-sru through a lambda.
+     * 3. Loop through the REFERENCE LIST (and do the following for every OBJECT).
+     * 3.1 Get the MMS_ID from the REFERENCE OBJECT.
+     * 3.2 Use the MMS_ID to get a BIB-RECORD from the alma-api.
+     * 3.3 Create an XML(String) by updating the existing ALMA xml with all the updatePayload items.
+     * 3.3.1 Loop through every UpdatePayload in the UpdatePayload LIST.
+     * 3.3.2 Determine whether the post is electronic or print.
+     * 3.3.3 Check if the update already exists.
+     * 3.3.4 Create a node from the UpdatePayload item.
+     * 3.3.5 Insert update node into the record retrieved from ALMA.
+     * 4. Push the updated BIB-RECORD back to the alma through a put-request to the api.
      * @param input payload with identifying parameters
      * @return a GatewayResponse
      */
@@ -94,6 +98,7 @@ public class UpdateAlmaDescriptionHandler implements RequestHandler<Map<String, 
             return gatewayResponse;
         }
 
+        /* 1. Create an UpdatePayload LIST from the input. */
         List<UpdatePayload> payloadItems;
 
         try {
@@ -105,69 +110,55 @@ public class UpdateAlmaDescriptionHandler implements RequestHandler<Map<String, 
         }
 
         StringBuilder gatewayResponseBody = new StringBuilder(41);
-        DocumentXmlParser xmlParser = new DocumentXmlParser();
 
-        for (UpdatePayload payloadItem : payloadItems) {
-            try {
-                /* Step 1. Get a REFERENCE LIST from alma-sru through a lambda. */
-                List<Reference> referenceList = getReferenceListByIsbn(payloadItem.getIsbn());
-                if (referenceList == null) {
-                    gatewayResponseBody.append(NO_REFERENCE_OBJECT_RETRIEVED_MESSAGE + payloadItem.getIsbn());
+        try {
+            /* Step 2. Get a REFERENCE LIST from alma-sru through a lambda. */
+            List<Reference> referenceList = getReferenceListByIsbn(payloadItems.get(0).getIsbn());
+            if (referenceList == null) {
+                gatewayResponseBody.append(NO_REFERENCE_OBJECT_RETRIEVED_MESSAGE + payloadItems.get(0).getIsbn());
+                gatewayResponse.setBody(gatewayResponseBody.toString());
+                gatewayResponse.setStatusCode(400);
+                return gatewayResponse;
+            }
+            gatewayResponseBody.append(referenceList.size()).append(NUMBER_OF_REFERENCE_OBJECTS_MESSAGE)
+                    .append(System.lineSeparator());
+
+            /* 3. Loop through the LIST. */
+            for (Reference reference : referenceList) {
+
+                /* 3.1 Get the MMS_ID from the REFERENCE OBJECT. */
+                String mmsId = reference.getId();
+
+                /* 3.2 Use the MMS_ID to get a BIB-RECORD from the alma-api. */
+                HttpResponse<String> almaResponse = getBibRecordFromAlma(gatewayResponse,
+                        gatewayResponseBody, mmsId);
+                if (almaResponse.statusCode() != HttpStatusCode.OK) {
+                    gatewayResponseBody.append("Record with mms_id: " + mmsId + " not found in ALMA");
                     continue;
                 }
-                gatewayResponseBody.append(referenceList.size()).append(NUMBER_OF_REFERENCE_OBJECTS_MESSAGE)
-                        .append(System.lineSeparator());
 
-                /* 2. Loop through the LIST. */
-                for (Reference reference : referenceList) {
+                String xmlFromAlma = almaResponse.body();
 
-                    /* 3. Get the MMS_ID from the REFERENCE OBJECT. */
-                    String mmsId = reference.getId();
+                /* 3.3 Create an XML(String) by updating the existing ALMA xml with all the updatePayload items. */
+                String updatedRecord = updateBibRecord(payloadItems, xmlFromAlma);
 
-                    /* 4. Use the MMS_ID to get a BIB-RECORD from the alma-api. */
-                    HttpResponse<String> almaResponse = getBibRecordFromAlma(gatewayResponse,
-                            gatewayResponseBody, mmsId);
-                    if (almaResponse.statusCode() != HttpStatusCode.OK) {
-                        continue;
-                    }
+                /* 4. Push the updated BIB-RECORD back to the alma through a put-request to the api. */
+                HttpResponse<String> response = putBibRecordInAlma(gatewayResponse, gatewayResponseBody, mmsId,
+                        updatedRecord);
 
-                    /* 5. Determine whether the post is electronic or print. */
-                    int marcTag = xmlParser.determineElectronicOrPrint(almaResponse.body());
-
-                    /* 6. Insert the new link-data into the BIB-RECORD. */
-                    Boolean alreadyExists = xmlParser.alreadyExists(payloadItem.getSpecifiedMaterial(),
-                            payloadItem.getLink(), almaResponse.body(), marcTag);
-                    if (alreadyExists) {
-                        gatewayResponseBody.append(ALMA_POST_ALREADY_UPDATED + mmsId).append(System.lineSeparator());
-                        gatewayResponse.setStatusCode(HttpStatusCode.BAD_REQUEST);
-                        continue;
-                    }
-
-                    Document updateNode = xmlParser.createNode(payloadItem.getSpecifiedMaterial(),
-                            payloadItem.getLink(), marcTag);
-
-                    Document updatedDocument = xmlParser.insertUpdatedIntoRecord(almaResponse.body(),
-                            updateNode, marcTag);
-                    String updatedXml = xmlParser.convertDocToString(updatedDocument);
-
-                    /* 7. Push the updated BIB-RECORD back to the alma through a put-request to the api. */
-                    HttpResponse<String> response = putBibRecordInAlma(gatewayResponse, gatewayResponseBody, mmsId,
-                            updatedXml);
-
-                    if (response.statusCode() == HttpStatusCode.OK) {
-                        gatewayResponseBody.append(mmsId).append(": Has been updated").append(System.lineSeparator());
-                    } else {
-                        gatewayResponseBody.append(mmsId).append(": Faild to update, with statuscode: ")
-                                .append(response.statusCode())
-                                .append(System.lineSeparator());
-                    }
+                if (response.statusCode() == HttpStatusCode.OK) {
+                    gatewayResponseBody.append(mmsId).append(": Has been updated").append(System.lineSeparator());
+                } else {
+                    gatewayResponseBody.append(mmsId).append(": Faild to update, with statuscode: ")
+                            .append(response.statusCode())
+                            .append(System.lineSeparator());
                 }
-                gatewayResponse.appendBody(gatewayResponseBody.toString());
-            } catch (ParsingException | IOException | IllegalArgumentException
-                    | InterruptedException | SecurityException e) {
-                DebugUtils.dumpException(e);
-                gatewayResponse.appendBody(e.getMessage());
             }
+            gatewayResponse.appendBody(gatewayResponseBody.toString());
+        } catch (ParsingException | IOException | IllegalArgumentException
+                | InterruptedException | SecurityException e) {
+            DebugUtils.dumpException(e);
+            gatewayResponse.appendBody(e.getMessage());
         }
 
         return gatewayResponse;
@@ -183,6 +174,40 @@ public class UpdateAlmaDescriptionHandler implements RequestHandler<Map<String, 
         List<DynamoDbItem> dynamoDbItems = dbConnection.getAllRecordsFromYesterday(MODIFIED_KEY);
         List<UpdatePayload> payloadList = dynamoDbHelper.createLinks(dynamoDbItems);
         return payloadList;
+    }
+
+    /**
+     * Create an XML(String) by updating the existing ALMA xml with all the updatePayload items.
+     * @param updatePayloadItems A list of UpdatePayload items.
+     * @param xmlFromAlma A String in the shape of an XML the data is retrieved from ALMA.
+     * @return The same XML data that was entered now with added fields (either 856 or 956).
+     * @throws ParsingException When something goes wrong.
+     */
+    public String updateBibRecord(List<UpdatePayload> updatePayloadItems, String xmlFromAlma) throws ParsingException {
+        String xmlBuilderString = xmlFromAlma;
+        /* 3.3.1 Loop through every UpdatePayload in the UpdatePayload LIST. */
+        for (UpdatePayload payloadItem : updatePayloadItems) {
+            /* 3.3.2 Determine whether the post is electronic or print. */
+            int marcTag = xmlParser.determineElectronicOrPrint(xmlBuilderString);
+
+            /* 3.3.3 Check if the update already exists. */
+            Boolean alreadyExists = xmlParser.alreadyExists(payloadItem.getSpecifiedMaterial(),
+                    payloadItem.getLink(), xmlBuilderString, marcTag);
+            if (alreadyExists) {
+                continue;
+            }
+
+            /* 3.3.4 Create a node from the UpdatePayload item. */
+            Document updateNode = xmlParser.createNode(payloadItem.getSpecifiedMaterial(),
+                    payloadItem.getLink(), marcTag);
+
+            /* 3.3.5 Insert update node into the record retrieved from ALMA. */
+            Document updatedDocument = xmlParser.insertUpdatedIntoRecord(xmlBuilderString,
+                    updateNode, marcTag);
+            xmlBuilderString = xmlParser.convertDocToString(updatedDocument);
+
+        }
+        return xmlBuilderString;
     }
 
     /**
