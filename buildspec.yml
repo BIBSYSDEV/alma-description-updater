@@ -8,7 +8,7 @@ phases:
   install:
     runtime-versions:
       java: corretto11
-      ruby: 2.6
+      nodejs: 10
     commands:
       - pip3 install --upgrade cfn-lint
       # Upgrade AWS CLI to the latest version
@@ -34,11 +34,21 @@ phases:
 
   build:
     commands:
+      - cd $CODEBUILD_SRC_DIR/java
       - echo Build started on `date`
       # Use AWS SAM to build and package the application by using AWS CloudFormation
       - sam build
-      - sam package --s3-bucket $S3_BUCKET --output-template-file packaged.yml
+      - sam package --s3-bucket $S3_BUCKET --output-template-file packagedJava.yml
 
+      # Lint after 'package'
+      - cfn-lint packaged.yml
+
+      - cd $CODEBUILD_SRC_DIR/node
+      - echo Build started on `date`
+      - echo Building Node app...
+      # Use AWS SAM to build and package the application by using AWS CloudFormation
+      #      - sam build
+      - sam package --s3-bucket $S3_BUCKET --output-template-file packagedNode.yml
       # Lint after 'package'
       - cfn-lint packaged.yml
 

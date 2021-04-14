@@ -153,6 +153,57 @@ Resources:
                   type: string
                   description: Logg of events from the put against alma api
 
+  AlmaDLQ:
+    Type: AWS::SQS::Queue
+    Properties:
+      MessageRetentionPeriod: 1209600 #14 days
+      ReceiveMessageWaitTimeSeconds: 20
+      VisibilityTimeout: 60
+
+  AlmaQueue:
+    Type: AWS::SQS::Queue
+    Properties:
+      MessageRetentionPeriod: 1209600 #14 days
+      ReceiveMessageWaitTimeSeconds: 20
+      VisibilityTimeout: 60
+      RedrivePolicy:
+        deadLetterTargetArn: !GetAtt AlmaDLQ.Arn
+        maxReceiveCount: 3
+
+
+  StreamReader:
+    Type: AWS::Serverless::Function
+    Properties:
+      Description: A Lambda function that get data from dynamodb and put in sqs
+      Runtime: nodejs12.x
+      Handler: node/streamPump.streamReader
+      Environment:
+        Variables:
+          SqsUrlAlma: !Ref AlmaQueue
+      Events:
+        DynamoDBEvent:
+          Type: DynamoDB
+          Properties:
+            BatchSize: 100 #Default
+            Stream: '{{resolve:ssm:dynamoDBStreamArnContents:1}}'
+            StartingPosition: LATEST
+            MaximumBatchingWindowInSeconds: 5
+            MaximumRecordAgeInSeconds: 60
+            MaximumRetryAttempts: 2
+            DestinationConfig:
+              OnFailure:
+                Destination: !GetAtt AlmaDLQ.Arn # Writes batch-meta-info to SQS if everything fails
+      MemorySize: 128
+      Timeout: 55
+      Policies:
+        - AWSLambdaBasicExecutionRole
+        - SQSSendMessagePolicy:
+            QueueName:
+              !GetAtt AlmaQueue.QueueName
+        - DynamoDBStreamReadPolicy:
+            TableName: '{{resolve:ssm:dynamoDBTableNameContents:1}}'
+            StreamName: "*"
+
   UpdateAlmaDescriptionFunction:
     Type: AWS::Serverless::Function # More info about Function Resource: https://github.com/awslabs/serverless-application-model/blob/master/versions/2016-10-31.md#awsserverlessfunction
     Properties:
