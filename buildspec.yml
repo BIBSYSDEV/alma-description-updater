@@ -34,7 +34,9 @@ phases:
 
   build:
     commands:
-      - cd $CODEBUILD_SRC_DIR
+      - cp $CODEBUILD_SRC_DIR/template.yaml $CODEBUILD_SRC_DIR/java/temptale.yaml
+      - cp $CODEBUILD_SRC_DIR/template-configuration.yaml $CODEBUILD_SRC_DIR/java/temptale-configuration.yaml
+      - cd $CODEBUILD_SRC_DIR/java
       - echo Java Build started on `date`
       # Use AWS SAM to build and package the application by using AWS CloudFormation
       - sam build
@@ -43,7 +45,9 @@ phases:
       # Lint after 'package'
       - cfn-lint packagedJava.yml
 
-      - cd $CODEBUILD_SRC_DIR
+      - cp $CODEBUILD_SRC_DIR/template.yaml $CODEBUILD_SRC_DIR/node/temptale.yaml
+      - cp $CODEBUILD_SRC_DIR/template-configuration.yaml $CODEBUILD_SRC_DIR/node/temptale-configuration.yaml
+      - cd $CODEBUILD_SRC_DIR/node
       - echo Node Build started on `date`
       - echo Building Node app...
       # Use AWS SAM to build and package the application by using AWS CloudFormation
