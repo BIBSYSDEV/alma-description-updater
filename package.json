@@ -2,7 +2,7 @@
   "name": "streamPump-app",
   "version": "1.0.0",
   "description": "pumper dynamoDBstreams to SQS",
-  "main": "streamPump.js",
+  "main": "node/streamPump.js",
   "scripts": {
     "test": "echo \"run some tests here\""
   },
