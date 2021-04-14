@@ -169,8 +169,8 @@ Resources:
           ALLOWED_ORIGIN: '*'
           ALMA_API_HOST: !Ref AlmaBibsEndpointREST
           ALMA_SRU_HOST: !Ref AlmaSruLambda
-          STANDARD_IMAGE_URL: !Ref
-          STANDARD_CONTENT_URL: !Ref
+          STANDARD_IMAGE_URL: !Ref ImageUrlStart
+          STANDARD_CONTENT_URL: !Ref ContentUrlStart
       Handler: no.unit.alma.UpdateAlmaDescriptionHandler::handleRequest
       Runtime: java11
       MemorySize: 2048

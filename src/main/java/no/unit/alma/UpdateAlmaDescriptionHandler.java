@@ -7,6 +7,7 @@ import java.net.http.HttpResponse;
 import java.util.List;
 import java.util.Map;
 import java.util.concurrent.ConcurrentHashMap;
+import java.util.concurrent.TimeUnit;
 import java.util.stream.Collectors;
 import com.amazonaws.services.lambda.runtime.Context;
 import com.amazonaws.services.lambda.runtime.RequestHandler;
@@ -129,12 +130,28 @@ public class UpdateAlmaDescriptionHandler implements RequestHandler<Map<String, 
                 /* 3.1 Get the MMS_ID from the REFERENCE OBJECT. */
                 String mmsId = reference.getId();
 
+                HttpResponse<String> almaResponse = null;
                 /* 3.2 Use the MMS_ID to get a BIB-RECORD from the alma-api. */
-                HttpResponse<String> almaResponse = getBibRecordFromAlma(gatewayResponse,
+                almaResponse = getBibRecordFromAlma(gatewayResponse,
                         gatewayResponseBody, mmsId);
-                if (almaResponse.statusCode() != HttpStatusCode.OK) {
-                    gatewayResponseBody.append("Record with mms_id: " + mmsId + " not found in ALMA");
-                    continue;
+                if (almaResponse != null && almaResponse.statusCode() == HttpStatusCode.OK) {
+                    gatewayResponseBody.append("Record with mms_id: " + mmsId + " found in ALMA");
+                } else {
+                    TimeUnit.SECONDS.sleep(3);
+                    almaResponse = getBibRecordFromAlma(gatewayResponse,
+                            gatewayResponseBody, mmsId);
+                    if (almaResponse != null && almaResponse.statusCode() == HttpStatusCode.OK) {
+                        gatewayResponseBody.append("Record with mms_id: " + mmsId + " found in ALMA");
+                    } else {
+                        TimeUnit.SECONDS.sleep(3);
+                        almaResponse = getBibRecordFromAlma(gatewayResponse,
+                                gatewayResponseBody, mmsId);
+                        if (almaResponse != null && almaResponse.statusCode() == HttpStatusCode.OK) {
+                            gatewayResponseBody.append("Record with mms_id: " + mmsId + " found in ALMA");
+                        } else {
+                            //TODO Write to SQS
+                        }
+                    }
                 }
 
                 String xmlFromAlma = almaResponse.body();
@@ -142,16 +159,29 @@ public class UpdateAlmaDescriptionHandler implements RequestHandler<Map<String, 
                 /* 3.3 Create an XML(String) by updating the existing ALMA xml with all the updatePayload items. */
                 String updatedRecord = updateBibRecord(payloadItems, xmlFromAlma);
 
+                HttpResponse<String> response = null;
                 /* 4. Push the updated BIB-RECORD back to the alma through a put-request to the api. */
-                HttpResponse<String> response = putBibRecordInAlma(gatewayResponse, gatewayResponseBody, mmsId,
+                response = putBibRecordInAlma(gatewayResponse, gatewayResponseBody, mmsId,
                         updatedRecord);
 
-                if (response.statusCode() == HttpStatusCode.OK) {
+                if (response != null && response.statusCode() == HttpStatusCode.OK) {
                     gatewayResponseBody.append(mmsId).append(": Has been updated").append(System.lineSeparator());
                 } else {
-                    gatewayResponseBody.append(mmsId).append(": Faild to update, with statuscode: ")
-                            .append(response.statusCode())
-                            .append(System.lineSeparator());
+                    TimeUnit.SECONDS.sleep(3);
+                    response = putBibRecordInAlma(gatewayResponse, gatewayResponseBody, mmsId,
+                            updatedRecord);
+                    if (response != null && response.statusCode() == HttpStatusCode.OK) {
+                        gatewayResponseBody.append(mmsId).append(": Has been updated").append(System.lineSeparator());
+                    } else {
+                        TimeUnit.SECONDS.sleep(3);
+                        response = putBibRecordInAlma(gatewayResponse, gatewayResponseBody, mmsId,
+                                updatedRecord);
+                        if (response != null && response.statusCode() == HttpStatusCode.OK) {
+                            gatewayResponseBody.append(mmsId).append(": Has been updated").append(System.lineSeparator());
+                        } else {
+                            //TODO Write to SQS
+                        }
+                    }
                 }
             }
             gatewayResponse.appendBody(gatewayResponseBody.toString());
