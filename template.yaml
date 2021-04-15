@@ -199,7 +199,8 @@ Resources:
         - AWSLambdaBasicExecutionRole
         - SQSSendMessagePolicy:
             QueueName:
-              !GetAtt AlmaQueue.QueueName
+              - !GetAtt AlmaQueue.QueueName
+              - !GetAtt AlmaDLQ.QueueName
         - DynamoDBStreamReadPolicy:
             TableName: '{{resolve:ssm:dynamoDBTableNameContents:1}}'
             StreamName: "*"
