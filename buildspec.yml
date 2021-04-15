@@ -47,7 +47,7 @@ phases:
       - echo Node Build started on `date`
       - echo Building Node app...
       # Use AWS SAM to build and package the application by using AWS CloudFormation
-      #      - sam build
+      - sam build
       - sam package --s3-bucket $S3_BUCKET --output-template-file packagedNode.yml
       # Lint after 'package'
       - cfn-lint packagedNode.yml

@@ -477,49 +477,6 @@ Resources:
                 StackName: !Ref DeployStackNameJava
                 OutputFileName: ChangeSetExecuteOutput.json
               RunOrder: 3
-            - Name: CreateChangeSetNode
-              ActionTypeId:
-                Category: Deploy
-                Owner: AWS
-                Version: '1'
-                Provider: CloudFormation
-              InputArtifacts:
-                - Name: BuildArtifacts
-              Configuration:
-                ActionMode: CHANGE_SET_REPLACE
-                ChangeSetName: !Sub '${AWS::StackName}-Pipeline-changeset'
-                RoleArn: !GetAtt CloudFormationRole.Arn
-                StackName: !Ref DeployStackNameNode
-                Capabilities: CAPABILITY_AUTO_EXPAND,CAPABILITY_NAMED_IAM,CAPABILITY_IAM
-                TemplatePath: 'BuildArtifacts::packagedNode.yml'
-                TemplateConfiguration: !Sub 'BuildArtifacts::${StackTemplateConfigurationPath}'
-              RunOrder: 1
-            - !If
-              - IsPipelineApprovalActionCondition
-              - Name: ApprovalForReleaseNode
-                ActionTypeId:
-                  Category: Approval
-                  Owner: AWS
-                  Version: '1'
-                  Provider: Manual
-                Configuration:
-                  NotificationArn: !Ref PipelineApprovalTopic
-                  CustomData: !Sub 'A new change set was created for the ${DeployStackNameNode} stack in account ${AWS::AccountId}. Commit message: "#{SourceVariables.CommitMessage}". Do you want to deploy the changes?'
-                  ExternalEntityLink: 'https://aws.unit.no'
-                RunOrder: 2
-              - !Ref AWS::NoValue
-            - Name: ExecuteChangeSetNode
-              ActionTypeId:
-                Category: Deploy
-                Owner: AWS
-                Version: '1'
-                Provider: CloudFormation
-              Configuration:
-                ActionMode: CHANGE_SET_EXECUTE
-                ChangeSetName: !Sub '${AWS::StackName}-Pipeline-changeset'
-                StackName: !Ref DeployStackNameNode
-                OutputFileName: ChangeSetExecuteOutput.json
-              RunOrder: 3
 
   PipelineFailedNotification:
     Type: 'AWS::Events::Rule'
