@@ -8,7 +8,7 @@ phases:
   install:
     runtime-versions:
       java: corretto11
-      nodejs: 10
+      nodejs: 12
     commands:
       - pip3 install --upgrade cfn-lint
       # Upgrade AWS CLI to the latest version
@@ -30,27 +30,17 @@ phases:
       - cfn-lint # uses .cfnlintrc
 
       # Run cfn-nag (looks for patterns in CFN templates that may indicate insecure infrastructure)
-      # cfn_nag_scan --output-format txt --print-suppression --fail-on-warnings --blacklist-path .cfn_nag_blacklist --input-path . --template-pattern '^(?!.*buildspec\.y[a]?ml)((..*\.y[a]?ml)|(..*\.template))$'
+      cfn_nag_scan --output-format txt --print-suppression --fail-on-warnings --blacklist-path .cfn_nag_blacklist --input-path . --template-pattern '^(?!.*buildspec\.y[a]?ml)((..*\.y[a]?ml)|(..*\.template))$'
 
   build:
     commands:
-#      - cd $CODEBUILD_SRC_DIR/java
-      - echo Java Build started on `date`
+      - echo Build started on `date`
       # Use AWS SAM to build and package the application by using AWS CloudFormation
       - sam build
-      - sam package --s3-bucket $S3_BUCKET --output-template-file packagedJava.yml
+      - sam package --s3-bucket $S3_BUCKET --output-template-file packaged.yml
 
       # Lint after 'package'
-      - cfn-lint packagedJava.yml
-
-#      - cd $CODEBUILD_SRC_DIR/node
-      - echo Node Build started on `date`
-      - echo Building Node app...
-      # Use AWS SAM to build and package the application by using AWS CloudFormation
-      - sam build
-      - sam package --s3-bucket $S3_BUCKET --output-template-file packagedNode.yml
-      # Lint after 'package'
-      - cfn-lint packagedNode.yml
+      - cfn-lint packaged.yml
 
     post_build:
       commands:

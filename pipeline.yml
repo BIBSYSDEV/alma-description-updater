@@ -18,8 +18,7 @@ Metadata:
         Parameters:
           - StackTemplatePath
           - StackTemplateConfigurationPath
-          - DeployStackNameJava
-          - DeployStackNameNode
+          - DeployStackName
       - Label:
           default: Pipeline approval
         Parameters:
@@ -38,10 +37,8 @@ Metadata:
         default: Stack template path
       StackTemplateConfigurationPath:
         default: Stack template configuration path
-      DeployStackNameJava:
-        default: Stack name java
-      DeployStackNameNode:
-        default: Stack name node
+      DeployStackName:
+        default: Stack name
       PipelineApprovalAction:
         default: Approval action
       PipelineApprovalEmail:
@@ -58,14 +55,10 @@ Parameters:
     Type: String
     Default: template-configuration.json
     Description: CloudFormation stack template configuration filename in the Git repo
-  DeployStackNameJava:
+  DeployStackName:
     Type: String
-    Default: alma-description-updater-java
-    Description: The name to use for the CloudFormation java stack managed by this pipeline. (The stack created with the template in StackTemplatePath).
-  DeployStackNameNode:
-    Type: String
-    Default: alma-description-updater-node
-    Description: The name to use for the CloudFormation node stack managed by this pipeline. (The stack created with the template in StackTemplatePath).
+    Default: alma-description-updater
+    Description: The name to use for the CloudFormation stack managed by this pipeline. (The stack created with the template in StackTemplatePath).
   CodeStarConnectionArn:
     Type: AWS::SSM::Parameter::Value<String>
     Default: '/github-connection'
@@ -203,8 +196,7 @@ Resources:
                   - cloudformation:DeleteChangeSet
                 Resource:
                   - !Sub 'arn:aws:cloudformation:${AWS::Region}:${AWS::AccountId}:stack/${AWS::StackName}/*'
-                  - !Sub 'arn:aws:cloudformation:${AWS::Region}:${AWS::AccountId}:stack/${DeployStackNameJava}/*'
-                  - !Sub 'arn:aws:cloudformation:${AWS::Region}:${AWS::AccountId}:stack/${DeployStackNameNode}/*'
+                  - !Sub 'arn:aws:cloudformation:${AWS::Region}:${AWS::AccountId}:stack/${DeployStackName}/*'
               - Effect: Allow
                 Action:
                   - codestar-connections:UseConnection
@@ -420,8 +412,7 @@ Resources:
                   {
                     "StackTemplatePath": "${StackTemplatePath}",
                     "StackTemplateConfigurationPath": "${StackTemplateConfigurationPath}",
-                    "DeployStackNameJava": "${DeployStackNameJava}",
-                    "DeployStackNameNode": "${DeployStackNameNode}",
+                    "DeployStackName": "${DeployStackName}",
                     "CodeStarConnectionArn": "/github-connection",
                     "GitRepo": "${GitRepo}",
                     "GitBranch": "${GitBranch}",
@@ -434,7 +425,7 @@ Resources:
               RunOrder: 1
         - Name: Release
           Actions:
-            - Name: CreateChangeSetJava
+            - Name: CreateChangeSet
               ActionTypeId:
                 Category: Deploy
                 Owner: AWS
@@ -446,14 +437,14 @@ Resources:
                 ActionMode: CHANGE_SET_REPLACE
                 ChangeSetName: !Sub '${AWS::StackName}-Pipeline-changeset'
                 RoleArn: !GetAtt CloudFormationRole.Arn
-                StackName: !Ref DeployStackNameJava
+                StackName: !Ref DeployStackName
                 Capabilities: CAPABILITY_AUTO_EXPAND,CAPABILITY_NAMED_IAM,CAPABILITY_IAM
-                TemplatePath: 'BuildArtifacts::packagedJava.yml'
+                TemplatePath: 'BuildArtifacts::packaged.yml'
                 TemplateConfiguration: !Sub 'BuildArtifacts::${StackTemplateConfigurationPath}'
               RunOrder: 1
             - !If
               - IsPipelineApprovalActionCondition
-              - Name: ApprovalForReleaseJava
+              - Name: ApprovalForRelease
                 ActionTypeId:
                   Category: Approval
                   Owner: AWS
@@ -461,11 +452,11 @@ Resources:
                   Provider: Manual
                 Configuration:
                   NotificationArn: !Ref PipelineApprovalTopic
-                  CustomData: !Sub 'A new change set was created for the ${DeployStackNameJava} stack in account ${AWS::AccountId}. Commit message: "#{SourceVariables.CommitMessage}". Do you want to deploy the changes?'
+                  CustomData: !Sub 'A new change set was created for the ${DeployStackName} stack in account ${AWS::AccountId}. Commit message: "#{SourceVariables.CommitMessage}". Do you want to deploy the changes?'
                   ExternalEntityLink: 'https://aws.unit.no'
                 RunOrder: 2
               - !Ref AWS::NoValue
-            - Name: ExecuteChangeSetJava
+            - Name: ExecuteChangeSet
               ActionTypeId:
                 Category: Deploy
                 Owner: AWS
@@ -474,7 +465,7 @@ Resources:
               Configuration:
                 ActionMode: CHANGE_SET_EXECUTE
                 ChangeSetName: !Sub '${AWS::StackName}-Pipeline-changeset'
-                StackName: !Ref DeployStackNameJava
+                StackName: !Ref DeployStackName
                 OutputFileName: ChangeSetExecuteOutput.json
               RunOrder: 3
 
