@@ -199,7 +199,7 @@ Resources:
         - AWSLambdaBasicExecutionRole
         - SQSSendMessagePolicy:
             QueueName:
-              !GetAtt DynamodbDLQ.QueueName
+              !GetAtt AlmaDLQ.QueueName
         - SQSSendMessagePolicy:
             QueueName:
               !GetAtt AlmaQueue.QueueName
