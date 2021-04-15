@@ -197,26 +197,15 @@ Resources:
       Timeout: 55
       Policies:
         - AWSLambdaBasicExecutionRole
-        - MyQueuePermissions
+        - SQSSendMessagePolicy:
+            QueueName:
+              !GetAtt DynamodbDLQ.QueueName
+        - SQSSendMessagePolicy:
+            QueueName:
+              !GetAtt AlmaQueue.QueueName
         - DynamoDBStreamReadPolicy:
             TableName: '{{resolve:ssm:dynamoDBTableNameContents:1}}'
             StreamName: "*"
-
-  MyQueuePermissions:
-    Type: AWS::SQS::QueuePolicy
-    Properties:
-      PolicyDocument:
-        Statement:
-          Effect: Allow
-          Principal:
-            AWS: '*'
-          Action: SQS:SendMessage
-          Resource:
-            - !GetAtt AlmaQueue.Arn
-            - !GetAtt AlmaDLQ.Arn
-      Queues:
-        - !Ref AlmaQueue
-        - !Ref AlmaDLQ
 
   UpdateAlmaDescriptionFunction:
     Type: AWS::Serverless::Function # More info about Function Resource: https://github.com/awslabs/serverless-application-model/blob/master/versions/2016-10-31.md#awsserverlessfunction
