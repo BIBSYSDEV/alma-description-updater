@@ -29,9 +29,22 @@ exports.streamReader =  function(event, context) {
 exports.almaErrorHandler =  function(event, context) {
     console.info('Received records:'+ event.Records.length);
     event.Records.forEach(function(record) {
-        console.log("Bok: "+JSON.parse(record.body).dynamodb.Keys.isbn.S); //FOR DEMO
-        if (JSON.parse(record.body).dynamodb.Keys.isbn.S == 5)  // FOR DEMO - ERSTATT MED COUNTER>n eller sjekk timestamp fra DynamoDB for å unngå evig loop
-            throw new Error("Error bok 5");
+        let timestamp = JSON.parse(record.body).dynamodb.ApproximateCreationDateTime;
+        let msgCreationDate = new Date(timestamp * 1000);
+        console.log("date message was created: "+ msgCreationDate);
+        let halvAJearAgo = addMonths(Date.now(), -6);
+        let queueUrl;
+        if (msgCreationDate < halvAJearAgo)
+        {
+            queueUrl = process.env.SqsUrlAlmaDLQ;
+        } else {
+            queueUrl = process.env.SqsUrlAlmaQ;
+        }
+        let params = {MessageBody: JSON.stringify(record), QueueUrl: queueUrl};
+        sqs.sendMessage(params).promise()
+            .then(data => console.log("Successfully added message to queue", data.MessageId))
+            .catch(err => console.log("There was an Error: ", err));
+
     });
 }
 
@@ -50,5 +63,13 @@ exports.almaErrorScheduler =  function(event, context) {
 }
 
 
+const addMonths = (input, months) => {
+    const date = new Date(input)
+    date.setDate(1)
+    date.setMonth(date.getMonth() + months)
+    date.setDate(Math.min(input.getDate(), getDaysInMonth(date.getFullYear(), date.getMonth()+1)))
+    return date
+}
 
 
+const getDaysInMonth = (year, month) => new Date(year, month, 0).getDate()
