@@ -2,14 +2,12 @@ package no.unit.alma;
 
 
 import com.google.gson.Gson;
+import com.google.gson.JsonObject;
+import com.google.gson.JsonParser;
 import no.unit.dynamo.UpdatePayload;
-import no.unit.secret.SecretFormat;
 import nva.commons.utils.Environment;
 import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.Test;
-import org.w3c.dom.Document;
-import org.w3c.dom.Node;
-import org.w3c.dom.NodeList;
 import software.amazon.awssdk.http.HttpStatusCode;
 
 import java.io.BufferedReader;
@@ -67,29 +65,6 @@ public class UpdateAlmaDescriptionHandlerTest {
     }
 
     @Test
-    public void testCreateGatewayResponse() {
-        String successMessage = "Success";
-        String failureMessage = "Failure";
-
-        Map<String, Object> successResponse =
-                mockedHandler.createGatewayResponse(HttpStatusCode.OK, successMessage, failureMessage);
-        assertEquals(successMessage, successResponse.get(mockedHandler.RESPONSE_MESSAGE_KEY));
-        Map<String, Object> failResponse =
-                mockedHandler.createGatewayResponse(HttpStatusCode.BAD_REQUEST, successMessage, failureMessage);
-        assertEquals(failureMessage, failResponse.get(mockedHandler.RESPONSE_MESSAGE_KEY));
-    }
-
-    @Test
-    public void testCreateErrorResponse() {
-        String errorMessage = "Error";
-        int statusCode = 500;
-        String actualErrorMessage = "{\"error\":\"Error\"}";
-        GatewayResponse gatewayResponse = mockedHandler.createErrorResponse(errorMessage, statusCode);
-        assertEquals(actualErrorMessage, gatewayResponse.getBody());
-        assertEquals(statusCode, gatewayResponse.getStatusCode());
-    }
-
-    @Test
     public void updateBibRecordTest() throws Exception {
         Gson g = new Gson();
         String mockXml = setup(CORRECT_XML_FILE);
@@ -107,7 +82,7 @@ public class UpdateAlmaDescriptionHandlerTest {
 
     @Test
     public void testCheckProperties() throws Exception {
-        assertTrue(mockedHandler.checkProperties());
+        assertTrue(mockedHandler.readEnvVariables());
     }
 
 }

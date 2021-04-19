@@ -88,9 +88,17 @@ public class DynamoDbItem {
         this.isbn = isbn;
     }
 
+    public void setTitle(String title) { this.title = title; }
+
+    public void setCreated(String created) { this.created = created; }
+
+    public void setSource(String source) { this.source = source; }
+
     public void setDescriptionShort(String descriptionShort) {
         this.descriptionShort = descriptionShort;
     }
+
+    public void setDateOfPublication(String dateOfPublication) { this.dateOfPublication = dateOfPublication; }
 
     public void setImageLarge(String imageLarge) {
         this.imageLarge = imageLarge;
@@ -100,6 +108,8 @@ public class DynamoDbItem {
         this.descriptionLong = descriptionLong;
     }
 
+    public void setModified(String modified) { this.modified = modified; }
+
     public void setImageSmall(String imageSmall) {
         this.imageSmall = imageSmall;
     }
@@ -107,6 +117,8 @@ public class DynamoDbItem {
     public void setTableOfContents(String tableOfContents) {
         this.tableOfContents = tableOfContents;
     }
+
+    public void setAuthor(String author) { this.author = author; }
 
     public void setImageOriginal(String imageOriginal) {
         this.imageOriginal = imageOriginal;

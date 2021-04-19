@@ -8,7 +8,6 @@ import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.Test;
 
 import java.io.BufferedReader;
-import java.io.File;
 import java.io.InputStream;
 import java.io.InputStreamReader;
 import java.util.Iterator;
@@ -18,7 +17,7 @@ import static org.junit.jupiter.api.Assertions.assertEquals;
 import static org.mockito.Mockito.mock;
 import static org.mockito.Mockito.when;
 
-class DynamoDbHelperClassTest {
+class DynamoDbHelperTest {
 
     private static final String CREATED_KEY = "created";
     private static final String MODIFIED_KEY = "modified";
@@ -30,9 +29,10 @@ class DynamoDbHelperClassTest {
     private static final String NEWVERSION = "/newVersion.JSON";
     private static final String OLDVERSION = "/oldVersion.JSON";
     private static final String RETURNVERSION = "/returnVersion.JSON";
+    public static final String MOCKEVENT_FILE = "/MockEvent.JSON";
 
     Environment mockEnv;
-    DynamoDbHelperClass mockDynamoDbHelper;
+    DynamoDbHelper mockDynamoDbHelper;
 
     public void printList(List<?> theList) {
         Iterator<?> iter = theList.iterator();
@@ -66,7 +66,7 @@ class DynamoDbHelperClassTest {
     public void init() {
         mockEnv = mock(Environment.class);
         initEnv();
-        mockDynamoDbHelper = new DynamoDbHelperClass(mockEnv);
+        mockDynamoDbHelper = new DynamoDbHelper(mockEnv);
     }
 
     @Test
@@ -95,6 +95,15 @@ class DynamoDbHelperClassTest {
         DynamoDbItem returnItem = objectMapper.readValue(returnVersion, DynamoDbItem.class);
         DynamoDbItem theItem = mockDynamoDbHelper.extractDiffs(newItem, oldItem);
         assertEquals(returnItem.toString(), theItem.toString());
+    }
+
+    @Test
+    public void mockingEventTest() throws Exception {
+        String mockEvent = setup(MOCKEVENT_FILE);
+        List<UpdatePayload> payloadList = mockDynamoDbHelper.splitEventIntoUpdatePayloads(mockEvent);
+        for(UpdatePayload payload: payloadList){
+            System.out.println(payload.toString());
+        }
     }
 
 }
