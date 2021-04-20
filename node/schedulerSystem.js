@@ -32,9 +32,9 @@ exports.almaErrorHandler =  function(event, context) {
         let timestamp = JSON.parse(record.body).dynamodb.ApproximateCreationDateTime;
         let msgCreationDate = new Date(timestamp * 1000);
         console.log("date message was created: "+ msgCreationDate);
-        let halvAJearAgo = addMonths(Date.now(), -6);
+        let sixMonthAgo = addMonths(Date.now(), process.env.durationToRetryNotFoundRecordsInMonth);
         let queueUrl;
-        if (msgCreationDate < halvAJearAgo)
+        if (msgCreationDate < sixMonthAgo)
         {
             queueUrl = process.env.SqsUrlAlmaDLQ;
         } else {

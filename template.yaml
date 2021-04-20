@@ -21,6 +21,10 @@ Parameters:
     Type: String
     Description: Url endpoint to the alma sru proxy lambda
     Default: 'https://api.bibs.aws.unit.no/alma?isbn='
+  durationToRetryNotFoundRecordsInMonth:
+    Type: Number
+    Description: Duration in Month (negativ number) for how long should be retried to update Alma with not found records
+    Default: -6
 
 Conditions:
   HasDomainName: !Not [!Equals [!Ref CustomDomain, '']]
@@ -37,6 +41,14 @@ Globals:
     EndpointConfiguration: REGIONAL
 
 Resources:
+
+  DurationToRetryNotFoundParamter:
+    Type: AWS::SSM::Parameter
+    Properties:
+      Name: durationToRetryNotFoundRecordsInMonth
+      Type: Number
+      Value: !Ref durationToRetryNotFoundRecordsInMonth
+      Description: Duration in Month (negativ number) for how long should be retried to update Alma with not found records
 
   ################
   #
@@ -298,6 +310,7 @@ Resources:
         Variables:
           SqsUrlAlmaQ: !Ref AlmaUpdateQueue
           SqsUrlAlmaDLQ: !Ref AlmaUpdateDLQ
+          durationToRetryNotFoundRecordsInMonth: '{{resolve:ssm:durationToRetryNotFoundRecordsInMonth:1}}'
       Events:
         SQSQueueEvent:
           Type: SQS
