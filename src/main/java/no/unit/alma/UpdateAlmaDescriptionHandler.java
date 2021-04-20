@@ -5,8 +5,6 @@ import java.lang.reflect.Type;
 import java.net.URL;
 import java.net.http.HttpResponse;
 import java.util.List;
-import java.util.Map;
-import java.util.concurrent.ConcurrentHashMap;
 import java.util.concurrent.TimeUnit;
 import java.util.stream.Collectors;
 import com.amazonaws.services.lambda.runtime.Context;
@@ -14,8 +12,9 @@ import com.amazonaws.services.lambda.runtime.RequestHandler;
 import com.amazonaws.services.lambda.runtime.events.SQSEvent;
 import com.google.gson.*;
 import com.google.gson.reflect.TypeToken;
-import no.unit.dynamo.DynamoDbHelper;
-import no.unit.dynamo.UpdatePayload;
+import no.unit.scheduler.SchedulerHelper;
+import no.unit.scheduler.UpdateItem;
+import no.unit.exceptions.SqsException;
 import no.unit.exceptions.ParsingException;
 import no.unit.exceptions.SecretRetrieverException;
 import no.unit.marc.Reference;
@@ -25,7 +24,6 @@ import nva.commons.utils.Environment;
 import org.w3c.dom.Document;
 import software.amazon.awssdk.http.HttpStatusCode;
 
-import javax.ws.rs.core.Response;
 import java.io.BufferedReader;
 import java.io.InputStreamReader;
 
@@ -34,12 +32,12 @@ public class UpdateAlmaDescriptionHandler implements RequestHandler<SQSEvent, Vo
 
     public static final String ALMA_SRU_HOST_KEY = "ALMA_SRU_HOST";
     public static final String ALMA_API_KEY = "ALMA_API_HOST";
-    
+
     private transient String secretKey;
     private final transient  Environment envHandler;
     private transient String almaApiHost;
     private transient String almaSruHost;
-    private final transient DynamoDbHelper dynamoDbHelper = new DynamoDbHelper();
+    private final transient SchedulerHelper schedulerHelper = new SchedulerHelper();
     private final transient DocumentXmlParser xmlParser = new DocumentXmlParser();
 
     public UpdateAlmaDescriptionHandler(Environment envHandler) {
@@ -53,16 +51,16 @@ public class UpdateAlmaDescriptionHandler implements RequestHandler<SQSEvent, Vo
     /**
      * Main lambda function to update the links in Alma records.
      * Program flow:
-     * 1. Create an UpdatePayload LIST from the input.
+     * 1. Create an UpdateItem LIST from the input.
      * 2. Get a REFERENCE LIST from alma-sru through a lambda.
      * 3. Loop through the REFERENCE LIST (and do the following for every OBJECT).
      * 3.1 Get the MMS_ID from the REFERENCE OBJECT.
      * 3.2 Use the MMS_ID to get a BIB-RECORD from the alma-api.
-     * 3.3 Create an XML(String) by updating the existing ALMA xml with all the updatePayload items.
-     * 3.3.1 Loop through every UpdatePayload in the UpdatePayload LIST.
+     * 3.3 Create an XML(String) by updating the existing ALMA xml with all the UpdateItems.
+     * 3.3.1 Loop through every UpdateItem in the UpdateItem LIST.
      * 3.3.2 Determine whether the post is electronic or print.
      * 3.3.3 Check if the update already exists.
-     * 3.3.4 Create a node from the UpdatePayload item.
+     * 3.3.4 Create a node from the UpdateItem.
      * 3.3.5 Insert update node into the record retrieved from ALMA.
      * 4. Push the updated BIB-RECORD back to the alma through a put-request to the api.
      * @param event payload with identifying parameters
@@ -78,11 +76,11 @@ public class UpdateAlmaDescriptionHandler implements RequestHandler<SQSEvent, Vo
             //TODO Throw an exception
         }
 
-        /* 1. Create an UpdatePayload LIST from the input. */
-        List<UpdatePayload> payloadItems;
+        /* 1. Create an UpdateItem LIST from the input. */
+        List<UpdateItem> updateItems;
 
         try {
-            payloadItems = dynamoDbHelper.splitEventIntoUpdatePayloads(event.getRecords().get(0).getBody());
+            updateItems = schedulerHelper.splitEventIntoUpdateItems(event.getRecords().get(0).getBody());
         } catch (Exception e) {
             //TODO Throw an exception
             return null;
@@ -90,7 +88,7 @@ public class UpdateAlmaDescriptionHandler implements RequestHandler<SQSEvent, Vo
 
         try {
             /* Step 2. Get a REFERENCE LIST from alma-sru through a lambda. */
-            List<Reference> referenceList = getReferenceListByIsbn(payloadItems.get(0).getIsbn());
+            List<Reference> referenceList = getReferenceListByIsbn(updateItems.get(0).getIsbn());
             if (referenceList == null) {
                 //TODO Throw an exception
             }
@@ -102,7 +100,7 @@ public class UpdateAlmaDescriptionHandler implements RequestHandler<SQSEvent, Vo
                 String mmsId = reference.getId();
 
                 /* 3.2 Use the MMS_ID to get a BIB-RECORD from the alma-api. */
-                HttpResponse<String> almaResponse = getBibRecordFromAlmaWithRetries(mmsId);
+                HttpResponse<String> almaResponse = getBibRecordFromAlmaWithRetries(mmsId, event);
 
                 if (almaResponse == null) {
                     return null;
@@ -110,18 +108,18 @@ public class UpdateAlmaDescriptionHandler implements RequestHandler<SQSEvent, Vo
 
                 String xmlFromAlma = almaResponse.body();
 
-                /* 3.3 Create an XML(String) by updating the existing ALMA xml with all the updatePayload items. */
-                String updatedRecord = updateBibRecord(payloadItems, xmlFromAlma);
+                /* 3.3 Create an XML(String) by updating the existing ALMA xml with all the updateItems. */
+                String updatedRecord = updateBibRecord(updateItems, xmlFromAlma);
 
                 /* 4. Push the updated BIB-RECORD back to the alma through a put-request to the api. */
-                HttpResponse<String> response = putBibRecordInAlmaWithRetries(mmsId, updatedRecord);
+                HttpResponse<String> response = putBibRecordInAlmaWithRetries(mmsId, updatedRecord, event);
 
                 if(response == null) {
                     return  null;
                 }
             }
         } catch (ParsingException | IOException | IllegalArgumentException
-                | InterruptedException | SecurityException e) {
+                | InterruptedException | SecurityException | SqsException e) {
             DebugUtils.dumpException(e);
             //TODO Throw an exception
         }
@@ -129,29 +127,29 @@ public class UpdateAlmaDescriptionHandler implements RequestHandler<SQSEvent, Vo
     }
 
     /**
-     * Create an XML(String) by updating the existing ALMA xml with all the updatePayload items.
-     * @param updatePayloadItems A list of UpdatePayload items.
+     * Create an XML(String) by updating the existing ALMA xml with all the UpdateItems.
+     * @param updateItems A list of UpdateItems.
      * @param xmlFromAlma A String in the shape of an XML the data is retrieved from ALMA.
      * @return The same XML data that was entered now with added fields (either 856 or 956).
      * @throws ParsingException When something goes wrong.
      */
-    public String updateBibRecord(List<UpdatePayload> updatePayloadItems, String xmlFromAlma) throws ParsingException {
+    public String updateBibRecord(List<UpdateItem> updateItems, String xmlFromAlma) throws ParsingException {
         String xmlBuilderString = xmlFromAlma;
-        /* 3.3.1 Loop through every UpdatePayload in the UpdatePayload LIST. */
-        for (UpdatePayload payloadItem : updatePayloadItems) {
+        /* 3.3.1 Loop through every UpdateItem in the UpdateItem LIST. */
+        for (UpdateItem item : updateItems) {
             /* 3.3.2 Determine whether the post is electronic or print. */
             int marcTag = xmlParser.determineElectronicOrPrint(xmlBuilderString);
 
             /* 3.3.3 Check if the update already exists. */
-            Boolean alreadyExists = xmlParser.alreadyExists(payloadItem.getSpecifiedMaterial(),
-                    payloadItem.getLink(), xmlBuilderString, marcTag);
+            Boolean alreadyExists = xmlParser.alreadyExists(item.getSpecifiedMaterial(),
+                    item.getLink(), xmlBuilderString, marcTag);
             if (alreadyExists) {
                 continue;
             }
 
-            /* 3.3.4 Create a node from the UpdatePayload item. */
-            Document updateNode = xmlParser.createNode(payloadItem.getSpecifiedMaterial(),
-                    payloadItem.getLink(), marcTag);
+            /* 3.3.4 Create a node from the UpdateItem. */
+            Document updateNode = xmlParser.createNode(item.getSpecifiedMaterial(),
+                    item.getLink(), marcTag);
 
             /* 3.3.5 Insert update node into the record retrieved from ALMA. */
             Document updatedDocument = xmlParser.insertUpdatedIntoRecord(xmlBuilderString,
@@ -196,7 +194,8 @@ public class UpdateAlmaDescriptionHandler implements RequestHandler<SQSEvent, Vo
      * @return HttpResponse<String> with the ALMA response or null if failing.
      * @throws InterruptedException when the sleep is interrupted.
      */
-    public HttpResponse<String> getBibRecordFromAlmaWithRetries(String mmsId) throws InterruptedException{
+    public HttpResponse<String> getBibRecordFromAlmaWithRetries(String mmsId, SQSEvent event)
+            throws InterruptedException, SqsException {
         HttpResponse<String> almaResponse = null;
         try {
 
@@ -226,7 +225,7 @@ public class UpdateAlmaDescriptionHandler implements RequestHandler<SQSEvent, Vo
                 if (almaResponse != null && almaResponse.statusCode() == HttpStatusCode.OK) {
                     return almaResponse;
                 } else {
-                    //TODO Write to SQS
+                    schedulerHelper.writeToDLQ(event.getRecords().get(0).getBody());
                     return null;
                 }
             }
@@ -239,8 +238,8 @@ public class UpdateAlmaDescriptionHandler implements RequestHandler<SQSEvent, Vo
      * @return HttpResponse<String> with the ALMA response or null if failing.
      * @throws InterruptedException when the sleep is interrupted.
      */
-    public HttpResponse<String> putBibRecordInAlmaWithRetries(String mmsId, String updatedRecord)
-            throws InterruptedException{
+    public HttpResponse<String> putBibRecordInAlmaWithRetries(String mmsId, String updatedRecord, SQSEvent event)
+            throws InterruptedException, SqsException {
         HttpResponse<String> response = null;
         try {
             response = putBibRecordInAlma(mmsId, updatedRecord);
@@ -268,7 +267,7 @@ public class UpdateAlmaDescriptionHandler implements RequestHandler<SQSEvent, Vo
                 if (response != null && response.statusCode() == HttpStatusCode.OK) {
                     return response;
                 } else {
-                    //TODO Write to SQS
+                    schedulerHelper.writeToDLQ(event.getRecords().get(0).getBody());
                     return null;
                 }
             }

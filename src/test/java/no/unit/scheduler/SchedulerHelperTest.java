@@ -1,4 +1,4 @@
-package no.unit.dynamo;
+package no.unit.scheduler;
 
 import com.fasterxml.jackson.databind.ObjectMapper;
 import com.google.gson.Gson;
@@ -17,7 +17,7 @@ import static org.junit.jupiter.api.Assertions.assertEquals;
 import static org.mockito.Mockito.mock;
 import static org.mockito.Mockito.when;
 
-class DynamoDbHelperTest {
+class SchedulerHelperTest {
 
     private static final String CREATED_KEY = "created";
     private static final String MODIFIED_KEY = "modified";
@@ -32,7 +32,7 @@ class DynamoDbHelperTest {
     public static final String MOCKEVENT_FILE = "/MockEvent.JSON";
 
     Environment mockEnv;
-    DynamoDbHelper mockDynamoDbHelper;
+    SchedulerHelper mockSchedulerHelper;
 
     public void printList(List<?> theList) {
         Iterator<?> iter = theList.iterator();
@@ -66,19 +66,19 @@ class DynamoDbHelperTest {
     public void init() {
         mockEnv = mock(Environment.class);
         initEnv();
-        mockDynamoDbHelper = new DynamoDbHelper(mockEnv);
+        mockSchedulerHelper = new SchedulerHelper(mockEnv);
     }
 
     @Test
     void generateImageLinkTest() throws Exception {
-        UpdatePayload payload = mockDynamoDbHelper.createImageLink(IMAGE_SIZE, ISBN);
+        UpdateItem payload = mockSchedulerHelper.createImageLink(IMAGE_SIZE, ISBN);
         String expectedLink = String.format(IMAGE_URL_KEY + IMAGE_SIZE + "/%s/%s/%s.jpg", 7, 4, ISBN);
         assertEquals(expectedLink, payload.getLink());
     }
 
     @Test
     void generateContentLinkTest() throws Exception {
-        UpdatePayload payload = mockDynamoDbHelper.createContentLink(CONTENT_TYPE, ISBN);
+        UpdateItem payload = mockSchedulerHelper.createContentLink(CONTENT_TYPE, ISBN);
         String expectedLink = String.format(CONTENT_URL_KEY + ISBN + "?type=" + CONTENT_TYPE.toUpperCase());
         assertEquals(expectedLink, payload.getLink());
     }
@@ -90,18 +90,18 @@ class DynamoDbHelperTest {
         String oldVersion = setup(OLDVERSION);
         String newVersion = setup(NEWVERSION);
         String returnVersion = setup(RETURNVERSION);
-        DynamoDbItem oldItem = objectMapper.readValue(oldVersion, DynamoDbItem.class);
-        DynamoDbItem newItem = objectMapper.readValue(newVersion, DynamoDbItem.class);
-        DynamoDbItem returnItem = objectMapper.readValue(returnVersion, DynamoDbItem.class);
-        DynamoDbItem theItem = mockDynamoDbHelper.extractDiffs(newItem, oldItem);
+        BibItem oldItem = objectMapper.readValue(oldVersion, BibItem.class);
+        BibItem newItem = objectMapper.readValue(newVersion, BibItem.class);
+        BibItem returnItem = objectMapper.readValue(returnVersion, BibItem.class);
+        BibItem theItem = mockSchedulerHelper.extractDiffs(newItem, oldItem);
         assertEquals(returnItem.toString(), theItem.toString());
     }
 
     @Test
     public void mockingEventTest() throws Exception {
         String mockEvent = setup(MOCKEVENT_FILE);
-        List<UpdatePayload> payloadList = mockDynamoDbHelper.splitEventIntoUpdatePayloads(mockEvent);
-        for(UpdatePayload payload: payloadList){
+        List<UpdateItem> payloadList = mockSchedulerHelper.splitEventIntoUpdateItems(mockEvent);
+        for(UpdateItem payload: payloadList){
             System.out.println(payload.toString());
         }
     }

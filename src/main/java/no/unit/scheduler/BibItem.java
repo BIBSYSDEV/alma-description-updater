@@ -1,9 +1,9 @@
-package no.unit.dynamo;
+package no.unit.scheduler;
 
 import nva.commons.utils.JacocoGenerated;
 
 @JacocoGenerated
-public class DynamoDbItem {
+public class BibItem {
 
     private transient String isbn;
     private transient String title;

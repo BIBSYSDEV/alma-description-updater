@@ -1,9 +1,9 @@
-package no.unit.dynamo;
+package no.unit.scheduler;
 
 import nva.commons.utils.JacocoGenerated;
 
 @JacocoGenerated
-public class UpdatePayload {
+public class UpdateItem {
 
     private String isbn;
     private String link;

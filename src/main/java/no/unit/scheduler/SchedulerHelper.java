@@ -1,18 +1,20 @@
-package no.unit.dynamo;
+package no.unit.scheduler;
 
+import com.amazonaws.services.sqs.AmazonSQS;
+import com.amazonaws.services.sqs.AmazonSQSClientBuilder;
+import com.amazonaws.services.sqs.model.InvalidMessageContentsException;
+import com.amazonaws.services.sqs.model.SendMessageRequest;
 import com.google.gson.JsonObject;
 import com.google.gson.JsonParser;
-import no.unit.exceptions.DynamoDbException;
+import no.unit.exceptions.SqsException;
 import nva.commons.utils.Environment;
-import nva.commons.utils.JacocoGenerated;
+import software.amazon.awssdk.regions.Region;
 
-import java.time.Instant;
-import java.time.temporal.ChronoUnit;
 import java.util.ArrayList;
 import java.util.List;
 import java.util.Locale;
 
-public class DynamoDbHelper {
+public class SchedulerHelper {
 
     private static final String IMAGE_URL_KEY = "STANDARD_IMAGE_URL";
     private static final String CONTENT_URL_KEY = "STANDARD_CONTENT_URL";
@@ -35,36 +37,36 @@ public class DynamoDbHelper {
     private final transient Environment envHandler;
 
 
-    public DynamoDbHelper(Environment envHandler) {
+    public SchedulerHelper(Environment envHandler) {
         this.envHandler = envHandler;
     }
 
-    public DynamoDbHelper() {
+    public SchedulerHelper() {
         this.envHandler = new Environment();
     }
 
 
     /**
-     * Creates a list of UpdatePayload items, if the event is "MODIFIED" this will be from the
+     * Creates a list of UpdateItem objects, if the event is "MODIFIED" this will be from the
      *     difference between the new and the old image, if created simply from the new image.
      * @param eventBody The body of the SQSEvent.
-     * @return A list of UpdatePayload objects.
+     * @return A list of UpdateItem objects.
      * @throws Exception when something goes wrong.
      */
-    public List<UpdatePayload> splitEventIntoUpdatePayloads(String eventBody) throws Exception {
+    public List<UpdateItem> splitEventIntoUpdateItems(String eventBody) throws Exception {
         JsonObject eventBodyObject = JsonParser.parseString(eventBody).getAsJsonObject();
         String isbn = eventBodyObject.get("dynamodb").getAsJsonObject().get("Keys")
                 .getAsJsonObject().get("isbn").getAsJsonObject().get(S).getAsString();
         String eventName = eventBodyObject.get("eventName").getAsString();
         JsonObject newImage = eventBodyObject.get("dynamodb").getAsJsonObject().get("NewImage").getAsJsonObject();
-        DynamoDbItem newDynamoItem = extractFromJsonObject(newImage);
+        BibItem newDynamoItem = extractFromJsonObject(newImage);
         newDynamoItem.setIsbn(isbn);
         if (eventName.equals("MODIFY")) {
             JsonObject oldImage = eventBodyObject.get("dynamodb").getAsJsonObject().get("OldImage").getAsJsonObject();
-            DynamoDbItem oldDynamoItem = extractFromJsonObject(oldImage);
+            BibItem oldDynamoItem = extractFromJsonObject(oldImage);
             oldDynamoItem.setIsbn(isbn);
 
-            DynamoDbItem diffDynamoItem = extractDiffs(newDynamoItem, oldDynamoItem);
+            BibItem diffDynamoItem = extractDiffs(newDynamoItem, oldDynamoItem);
 
             return createLinks(diffDynamoItem);
         } else {
@@ -78,8 +80,8 @@ public class DynamoDbHelper {
      * @return The DynamoDbItem.
      * @throws Exception when something goes wrong.
      */
-    private DynamoDbItem extractFromJsonObject(JsonObject image) throws Exception {
-        DynamoDbItem dynamoItem = new DynamoDbItem();
+    private BibItem extractFromJsonObject(JsonObject image) throws Exception {
+        BibItem dynamoItem = new BibItem();
         dynamoItem.setDescriptionShort((image.get("description_short") == null) ? null : image.get("description_short")
                 .getAsJsonObject().get(S).getAsString());
         dynamoItem.setImageLarge((image.get("image_large") == null) ? null : image.get("image_large").getAsJsonObject().get(S).getAsString());
@@ -94,44 +96,44 @@ public class DynamoDbHelper {
     }
 
     /**
-     * Creates a list of UpdatePayload items based on a list of DynamoDbItems.
-     *     The DynamoDbItem may result in several UpdatePayload items.
-     * @param item The DynamoDbItem from which to extract and create UpdatePayload items from.
-     * @return A list of UpdatePayload items.
-     * @throws DynamoDbException When something goes wrong.
+     * Creates a list of UpdateItem objects based on a list of DynamoDbItems.
+     *     The DynamoDbItem may result in several UpdateItem objects.
+     * @param item The DynamoDbItem from which to extract and create UpdateItems from.
+     * @return A list of UpdateItems.
+     * @throws SqsException When something goes wrong.
      */
-    public List<UpdatePayload> createLinks(DynamoDbItem item) throws DynamoDbException {
-        List<UpdatePayload> payloads = new ArrayList<>();
+    public List<UpdateItem> createLinks(BibItem item) throws IllegalStateException {
+        List<UpdateItem> items = new ArrayList<>();
         if (item.getDescriptionShort() != null) {
-            payloads.add(createContentLink(SHORT_KEY, item.getIsbn()));
+            items.add(createContentLink(SHORT_KEY, item.getIsbn()));
         }
         if (item.getDescriptionLong() != null) {
-            payloads.add(createContentLink(LONG_KEY, item.getIsbn()));
+            items.add(createContentLink(LONG_KEY, item.getIsbn()));
         }
         if (item.getTableOfContents() != null) {
-            payloads.add(createContentLink(CONTENTS_KEY, item.getIsbn()));
+            items.add(createContentLink(CONTENTS_KEY, item.getIsbn()));
         }
         if (item.getImageSmall() != null) {
-            payloads.add(createImageLink(SMALL_KEY, item.getIsbn()));
+            items.add(createImageLink(SMALL_KEY, item.getIsbn()));
         }
         if (item.getImageLarge() != null) {
-            payloads.add(createImageLink(LARGE_KEY, item.getIsbn()));
+            items.add(createImageLink(LARGE_KEY, item.getIsbn()));
         }
         if (item.getImageOriginal() != null) {
-            payloads.add(createImageLink(ORIGINAL_KEY, item.getIsbn()));
+            items.add(createImageLink(ORIGINAL_KEY, item.getIsbn()));
         }
 
-        return payloads;
+        return items;
     }
 
     /**
-     * Creates a UpdatePayload Item containing the correct isbn, link and specifiedMaterial.
+     * Creates a UpdateItem containing the correct isbn, link and specifiedMaterial.
      * @param imageSize The size of the Image to create a link for.
-     * @param isbn The isbn to create the UpdatePayload item for.
-     * @return A UpdatePayload item.
-     * @throws DynamoDbException When the environment variable hasn't been set.
+     * @param isbn The isbn to create the UpdateItem for.
+     * @return A UpdateItem.
+     * @throws SqsException When the environment variable hasn't been set.
      */
-    public UpdatePayload createImageLink(String imageSize, String isbn) throws DynamoDbException {
+    public UpdateItem createImageLink(String imageSize, String isbn) throws IllegalStateException {
         String link = "";
         String secondLinkPart = isbn.substring(isbn.length() - 2, isbn.length() - 1);
         String firstLinkPart = isbn.substring(isbn.length() - 1);
@@ -139,7 +141,7 @@ public class DynamoDbHelper {
             link = String.format(envHandler.readEnv(IMAGE_URL_KEY) + imageSize
                     + "/%s/%s/%s.jpg", firstLinkPart, secondLinkPart, isbn);
         } catch (IllegalStateException e) {
-            throw new DynamoDbException("No env-variable set for " + IMAGE_URL_KEY, e);
+            throw e;
         }
         String specifiedMaterial;
         switch (imageSize) {
@@ -153,26 +155,26 @@ public class DynamoDbHelper {
                 specifiedMaterial = ORIGINAL_DESCRIPTION;
                 break;
         }
-        UpdatePayload payload = new UpdatePayload();
-        payload.setIsbn(isbn);
-        payload.setLink(link);
-        payload.setSpecifiedMaterial(specifiedMaterial);
-        return payload;
+        UpdateItem item = new UpdateItem();
+        item.setIsbn(isbn);
+        item.setLink(link);
+        item.setSpecifiedMaterial(specifiedMaterial);
+        return item;
     }
 
     /**
-     * Creates a UpdatePayload Item containing the correct isbn, link and specifiedMaterial.
+     * Creates a UpdateItem containing the correct isbn, link and specifiedMaterial.
      * @param contentType The type of content to create a link for.
-     * @param isbn The isbn to create the UpdatePayload item for.
-     * @return A UpdatePayload item.
-     * @throws DynamoDbException When the environment variable hasn't been set.
+     * @param isbn The isbn to create the UpdateItem for.
+     * @return A UpdateItem.
+     * @throws SqsException When the environment variable hasn't been set.
      */
-    public UpdatePayload createContentLink(String contentType, String isbn) throws DynamoDbException {
+    public UpdateItem createContentLink(String contentType, String isbn) throws IllegalStateException {
         String link = "";
         try {
             link = envHandler.readEnv(CONTENT_URL_KEY) + isbn + "?type=" + contentType.toUpperCase(Locale.getDefault());
         } catch (IllegalStateException e) {
-            throw new DynamoDbException("No env-variable set for " + CONTENT_URL_KEY, e);
+            throw e;
         }
         String specifiedMaterial;
         switch (contentType.toLowerCase(Locale.getDefault())) {
@@ -186,11 +188,11 @@ public class DynamoDbHelper {
                 specifiedMaterial = CONTENTS_DESCRIPTION;
                 break;
         }
-        UpdatePayload payload = new UpdatePayload();
-        payload.setIsbn(isbn);
-        payload.setLink(link);
-        payload.setSpecifiedMaterial(specifiedMaterial);
-        return payload;
+        UpdateItem item = new UpdateItem();
+        item.setIsbn(isbn);
+        item.setLink(link);
+        item.setSpecifiedMaterial(specifiedMaterial);
+        return item;
     }
 
     /**
@@ -199,8 +201,8 @@ public class DynamoDbHelper {
      * @param oldVersion DynamoDbItem containing the old version of the db-record.
      * @return A DynamoDbItem with only the field of interest filed.
      */
-    public DynamoDbItem extractDiffs(DynamoDbItem newVersion, DynamoDbItem oldVersion) {
-        DynamoDbItem returnVersion = new DynamoDbItem();
+    public BibItem extractDiffs(BibItem newVersion, BibItem oldVersion) {
+        BibItem returnVersion = new BibItem();
         returnVersion.setIsbn(newVersion.getIsbn());
         if ( newVersion.getDescriptionShort() != null && oldVersion.getDescriptionShort() != null &&
                 !newVersion.getDescriptionShort().equals(oldVersion.getDescriptionShort())) {
@@ -227,5 +229,25 @@ public class DynamoDbHelper {
             returnVersion.setImageLarge(newVersion.getImageLarge());
         }
         return returnVersion;
+    }
+
+    /**
+     * Method that writes a message to an already specified queue.
+     * @param message The message thats to be sent to the queue.
+     */
+    public void writeToDLQ(String message) throws SqsException {
+        try {
+            AmazonSQS sqs = AmazonSQSClientBuilder.standard().withRegion(Region.EU_WEST_1.toString()).build();
+            //TODO sub the queueName with an envVariable.
+            String queueUrl = sqs.getQueueUrl("alma-description-updater-AlmaUpdateDLQ-1TB7DS6J4FYQH")
+                    .getQueueUrl();
+            SendMessageRequest send_msg_request = new SendMessageRequest()
+                    .withQueueUrl(queueUrl)
+                    .withMessageBody(message)
+                    .withDelaySeconds(5);
+            sqs.sendMessage(send_msg_request);
+        } catch (InvalidMessageContentsException | UnsupportedOperationException e) {
+            throw new SqsException("Failed to send message to DLQ. ", e);
+        }
     }
 }

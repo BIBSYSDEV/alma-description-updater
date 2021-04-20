@@ -2,9 +2,9 @@ package no.unit.exceptions;
 
 import nva.commons.utils.JacocoGenerated;
 
-public class DynamoDbException extends Exception {
+public class SqsException extends Exception {
     @JacocoGenerated
-    public DynamoDbException(String message, Exception e) {
+    public SqsException(String message, Exception e) {
         super(message, e);
     }
 }

@@ -2,20 +2,21 @@ package no.unit.alma;
 
 
 import com.google.gson.Gson;
-import com.google.gson.JsonObject;
-import com.google.gson.JsonParser;
-import no.unit.dynamo.UpdatePayload;
+import no.unit.scheduler.UpdateItem;
 import nva.commons.utils.Environment;
 import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.Test;
-import software.amazon.awssdk.http.HttpStatusCode;
+
+import com.amazonaws.services.sqs.AmazonSQS;
+import com.amazonaws.services.sqs.AmazonSQSClientBuilder;
+import com.amazonaws.services.sqs.model.SendMessageRequest;
+import software.amazon.awssdk.regions.Region;
 
 import java.io.BufferedReader;
 import java.io.InputStream;
 import java.io.InputStreamReader;
 import java.util.ArrayList;
 import java.util.List;
-import java.util.Map;
 
 import static org.junit.jupiter.api.Assertions.assertEquals;
 import static org.junit.jupiter.api.Assertions.assertTrue;
@@ -26,6 +27,8 @@ public class UpdateAlmaDescriptionHandlerTest {
 
     public static final String CORRECT_XML_FILE = "/Mock_xml.xml";
     public static final String UPDATED_XML_FILE = "/UpdatedGroupXml.xml";
+    public static final String MOCKEVENT_FILE = "/MockEvent.JSON";
+
 
     Environment mockEnv;
     UpdateAlmaDescriptionHandler mockedHandler;
@@ -71,12 +74,12 @@ public class UpdateAlmaDescriptionHandlerTest {
         String mockUpdatedXml = setup(UPDATED_XML_FILE);
         String item1String = "{isbn: 1234, link: 1234_small_1234.jpg, specifiedMaterial: Small_coverFoto}";
         String item2String = "{isbn: 1234, link: 1234_large_1234.jpg, specifiedMaterial: Large_coverFoto}";
-        UpdatePayload item1 = g.fromJson(item1String, UpdatePayload.class);
-        UpdatePayload item2 = g.fromJson(item2String, UpdatePayload.class);
-        List<UpdatePayload> updatePayloadList = new ArrayList<>();
-        updatePayloadList.add(item1);
-        updatePayloadList.add(item2);
-        String updatedXml = mockedHandler.updateBibRecord(updatePayloadList, mockXml);
+        UpdateItem item1 = g.fromJson(item1String, UpdateItem.class);
+        UpdateItem item2 = g.fromJson(item2String, UpdateItem.class);
+        List<UpdateItem> updateItemList = new ArrayList<>();
+        updateItemList.add(item1);
+        updateItemList.add(item2);
+        String updatedXml = mockedHandler.updateBibRecord(updateItemList, mockXml);
         assertEquals(mockUpdatedXml, updatedXml);
     }
 
