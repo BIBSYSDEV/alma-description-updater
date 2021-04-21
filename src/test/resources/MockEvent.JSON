@@ -13,13 +13,13 @@
     },
     "NewImage": {
       "image_small": {
-        "S": "/9788210053412/small/9788210053412.jpg"
+        "S": "test/9788210053412/small/9788210053412.jpg"
       },
       "description_short": {
         "S": "Yes this is short v7"
       },
       "image_original": {
-        "S": "/9788210053412/original/9788210053412.jpg"
+        "S": "test/9788210053412/original/9788210053412.jpg"
       },
       "author": {
         "S": "Calvert, Christine"
@@ -52,12 +52,6 @@
     "OldImage": {
       "image_small": {
         "S": "/9788210053412/small/9788210053412.jpg"
-      },
-      "description_short": {
-        "S": "Yes this is short v6"
-      },
-      "image_original": {
-        "S": "/9788210053412/original/9788210053412.jpg"
       },
       "author": {
         "S": "Calvert, Christine"

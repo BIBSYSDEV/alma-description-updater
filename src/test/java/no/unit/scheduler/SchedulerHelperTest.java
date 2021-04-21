@@ -1,5 +1,6 @@
 package no.unit.scheduler;
 
+import com.amazonaws.services.dynamodbv2.xspec.B;
 import com.fasterxml.jackson.databind.ObjectMapper;
 import com.google.gson.Gson;
 import no.unit.alma.XmlParserTest;
@@ -101,9 +102,8 @@ class SchedulerHelperTest {
     public void mockingEventTest() throws Exception {
         String mockEvent = setup(MOCKEVENT_FILE);
         List<UpdateItem> payloadList = mockSchedulerHelper.splitEventIntoUpdateItems(mockEvent);
-        for(UpdateItem payload: payloadList){
+        for (UpdateItem payload: payloadList) {
             System.out.println(payload.toString());
         }
     }
-
 }

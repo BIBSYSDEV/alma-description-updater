@@ -10,11 +10,12 @@ import java.util.stream.Collectors;
 import com.amazonaws.services.lambda.runtime.Context;
 import com.amazonaws.services.lambda.runtime.RequestHandler;
 import com.amazonaws.services.lambda.runtime.events.SQSEvent;
-import com.google.gson.*;
+import com.google.gson.Gson;
+import com.google.gson.GsonBuilder;
 import com.google.gson.reflect.TypeToken;
 import no.unit.scheduler.SchedulerHelper;
 import no.unit.scheduler.UpdateItem;
-import no.unit.exceptions.SqsException;
+import no.unit.exceptions.SchedulerException;
 import no.unit.exceptions.ParsingException;
 import no.unit.exceptions.SecretRetrieverException;
 import no.unit.marc.Reference;
@@ -70,10 +71,10 @@ public class UpdateAlmaDescriptionHandler implements RequestHandler<SQSEvent, Vo
     @SuppressWarnings("unchecked")
     public Void handleRequest(final SQSEvent event, Context context) {
 
-        try{
+        try {
             initVariables();
-        } catch(SecretRetrieverException | IllegalStateException e) {
-            //TODO Throw an exception
+        } catch (SchedulerException e) {
+            throw new RuntimeException("Error while setting up env-variables and secretKeys. " + e.getMessage());
         }
 
         /* 1. Create an UpdateItem LIST from the input. */
@@ -82,17 +83,18 @@ public class UpdateAlmaDescriptionHandler implements RequestHandler<SQSEvent, Vo
         try {
             updateItems = schedulerHelper.splitEventIntoUpdateItems(event.getRecords().get(0).getBody());
         } catch (Exception e) {
-            //TODO Throw an exception
-            return null;
+            throw new RuntimeException("Error while processing input event. " + e.getMessage());
         }
 
         try {
             /* Step 2. Get a REFERENCE LIST from alma-sru through a lambda. */
             List<Reference> referenceList = getReferenceListByIsbn(updateItems.get(0).getIsbn());
             if (referenceList == null) {
-                //TODO Throw an exception
+                schedulerHelper.writeToDLQ(event.getRecords().get(0).getBody());
+                return null;
             }
 
+            int sucessCounter = 0;
             /* 3. Loop through the LIST. */
             for (Reference reference : referenceList) {
 
@@ -100,10 +102,10 @@ public class UpdateAlmaDescriptionHandler implements RequestHandler<SQSEvent, Vo
                 String mmsId = reference.getId();
 
                 /* 3.2 Use the MMS_ID to get a BIB-RECORD from the alma-api. */
-                HttpResponse<String> almaResponse = getBibRecordFromAlmaWithRetries(mmsId, event);
+                HttpResponse<String> almaResponse = getBibRecordFromAlmaWithRetries(mmsId);
 
                 if (almaResponse == null) {
-                    return null;
+                    continue;
                 }
 
                 String xmlFromAlma = almaResponse.body();
@@ -112,16 +114,20 @@ public class UpdateAlmaDescriptionHandler implements RequestHandler<SQSEvent, Vo
                 String updatedRecord = updateBibRecord(updateItems, xmlFromAlma);
 
                 /* 4. Push the updated BIB-RECORD back to the alma through a put-request to the api. */
-                HttpResponse<String> response = putBibRecordInAlmaWithRetries(mmsId, updatedRecord, event);
+                HttpResponse<String> response = putBibRecordInAlmaWithRetries(mmsId, updatedRecord);
 
-                if(response == null) {
-                    return  null;
+                if (response == null) {
+                    continue;
                 }
+                sucessCounter++;
+            }
+            if (sucessCounter < referenceList.size()) {
+                throw new RuntimeException("1 or more mms_id's did not go through");
             }
         } catch (ParsingException | IOException | IllegalArgumentException
-                | InterruptedException | SecurityException | SqsException e) {
+                | InterruptedException | SecurityException | SchedulerException e) {
             DebugUtils.dumpException(e);
-            //TODO Throw an exception
+            throw new RuntimeException("General error: " + e.getMessage());
         }
         return null;
     }
@@ -194,14 +200,14 @@ public class UpdateAlmaDescriptionHandler implements RequestHandler<SQSEvent, Vo
      * @return HttpResponse<String> with the ALMA response or null if failing.
      * @throws InterruptedException when the sleep is interrupted.
      */
-    public HttpResponse<String> getBibRecordFromAlmaWithRetries(String mmsId, SQSEvent event)
-            throws InterruptedException, SqsException {
+    public HttpResponse<String> getBibRecordFromAlmaWithRetries(String mmsId)
+            throws InterruptedException {
         HttpResponse<String> almaResponse = null;
         try {
 
             almaResponse = getBibRecordFromAlma(mmsId);
         } catch (InterruptedException | IOException e) {
-            almaResponse = null;
+            almaResponse = null; //NOPMD
         }
 
         if (almaResponse != null && almaResponse.statusCode() == HttpStatusCode.OK) {
@@ -211,21 +217,20 @@ public class UpdateAlmaDescriptionHandler implements RequestHandler<SQSEvent, Vo
             try {
                 almaResponse = getBibRecordFromAlma(mmsId);
             } catch (InterruptedException | IOException e) {
-                almaResponse = null;
+                almaResponse = null; //NOPMD
             }
             if (almaResponse != null && almaResponse.statusCode() == HttpStatusCode.OK) {
                 return almaResponse;
             } else {
                 TimeUnit.SECONDS.sleep(3);
-                try{
+                try {
                     almaResponse = getBibRecordFromAlma(mmsId);
                 } catch (InterruptedException | IOException e) {
-                    almaResponse = null;
+                    almaResponse = null; //NOPMD
                 }
                 if (almaResponse != null && almaResponse.statusCode() == HttpStatusCode.OK) {
                     return almaResponse;
                 } else {
-                    schedulerHelper.writeToDLQ(event.getRecords().get(0).getBody());
                     return null;
                 }
             }
@@ -238,13 +243,13 @@ public class UpdateAlmaDescriptionHandler implements RequestHandler<SQSEvent, Vo
      * @return HttpResponse<String> with the ALMA response or null if failing.
      * @throws InterruptedException when the sleep is interrupted.
      */
-    public HttpResponse<String> putBibRecordInAlmaWithRetries(String mmsId, String updatedRecord, SQSEvent event)
-            throws InterruptedException, SqsException {
+    public HttpResponse<String> putBibRecordInAlmaWithRetries(String mmsId, String updatedRecord)
+            throws InterruptedException {
         HttpResponse<String> response = null;
         try {
             response = putBibRecordInAlma(mmsId, updatedRecord);
         } catch (InterruptedException | IOException e) {
-            response = null;
+            response = null; //NOPMD
         }
         if (response != null && response.statusCode() == HttpStatusCode.OK) {
             return response;
@@ -253,7 +258,7 @@ public class UpdateAlmaDescriptionHandler implements RequestHandler<SQSEvent, Vo
             try {
                 response = putBibRecordInAlma(mmsId, updatedRecord);
             } catch (InterruptedException | IOException e) {
-                response = null;
+                response = null; //NOPMD
             }
             if (response != null && response.statusCode() == HttpStatusCode.OK) {
                 return response;
@@ -262,12 +267,11 @@ public class UpdateAlmaDescriptionHandler implements RequestHandler<SQSEvent, Vo
                 try {
                     response = putBibRecordInAlma(mmsId, updatedRecord);
                 } catch (InterruptedException | IOException e) {
-                    response = null;
+                    response = null; //NOPMD
                 }
                 if (response != null && response.statusCode() == HttpStatusCode.OK) {
                     return response;
                 } else {
-                    schedulerHelper.writeToDLQ(event.getRecords().get(0).getBody());
                     return null;
                 }
             }
@@ -278,17 +282,23 @@ public class UpdateAlmaDescriptionHandler implements RequestHandler<SQSEvent, Vo
      * A method for assigning values to the secretkey and checking the environment variables.
      * @return returns null if everything works. If not it will return a Map
      *     containing an appropriate errormessage and errorsatus.
+     * @throws SchedulerException When something goes wrong.
      */
-    private void initVariables() throws IllegalStateException, SecretRetrieverException {
-        readEnvVariables();
-        secretKey = SecretRetriever.getAlmaApiKeySecret();
+    private void initVariables() throws SchedulerException {
+        try {
+            readEnvVariables();
+            secretKey = SecretRetriever.getAlmaApiKeySecret();
+        } catch (IllegalStateException | SecretRetrieverException e) {
+            throw new SchedulerException("Failed to initialize variables. ", e);
+        }
+
     }
 
     /**
      * Stores the systemvariable properties.
      * @return It returnes a boolean indicating that it retrieved the systemvariables.
      */
-    public boolean readEnvVariables() throws IllegalStateException {
+    public boolean readEnvVariables() {
         almaApiHost = envHandler.readEnv(ALMA_API_KEY);
         almaSruHost = envHandler.readEnv(ALMA_SRU_HOST_KEY);
         return true;

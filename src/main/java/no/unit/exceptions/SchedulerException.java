@@ -2,9 +2,9 @@ package no.unit.exceptions;
 
 import nva.commons.utils.JacocoGenerated;
 
-public class SqsException extends Exception {
+public class SchedulerException extends Exception {
     @JacocoGenerated
-    public SqsException(String message, Exception e) {
+    public SchedulerException(String message, Exception e) {
         super(message, e);
     }
 }

@@ -6,7 +6,7 @@ import com.amazonaws.services.sqs.model.InvalidMessageContentsException;
 import com.amazonaws.services.sqs.model.SendMessageRequest;
 import com.google.gson.JsonObject;
 import com.google.gson.JsonParser;
-import no.unit.exceptions.SqsException;
+import no.unit.exceptions.SchedulerException;
 import nva.commons.utils.Environment;
 import software.amazon.awssdk.regions.Region;
 
@@ -29,7 +29,8 @@ public class SchedulerHelper {
     private static final String SHORT_KEY = "description_short";
     private static final String LONG_KEY = "description_long";
     private static final String CONTENTS_KEY = "contents";
-    public static final String S = "S";
+    private static final String S = "S";
+    private static final String MODIFY = "MODIFY";
     private static final String SHORT_DESCRIPTION = "Forlagets beskrivelse (kort)";
     private static final String LONG_DESCRIPTION = "Forlagets beskrivelse (lang)";
     private static final String CONTENTS_DESCRIPTION = "Innholdsfortegnelse";
@@ -51,9 +52,8 @@ public class SchedulerHelper {
      *     difference between the new and the old image, if created simply from the new image.
      * @param eventBody The body of the SQSEvent.
      * @return A list of UpdateItem objects.
-     * @throws Exception when something goes wrong.
      */
-    public List<UpdateItem> splitEventIntoUpdateItems(String eventBody) throws Exception {
+    public List<UpdateItem> splitEventIntoUpdateItems(String eventBody)  {
         JsonObject eventBodyObject = JsonParser.parseString(eventBody).getAsJsonObject();
         String isbn = eventBodyObject.get("dynamodb").getAsJsonObject().get("Keys")
                 .getAsJsonObject().get("isbn").getAsJsonObject().get(S).getAsString();
@@ -61,7 +61,7 @@ public class SchedulerHelper {
         JsonObject newImage = eventBodyObject.get("dynamodb").getAsJsonObject().get("NewImage").getAsJsonObject();
         BibItem newDynamoItem = extractFromJsonObject(newImage);
         newDynamoItem.setIsbn(isbn);
-        if (eventName.equals("MODIFY")) {
+        if (MODIFY.equals(eventName)) {
             JsonObject oldImage = eventBodyObject.get("dynamodb").getAsJsonObject().get("OldImage").getAsJsonObject();
             BibItem oldDynamoItem = extractFromJsonObject(oldImage);
             oldDynamoItem.setIsbn(isbn);
@@ -78,20 +78,27 @@ public class SchedulerHelper {
      * Extracts the data needed to create an DynamoDbItem from a JsonObject.
      * @param image Either the new or the old image, containing the dynamoDbItem.
      * @return The DynamoDbItem.
-     * @throws Exception when something goes wrong.
      */
-    private BibItem extractFromJsonObject(JsonObject image) throws Exception {
+    private BibItem extractFromJsonObject(JsonObject image) {
         BibItem dynamoItem = new BibItem();
-        dynamoItem.setDescriptionShort((image.get("description_short") == null) ? null : image.get("description_short")
-                .getAsJsonObject().get(S).getAsString());
-        dynamoItem.setImageLarge((image.get("image_large") == null) ? null : image.get("image_large").getAsJsonObject().get(S).getAsString());
-        dynamoItem.setDescriptionLong((image.get("description_long") == null) ? null : image.get("description_long")
-                .getAsJsonObject().get(S).getAsString());
-        dynamoItem.setImageSmall((image.get("image_small") == null) ? null : image.get("image_small").getAsJsonObject().get(S).getAsString());
-        dynamoItem.setTableOfContents((image.get("table_of_contents") == null) ? null : image.get("table_of_contents")
-                .getAsJsonObject().get(S).getAsString());
-        dynamoItem.setImageOriginal((image.get("image_original") == null) ? null : image.get("image_original").getAsJsonObject().get(S).getAsString());
-
+        if (image.get("description_short") != null) {
+            dynamoItem.setDescriptionShort(image.get("description_short").getAsJsonObject().get(S).getAsString());
+        }
+        if (image.get("image_large") != null) {
+            dynamoItem.setImageLarge(image.get("image_large").getAsJsonObject().get(S).getAsString());
+        }
+        if (image.get("description_long") != null) {
+            dynamoItem.setDescriptionLong(image.get("description_long").getAsJsonObject().get(S).getAsString());
+        }
+        if (image.get("image_small") != null) {
+            dynamoItem.setImageSmall(image.get("image_small").getAsJsonObject().get(S).getAsString());
+        }
+        if (image.get("table_of_contents") != null) {
+            dynamoItem.setTableOfContents(image.get("table_of_contents").getAsJsonObject().get(S).getAsString());
+        }
+        if (image.get("image_original") != null) {
+            dynamoItem.setImageOriginal(image.get("image_original").getAsJsonObject().get(S).getAsString());
+        }
         return dynamoItem;
     }
 
@@ -100,9 +107,8 @@ public class SchedulerHelper {
      *     The DynamoDbItem may result in several UpdateItem objects.
      * @param item The DynamoDbItem from which to extract and create UpdateItems from.
      * @return A list of UpdateItems.
-     * @throws SqsException When something goes wrong.
      */
-    public List<UpdateItem> createLinks(BibItem item) throws IllegalStateException {
+    public List<UpdateItem> createLinks(BibItem item) {
         List<UpdateItem> items = new ArrayList<>();
         if (item.getDescriptionShort() != null) {
             items.add(createContentLink(SHORT_KEY, item.getIsbn()));
@@ -131,18 +137,14 @@ public class SchedulerHelper {
      * @param imageSize The size of the Image to create a link for.
      * @param isbn The isbn to create the UpdateItem for.
      * @return A UpdateItem.
-     * @throws SqsException When the environment variable hasn't been set.
      */
-    public UpdateItem createImageLink(String imageSize, String isbn) throws IllegalStateException {
+    public UpdateItem createImageLink(String imageSize, String isbn) {
         String link = "";
         String secondLinkPart = isbn.substring(isbn.length() - 2, isbn.length() - 1);
         String firstLinkPart = isbn.substring(isbn.length() - 1);
-        try {
-            link = String.format(envHandler.readEnv(IMAGE_URL_KEY) + imageSize
-                    + "/%s/%s/%s.jpg", firstLinkPart, secondLinkPart, isbn);
-        } catch (IllegalStateException e) {
-            throw e;
-        }
+        link = String.format(envHandler.readEnv(IMAGE_URL_KEY) + imageSize
+                + "/%s/%s/%s.jpg", firstLinkPart, secondLinkPart, isbn);
+
         String specifiedMaterial;
         switch (imageSize) {
             case SMALL_KEY:
@@ -167,15 +169,11 @@ public class SchedulerHelper {
      * @param contentType The type of content to create a link for.
      * @param isbn The isbn to create the UpdateItem for.
      * @return A UpdateItem.
-     * @throws SqsException When the environment variable hasn't been set.
      */
-    public UpdateItem createContentLink(String contentType, String isbn) throws IllegalStateException {
+    public UpdateItem createContentLink(String contentType, String isbn) {
         String link = "";
-        try {
-            link = envHandler.readEnv(CONTENT_URL_KEY) + isbn + "?type=" + contentType.toUpperCase(Locale.getDefault());
-        } catch (IllegalStateException e) {
-            throw e;
-        }
+        link = envHandler.readEnv(CONTENT_URL_KEY) + isbn + "?type=" + contentType.toUpperCase(Locale.getDefault());
+
         String specifiedMaterial;
         switch (contentType.toLowerCase(Locale.getDefault())) {
             case SHORT_KEY:
@@ -196,36 +194,37 @@ public class SchedulerHelper {
     }
 
     /**
-     * Method to fill the actually updated fields of a DynamoDbItem.
-     * @param newVersion DynamoDbItem containing the new version of the db-record.
-     * @param oldVersion DynamoDbItem containing the old version of the db-record.
-     * @return A DynamoDbItem with only the field of interest filed.
+     * Method to fill the actually updated fields of a BibItem.
+     * @param newVersion BibItem containing the new version of the db-record.
+     * @param oldVersion BibItem containing the old version of the db-record.
+     * @return A BibItem with only the field of interest filed.
      */
+    @SuppressWarnings("PMD.NPathComplexity")
     public BibItem extractDiffs(BibItem newVersion, BibItem oldVersion) {
         BibItem returnVersion = new BibItem();
         returnVersion.setIsbn(newVersion.getIsbn());
-        if ( newVersion.getDescriptionShort() != null && oldVersion.getDescriptionShort() != null &&
-                !newVersion.getDescriptionShort().equals(oldVersion.getDescriptionShort())) {
+        if (newVersion.getDescriptionShort() != null && !newVersion.getDescriptionShort()
+                .equals(oldVersion.getDescriptionShort())) {
             returnVersion.setDescriptionShort(newVersion.getDescriptionShort());
         }
-        if (newVersion.getDescriptionLong() != null && oldVersion.getDescriptionLong() != null &&
-                !newVersion.getDescriptionLong().equals(oldVersion.getDescriptionLong())) {
+        if (newVersion.getDescriptionLong() != null && !newVersion.getDescriptionLong()
+                .equals(oldVersion.getDescriptionLong())) {
             returnVersion.setDescriptionLong(newVersion.getDescriptionLong());
         }
-        if (newVersion.getTableOfContents() != null && oldVersion.getTableOfContents() != null &&
-                !newVersion.getTableOfContents().equals(oldVersion.getTableOfContents())) {
+        if (newVersion.getTableOfContents() != null && !newVersion.getTableOfContents()
+                .equals(oldVersion.getTableOfContents())) {
             returnVersion.setTableOfContents(newVersion.getTableOfContents());
         }
-        if (newVersion.getImageSmall() != null && oldVersion.getImageSmall() != null &&
-                !newVersion.getImageSmall().equals(oldVersion.getImageSmall())) {
+        if (newVersion.getImageSmall() != null && !newVersion.getImageSmall()
+                .equals(oldVersion.getImageSmall())) {
             returnVersion.setImageSmall(newVersion.getImageSmall());
         }
-        if (newVersion.getImageOriginal() != null && oldVersion.getImageOriginal() != null &&
-                !newVersion.getImageOriginal().equals(oldVersion.getImageOriginal())) {
+        if (newVersion.getImageOriginal() != null && !newVersion.getImageOriginal()
+                .equals(oldVersion.getImageOriginal())) {
             returnVersion.setImageOriginal(newVersion.getImageOriginal());
         }
-        if (newVersion.getImageLarge() != null && oldVersion.getImageLarge() != null &&
-                !newVersion.getImageLarge().equals(oldVersion.getImageLarge())) {
+        if (newVersion.getImageLarge() != null && !newVersion.getImageLarge()
+                .equals(oldVersion.getImageLarge())) {
             returnVersion.setImageLarge(newVersion.getImageLarge());
         }
         return returnVersion;
@@ -234,20 +233,21 @@ public class SchedulerHelper {
     /**
      * Method that writes a message to an already specified queue.
      * @param message The message thats to be sent to the queue.
+     * @throws SchedulerException when something goes wrong.
      */
-    public void writeToDLQ(String message) throws SqsException {
+    public void writeToDLQ(String message) throws SchedulerException {
         try {
             AmazonSQS sqs = AmazonSQSClientBuilder.standard().withRegion(Region.EU_WEST_1.toString()).build();
             //TODO sub the queueName with an envVariable.
             String queueUrl = sqs.getQueueUrl("alma-description-updater-AlmaUpdateDLQ-1TB7DS6J4FYQH")
                     .getQueueUrl();
-            SendMessageRequest send_msg_request = new SendMessageRequest()
+            SendMessageRequest sendMsgRequest = new SendMessageRequest()
                     .withQueueUrl(queueUrl)
                     .withMessageBody(message)
                     .withDelaySeconds(5);
-            sqs.sendMessage(send_msg_request);
+            sqs.sendMessage(sendMsgRequest);
         } catch (InvalidMessageContentsException | UnsupportedOperationException e) {
-            throw new SqsException("Failed to send message to DLQ. ", e);
+            throw new SchedulerException("Failed to send message to DLQ. ", e);
         }
     }
 }
