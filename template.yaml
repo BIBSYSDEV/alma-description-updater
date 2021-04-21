@@ -310,7 +310,7 @@ Resources:
         Variables:
           SqsUrlAlmaQ: !Ref AlmaUpdateQueue
           SqsUrlAlmaDLQ: !Ref AlmaUpdateDLQ
-          messageAgeLimitAlmaUpdateQueue: '{{resolve:ssm:MessageAgeLimitAlmaUpdateQueue:1}}'
+          messageAgeLimitAlmaUpdateQueue: !Ref MessageAgeLimitAlmaUpdateQueue
       Events:
         SQSQueueEvent:
           Type: SQS
