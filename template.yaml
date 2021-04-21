@@ -21,6 +21,10 @@ Parameters:
     Type: String
     Description: Url endpoint to the alma sru proxy lambda
     Default: 'https://api.bibs.aws.unit.no/alma?isbn='
+  messageAgeLimitAlmaUpdateQueue:
+    Type: Number
+    Description: Age limit in month (negativ number) for messages to be put back to retry update Alma for not found records
+    Default: -6
 
 Conditions:
   HasDomainName: !Not [!Equals [!Ref CustomDomain, '']]
@@ -37,6 +41,14 @@ Globals:
     EndpointConfiguration: REGIONAL
 
 Resources:
+
+  MessageAgeLimitAlmaUpdateQueue:
+    Type: AWS::SSM::Parameter
+    Properties:
+      Name: messageAgeLimitAlmaUpdateQueue
+      Type: Number
+      Value: !Ref messageAgeLimitAlmaUpdateQueue
+      Description: Age limit in month (negativ number) for messages to be put back to retry update Alma for not found records
 
   ################
   #
@@ -298,6 +310,7 @@ Resources:
         Variables:
           SqsUrlAlmaQ: !Ref AlmaUpdateQueue
           SqsUrlAlmaDLQ: !Ref AlmaUpdateDLQ
+          durationToRetryNotFoundRecordsInMonth: '{{resolve:ssm:durationToRetryNotFoundRecordsInMonth:1}}'
       Events:
         SQSQueueEvent:
           Type: SQS

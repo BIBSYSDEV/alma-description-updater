@@ -1,0 +1,95 @@
+{
+  "eventID": "428be6cb330a37798d9dfa8752ae4e16",
+  "eventName": "MODIFY",
+  "eventVersion": "1.1",
+  "eventSource": "aws:dynamodb",
+  "awsRegion": "eu-west-1",
+  "dynamodb": {
+    "ApproximateCreationDateTime": 1618818512,
+    "Keys": {
+      "isbn": {
+        "S": "9788210053412"
+      }
+    },
+    "NewImage": {
+      "image_small": {
+        "S": "/9788210053412/small/9788210053412.jpg"
+      },
+      "description_short": {
+        "S": "Yes this is short v7"
+      },
+      "image_original": {
+        "S": "/9788210053412/original/9788210053412.jpg"
+      },
+      "author": {
+        "S": "Calvert, Christine"
+      },
+      "created": {
+        "S": "2021-03-31T08:32:06.268519Z"
+      },
+      "isbn": {
+        "S": "9788210053412"
+      },
+      "date_of_publication": {
+        "S": "2018"
+      },
+      "description_long": {
+        "S": "No this is long v7"
+      },
+      "modified": {
+        "S": "2021-04-19T07:48:32.769721Z"
+      },
+      "source": {
+        "S": "NIELSEN"
+      },
+      "title": {
+        "S": "Smaug"
+      },
+      "table_of_contents": {
+        "S": "First Second Third v7"
+      }
+    },
+    "OldImage": {
+      "image_small": {
+        "S": "/9788210053412/small/9788210053412.jpg"
+      },
+      "description_short": {
+        "S": "Yes this is short v6"
+      },
+      "image_original": {
+        "S": "/9788210053412/original/9788210053412.jpg"
+      },
+      "author": {
+        "S": "Calvert, Christine"
+      },
+      "created": {
+        "S": "2021-03-31T08:32:06.268519Z"
+      },
+      "isbn": {
+        "S": "9788210053412"
+      },
+      "date_of_publication": {
+        "S": "2018"
+      },
+      "description_long": {
+        "S": "No this is long v6"
+      },
+      "modified": {
+        "S": "2021-04-19T07:39:16.379970Z"
+      },
+      "source": {
+        "S": "NIELSEN"
+      },
+      "title": {
+        "S": "Smaug"
+      },
+      "table_of_contents": {
+        "S": "First Second Third v6"
+      }
+    },
+    "SequenceNumber": "139959700000000009428553953",
+    "SizeBytes": 755,
+    "StreamViewType": "NEW_AND_OLD_IMAGES"
+  },
+  "eventSourceARN": "arn:aws:dynamodb:eu-west-1:979605241843:table/contents/stream/2021-04-13T13:21:40.439"
+}
