@@ -34,6 +34,7 @@ public class SchedulerHelper {
     private static final String SHORT_DESCRIPTION = "Forlagets beskrivelse (kort)";
     private static final String LONG_DESCRIPTION = "Forlagets beskrivelse (lang)";
     private static final String CONTENTS_DESCRIPTION = "Innholdsfortegnelse";
+    private static final String DLQ_QUEUE_URL_KEY = "DLQ_QUEUE_URL";
 
     private final transient Environment envHandler;
 
@@ -238,9 +239,7 @@ public class SchedulerHelper {
     public void writeToDLQ(String message) throws SchedulerException {
         try {
             AmazonSQS sqs = AmazonSQSClientBuilder.standard().withRegion(Region.EU_WEST_1.toString()).build();
-            //TODO sub the queueName with an envVariable.
-            String queueUrl = sqs.getQueueUrl("alma-description-updater-AlmaUpdateDLQ-1TB7DS6J4FYQH")
-                    .getQueueUrl();
+            String queueUrl = envHandler.readEnv(DLQ_QUEUE_URL_KEY);
             SendMessageRequest sendMsgRequest = new SendMessageRequest()
                     .withQueueUrl(queueUrl)
                     .withMessageBody(message)

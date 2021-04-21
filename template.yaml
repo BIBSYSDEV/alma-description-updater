@@ -296,12 +296,16 @@ Resources:
           ALMA_SRU_HOST: !Ref AlmaSruLambda
           STANDARD_IMAGE_URL: !Ref ImageUrlStart
           STANDARD_CONTENT_URL: !Ref ContentUrlStart
+          DLQ_QUEUE_URL: !Ref AlmaUpdateDLQ
       Handler: no.unit.alma.UpdateAlmaDescriptionHandler::handleRequest
       Runtime: java11
       MemorySize: 2048
       Policies:
         - AWSSecretsManagerGetSecretValuePolicy:
             SecretArn: '*'
+        - SQSSendMessagePolicy:
+            QueueName:
+              !GetAtt AlmaUpdateDLQ.QueueName
       Events:
         GetAlmaSruRecordEvent:
           Type: Api # More info about API Event Source: https://github.com/awslabs/serverless-application-model/blob/master/versions/2016-10-31.md#api
