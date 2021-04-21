@@ -310,7 +310,7 @@ Resources:
         Variables:
           SqsUrlAlmaQ: !Ref AlmaUpdateQueue
           SqsUrlAlmaDLQ: !Ref AlmaUpdateDLQ
-          durationToRetryNotFoundRecordsInMonth: '{{resolve:ssm:durationToRetryNotFoundRecordsInMonth:1}}'
+          messageAgeLimitAlmaUpdateQueue: '{{resolve:ssm:messageAgeLimitAlmaUpdateQueue:1}}'
       Events:
         SQSQueueEvent:
           Type: SQS
@@ -331,7 +331,7 @@ Resources:
   AlmaErrorScheduler:
     Type: AWS::Serverless::Function
     Properties:
-      Description: A Lambda function that schdules DLQ-reads based on alarms
+      Description: A Lambda function that schedules DLQ-reads based on alarms
       Runtime: nodejs12.x
       Handler: node/schedulerSystem.almaErrorScheduler
       Environment:
@@ -363,12 +363,12 @@ Resources:
   #
   ################
 
-  UpdateSchdulerAlarm:
+  UpdateSchedulerAlarm:
     Type: AWS::CloudWatch::Alarm
     Properties:
       ActionsEnabled: true
       AlarmDescription: Enables emptying of retry-DLQ
-      AlarmName: !Sub UpdateSchduler-${AWS::StackName}
+      AlarmName: !Sub UpdateScheduler-${AWS::StackName}
       DatapointsToAlarm: 1
       Dimensions:
         - Name: QueueName
