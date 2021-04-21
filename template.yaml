@@ -46,7 +46,7 @@ Resources:
     Type: AWS::SSM::Parameter
     Properties:
       Name: MessageAgeLimitAlmaUpdateQueue
-      Type: Number
+      Type: String
       Value: !Ref AgeLimit
       Description: Age limit in month (negativ number) for messages to be put back to retry update Alma for not found records
 
