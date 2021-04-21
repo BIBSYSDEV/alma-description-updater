@@ -32,7 +32,7 @@ exports.almaErrorHandler =  function(event, context) {
         let timestamp = JSON.parse(record.body).dynamodb.ApproximateCreationDateTime;
         let msgCreationDate = new Date(timestamp * 1000);
         console.log("date message was created: "+ msgCreationDate);
-        let sixMonthAgo = addMonths(Date.now(), process.env.durationToRetryNotFoundRecordsInMonth);
+        let sixMonthAgo = addMonths(Date.now(), process.env.messageAgeLimitAlmaUpdateQueue);
         let queueUrl;
         if (msgCreationDate < sixMonthAgo)
         {

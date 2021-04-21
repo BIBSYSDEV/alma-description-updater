@@ -21,9 +21,9 @@ Parameters:
     Type: String
     Description: Url endpoint to the alma sru proxy lambda
     Default: 'https://api.bibs.aws.unit.no/alma?isbn='
-  durationToRetryNotFoundRecordsInMonth:
+  messageAgeLimitAlmaUpdateQueue:
     Type: Number
-    Description: Duration in Month (negativ number) for how long should be retried to update Alma with not found records
+    Description: Age limit in month (negativ number) for messages to be put back to retry update Alma for not found records
     Default: -6
 
 Conditions:
@@ -42,13 +42,13 @@ Globals:
 
 Resources:
 
-  DurationToRetryNotFoundParamter:
+  MessageAgeLimitAlmaUpdateQueue:
     Type: AWS::SSM::Parameter
     Properties:
-      Name: durationToRetryNotFoundRecordsInMonth
+      Name: messageAgeLimitAlmaUpdateQueue
       Type: Number
-      Value: !Ref durationToRetryNotFoundRecordsInMonth
-      Description: Duration in Month (negativ number) for how long should be retried to update Alma with not found records
+      Value: !Ref messageAgeLimitAlmaUpdateQueue
+      Description: Age limit in month (negativ number) for messages to be put back to retry update Alma for not found records
 
   ################
   #
