@@ -123,7 +123,7 @@ Resources:
               TransitionInDays: 30
 
   PipelineApprovalTopic:
-    Type: AWS::SNS::Topic
+    Type: 'AWS::SNS::Topic'
     Metadata:
       cfn_nag:
         rules_to_suppress:
@@ -267,6 +267,7 @@ Resources:
                   - s3:*
                   - secretsmanager:*
                   - sns:*
+                  - sqs:*
                   - ssm:*
                   - resource-groups:*
                   - route53:* # GetHostedZone
@@ -347,7 +348,7 @@ Resources:
       TimeoutInMinutes: 10
 
   Pipeline:
-    Type: AWS::CodePipeline::Pipeline
+    Type: 'AWS::CodePipeline::Pipeline'
     Properties:
       Name: !Sub '${AWS::StackName}-Pipeline'
       RoleArn: !GetAtt PipelineRole.Arn

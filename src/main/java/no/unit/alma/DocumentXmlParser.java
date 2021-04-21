@@ -240,18 +240,16 @@ public class DocumentXmlParser {
      * @throws ParsingException when something goes wrong.
      */
     public Document asDocument(String sruxml) throws ParsingException {
-        Document document = null;
         try {
             DocumentBuilderFactory factory = DocumentBuilderFactory.newInstance();
             DocumentBuilder builder = factory.newDocumentBuilder();
             String removedMarcInSruXml = sruxml.replace(MARC_PREFIX, EMPTY_STRING);
 
             InputSource is = new InputSource(new StringReader(removedMarcInSruXml));
-            document = builder.parse(is);
+            return builder.parse(is);
         } catch (ParserConfigurationException | SAXException | IOException e) {
             throw new ParsingException(CONVERTING_TO_DOC_ERROR_MESSAGE, e);
         }
-        return document;
     }
 
 }

@@ -21,6 +21,10 @@ Parameters:
     Type: String
     Description: Url endpoint to the alma sru proxy lambda
     Default: 'https://api.bibs.aws.unit.no/alma?isbn='
+  AgeLimit:
+    Type: Number
+    Description: Age limit in month (negativ number) for messages to be put back to retry update Alma for not found records
+    Default: -6
   ImageUrlStart:
     Type: String
     Description: The start of the url where images are stored.
@@ -45,6 +49,20 @@ Globals:
     EndpointConfiguration: REGIONAL
 
 Resources:
+
+  MessageAgeLimitAlmaUpdateQueue:
+    Type: AWS::SSM::Parameter
+    Properties:
+      Name: MessageAgeLimitAlmaUpdateQueue
+      Type: String
+      Value: !Ref AgeLimit
+      Description: Age limit in month (negativ number) for messages to be put back to retry update Alma for not found records
+
+  ################
+  #
+  #  API to be removed
+  #
+  ################
 
   UpdateAlmaDescriptionAPI:
     Type: AWS::Serverless::Api
@@ -161,6 +179,113 @@ Resources:
                   type: string
                   description: Logg of events from the put against alma api
 
+  ################
+  #
+  #  Queues
+  #
+  ################
+
+  DynamodbStreamDLQ:
+    Type: AWS::SQS::Queue
+    Properties:
+      MessageRetentionPeriod: 1209600 #14 days
+      ReceiveMessageWaitTimeSeconds: 20
+      VisibilityTimeout: 60
+
+  AlmaUpdateQueue:
+    Type: AWS::SQS::Queue
+    Properties:
+      MessageRetentionPeriod: 1209600 #14 days
+      ReceiveMessageWaitTimeSeconds: 20
+      VisibilityTimeout: 60
+      RedrivePolicy:
+        deadLetterTargetArn: !GetAtt AlmaUpdateDLQ.Arn
+        maxReceiveCount: 3
+
+  AlmaUpdateDLQ:
+    Type: AWS::SQS::Queue
+    Properties:
+      MessageRetentionPeriod: 1209600 #14 days
+      ReceiveMessageWaitTimeSeconds: 20
+      VisibilityTimeout: 60
+      DelaySeconds: 600  # Lang delay så ting ikke skal gå i loop her
+      RedrivePolicy:
+        deadLetterTargetArn: !GetAtt AlmaUpdateExhausted.Arn
+        maxReceiveCount: 2
+
+  AlmaUpdateExhausted:
+    Type: AWS::SQS::Queue
+    Properties:
+      MessageRetentionPeriod: 1209600 #14 days
+      ReceiveMessageWaitTimeSeconds: 20
+      VisibilityTimeout: 60
+
+  AlmaDLQAlarmNotification:
+    Type: AWS::SNS::Topic
+    Properties:
+      TopicName: !Sub "AlmaDLQAlarmNotification-${AWS::StackName}"
+
+  AlmaDLQAlarmNotificationPolicy:
+    Type: AWS::SNS::TopicPolicy
+    Properties:
+      Topics:
+        - !Ref AlmaDLQAlarmNotification
+      PolicyDocument:
+        Statement:
+          - Sid: AlarmSNS
+            Effect: Allow
+            Principal:
+              AWS: "*"
+            Action:
+              - SNS:Publish
+            Resource: !Ref AlmaDLQAlarmNotification
+            Condition:
+              StringEquals:
+                AWS:SourceOwner: !Ref AWS::AccountId
+
+
+  ################
+  #
+  #  Lambda
+  #
+  ################
+
+  StreamReader:
+    Type: AWS::Serverless::Function
+    Properties:
+      Description: A Lambda function that get data from dynamodb and put in sqs
+      Runtime: nodejs12.x
+      Handler: node/schedulerSystem.streamReader
+      Environment:
+        Variables:
+          SqsUrlAlma: !Ref AlmaUpdateQueue
+      Events:
+        DynamoDBEvent:
+          Type: DynamoDB
+          Properties:
+            BatchSize: 100 #Default
+            Stream: '{{resolve:ssm:dynamoDBStreamArnContents:1}}'
+            StartingPosition: LATEST
+            MaximumBatchingWindowInSeconds: 5
+            MaximumRecordAgeInSeconds: 60
+            MaximumRetryAttempts: 2
+            DestinationConfig:
+              OnFailure:
+                Destination: !GetAtt DynamodbStreamDLQ.Arn # Writes batch-meta-info to SQS if everything fails
+      MemorySize: 128
+      Timeout: 55
+      Policies:
+        - AWSLambdaBasicExecutionRole
+        - SQSSendMessagePolicy:
+            QueueName:
+              !GetAtt DynamodbStreamDLQ.QueueName
+        - SQSSendMessagePolicy:
+            QueueName:
+              !GetAtt AlmaUpdateQueue.QueueName
+        - DynamoDBStreamReadPolicy:
+            TableName: '{{resolve:ssm:dynamoDBTableNameContents:1}}'
+            StreamName: "*"
+
   UpdateAlmaDescriptionFunction:
     Type: AWS::Serverless::Function # More info about Function Resource: https://github.com/awslabs/serverless-application-model/blob/master/versions/2016-10-31.md#awsserverlessfunction
     Properties:
@@ -184,6 +309,98 @@ Resources:
             RestApiId: !Ref UpdateAlmaDescriptionAPI
             Method: put
             Path: /
+
+  AlmaErrorHandler:
+    Type: AWS::Serverless::Function
+    Properties:
+      Description: A Lambda function that handles Alma DLQ
+      Runtime: nodejs12.x
+      Handler: node/schedulerSystem.almaErrorHandler
+      Environment:
+        Variables:
+          SqsUrlAlmaQ: !Ref AlmaUpdateQueue
+          SqsUrlAlmaDLQ: !Ref AlmaUpdateDLQ
+          messageAgeLimitAlmaUpdateQueue: !Ref AgeLimit
+      Events:
+        SQSQueueEvent:
+          Type: SQS
+          Properties:
+            Queue: !GetAtt AlmaUpdateDLQ.Arn
+            BatchSize: 1
+            Enabled: false
+      ReservedConcurrentExecutions: 1
+      MemorySize: 128
+      Timeout: 55
+      Policies:
+        - AWSLambdaBasicExecutionRole
+        - SQSSendMessagePolicy:
+            QueueName:
+              !GetAtt AlmaUpdateQueue.QueueName
+
+
+  AlmaErrorScheduler:
+    Type: AWS::Serverless::Function
+    Properties:
+      Description: A Lambda function that schedules DLQ-reads based on alarms
+      Runtime: nodejs12.x
+      Handler: node/schedulerSystem.almaErrorScheduler
+      Environment:
+        Variables:
+          SqsUrlAlmaQ: !Ref AlmaUpdateQueue
+          SqsUrlAlmaDLQ: !Ref AlmaUpdateDLQ
+          ErrorHandlerSwitch: !Ref AlmaErrorHandlerSQSQueueEvent
+      Events:
+        SNSEvent:
+          Type: SNS
+          Properties:
+            Topic: !Ref AlmaDLQAlarmNotification
+      ReservedConcurrentExecutions: 1
+      MemorySize: 128
+      Timeout: 55
+      Policies:
+        - AWSLambdaBasicExecutionRole
+        - SQSSendMessagePolicy:
+            QueueName:
+              !GetAtt AlmaUpdateQueue.QueueName
+        - Statement:
+            Effect: Allow
+            Action: lambda:UpdateEventSourceMapping
+            Resource: !Sub arn:aws:lambda:${AWS::Region}:${AWS::AccountId}:event-source-mapping:${AlmaErrorHandlerSQSQueueEvent}
+
+  ################
+  #
+  #  Alarms
+  #
+  ################
+
+  UpdateSchedulerAlarm:
+    Type: AWS::CloudWatch::Alarm
+    Properties:
+      ActionsEnabled: true
+      AlarmDescription: Enables emptying of retry-DLQ
+      AlarmName: !Sub UpdateScheduler-${AWS::StackName}
+      DatapointsToAlarm: 1
+      Dimensions:
+        - Name: QueueName
+          Value: !GetAtt  AlmaUpdateDLQ.QueueName
+      EvaluationPeriods: 1
+      MetricName: ApproximateAgeOfOldestMessage
+      Namespace: AWS/SQS
+      Period: 60
+      Statistic: Average
+      ComparisonOperator: GreaterThanThreshold
+      Threshold: 7200.0
+      TreatMissingData: notBreaching
+      AlarmActions:
+        - !Ref AlmaDLQAlarmNotification
+      OKActions:
+        - !Ref AlmaDLQAlarmNotification
+
+  ################
+  #
+  #  Other stuff
+  #
+  ################
 
   UpdateAlmaDescriptionBasePathMapping:
     Type: AWS::ApiGateway::BasePathMapping

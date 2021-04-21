@@ -1,0 +1,11 @@
+{
+  "name": "streamPump-app",
+  "version": "1.0.0",
+  "description": "pumper dynamoDBstreams to SQS",
+  "main": "node/schedulerSystem.js",
+  "scripts": {
+    "test": "echo \"run some tests here\""
+  },
+  "author": "Team SMILE",
+  "license": "MIT"
+}
