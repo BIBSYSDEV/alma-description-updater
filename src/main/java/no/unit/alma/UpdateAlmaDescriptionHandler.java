@@ -5,7 +5,6 @@ import java.lang.reflect.Type;
 import java.net.URL;
 import java.net.http.HttpResponse;
 import java.util.List;
-import java.util.concurrent.TimeUnit;
 import java.util.stream.Collectors;
 import com.amazonaws.services.lambda.runtime.Context;
 import com.amazonaws.services.lambda.runtime.RequestHandler;
@@ -23,7 +22,6 @@ import no.unit.secret.SecretRetriever;
 import no.unit.utils.DebugUtils;
 import nva.commons.utils.Environment;
 import org.w3c.dom.Document;
-import software.amazon.awssdk.http.HttpStatusCode;
 
 import java.io.BufferedReader;
 import java.io.InputStreamReader;
@@ -38,6 +36,7 @@ public class UpdateAlmaDescriptionHandler implements RequestHandler<SQSEvent, Vo
     private final transient  Environment envHandler;
     private transient String almaApiHost;
     private transient String almaSruHost;
+    private final transient AlmaHelper almaHelper = new AlmaHelper();
     private final transient SchedulerHelper schedulerHelper = new SchedulerHelper();
     private final transient DocumentXmlParser xmlParser = new DocumentXmlParser();
 
@@ -86,6 +85,12 @@ public class UpdateAlmaDescriptionHandler implements RequestHandler<SQSEvent, Vo
             throw new RuntimeException("Error while processing input event. " + e.getMessage());
         }
 
+        if (updateItems.isEmpty()) {
+            //In case we recieve an update without any relevant information
+            // (at the time this include audiofiles) we just skip them.
+            return null;
+        }
+
         try {
             /* Step 2. Get a REFERENCE LIST from alma-sru through a lambda. */
             List<Reference> referenceList = getReferenceListByIsbn(updateItems.get(0).getIsbn());
@@ -102,7 +107,8 @@ public class UpdateAlmaDescriptionHandler implements RequestHandler<SQSEvent, Vo
                 String mmsId = reference.getId();
 
                 /* 3.2 Use the MMS_ID to get a BIB-RECORD from the alma-api. */
-                HttpResponse<String> almaResponse = getBibRecordFromAlmaWithRetries(mmsId);
+                HttpResponse<String> almaResponse = almaHelper
+                        .getBibRecordFromAlmaWithRetries(mmsId, secretKey, almaApiHost);
 
                 if (almaResponse == null) {
                     continue;
@@ -114,7 +120,8 @@ public class UpdateAlmaDescriptionHandler implements RequestHandler<SQSEvent, Vo
                 String updatedRecord = updateBibRecord(updateItems, xmlFromAlma);
 
                 /* 4. Push the updated BIB-RECORD back to the alma through a put-request to the api. */
-                HttpResponse<String> response = putBibRecordInAlmaWithRetries(mmsId, updatedRecord);
+                HttpResponse<String> response = almaHelper
+                        .putBibRecordInAlmaWithRetries(mmsId, updatedRecord, secretKey, almaApiHost);
 
                 if (response == null) {
                     continue;
@@ -166,117 +173,6 @@ public class UpdateAlmaDescriptionHandler implements RequestHandler<SQSEvent, Vo
         return xmlBuilderString;
     }
 
-    /**
-     * A method that sends a get request to ALMA.
-     * @param mmsId The mms id needed to specify which post to retrieve.
-     * @return A http response mirroring the response from the get request sent to ALMA.
-     * @throws InterruptedException When something goes wrong.
-     * @throws IOException When something goes wrong.
-     */
-    private HttpResponse<String> getBibRecordFromAlma(String mmsId)
-            throws InterruptedException, IOException {
-        HttpResponse<String> almaResponse = AlmaConnection.getInstance().sendGet(mmsId, secretKey, almaApiHost);
-        return almaResponse;
-    }
-
-    /**
-     * A method that sends a put request to ALMA.
-     * @param mmsId The mms id needed to specify which post to update.
-     * @param updatedXml The string which we want to update the post with.
-     * @return A http response mirroring the response from the put request sent to ALMA.
-     * @throws InterruptedException When something goes wrong.
-     * @throws IOException When something goes wrong.
-     */
-    private HttpResponse<String> putBibRecordInAlma(String mmsId, String updatedXml)
-            throws InterruptedException, IOException {
-        HttpResponse<String> almaResponse = AlmaConnection.getInstance().sendPut(mmsId, secretKey,
-                updatedXml, almaApiHost);
-        return almaResponse;
-    }
-
-    /**
-     * Method to retry GET-calls to ALMA, sleeps for 3 seconds before retrying.
-     * @param mmsId For identifying the record in ALMA.
-     * @return HttpResponse<String> with the ALMA response or null if failing.
-     * @throws InterruptedException when the sleep is interrupted.
-     */
-    public HttpResponse<String> getBibRecordFromAlmaWithRetries(String mmsId)
-            throws InterruptedException {
-        HttpResponse<String> almaResponse = null;
-        try {
-
-            almaResponse = getBibRecordFromAlma(mmsId);
-        } catch (InterruptedException | IOException e) {
-            almaResponse = null; //NOPMD
-        }
-
-        if (almaResponse != null && almaResponse.statusCode() == HttpStatusCode.OK) {
-            return almaResponse;
-        } else {
-            TimeUnit.SECONDS.sleep(3);
-            try {
-                almaResponse = getBibRecordFromAlma(mmsId);
-            } catch (InterruptedException | IOException e) {
-                almaResponse = null; //NOPMD
-            }
-            if (almaResponse != null && almaResponse.statusCode() == HttpStatusCode.OK) {
-                return almaResponse;
-            } else {
-                TimeUnit.SECONDS.sleep(3);
-                try {
-                    almaResponse = getBibRecordFromAlma(mmsId);
-                } catch (InterruptedException | IOException e) {
-                    almaResponse = null; //NOPMD
-                }
-                if (almaResponse != null && almaResponse.statusCode() == HttpStatusCode.OK) {
-                    return almaResponse;
-                } else {
-                    return null;
-                }
-            }
-        }
-    }
-
-    /**
-     * Method to retry Put-calls to ALMA, sleeps for 3 seconds before retrying.
-     * @param mmsId For identifying the record in ALMA.
-     * @return HttpResponse<String> with the ALMA response or null if failing.
-     * @throws InterruptedException when the sleep is interrupted.
-     */
-    public HttpResponse<String> putBibRecordInAlmaWithRetries(String mmsId, String updatedRecord)
-            throws InterruptedException {
-        HttpResponse<String> response = null;
-        try {
-            response = putBibRecordInAlma(mmsId, updatedRecord);
-        } catch (InterruptedException | IOException e) {
-            response = null; //NOPMD
-        }
-        if (response != null && response.statusCode() == HttpStatusCode.OK) {
-            return response;
-        } else {
-            TimeUnit.SECONDS.sleep(3);
-            try {
-                response = putBibRecordInAlma(mmsId, updatedRecord);
-            } catch (InterruptedException | IOException e) {
-                response = null; //NOPMD
-            }
-            if (response != null && response.statusCode() == HttpStatusCode.OK) {
-                return response;
-            } else {
-                TimeUnit.SECONDS.sleep(3);
-                try {
-                    response = putBibRecordInAlma(mmsId, updatedRecord);
-                } catch (InterruptedException | IOException e) {
-                    response = null; //NOPMD
-                }
-                if (response != null && response.statusCode() == HttpStatusCode.OK) {
-                    return response;
-                } else {
-                    return null;
-                }
-            }
-        }
-    }
 
     /**
      * A method for assigning values to the secretkey and checking the environment variables.

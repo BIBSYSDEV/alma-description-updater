@@ -13,7 +13,7 @@
     },
     "NewImage": {
       "image_small": {
-        "S": "test/9788210053412/small/9788210053412.jpg"
+        "S": "/9788210053412/small/9788210053412.jpg"
       },
       "description_short": {
         "S": "Yes this is short v7"
@@ -53,6 +53,12 @@
       "image_small": {
         "S": "/9788210053412/small/9788210053412.jpg"
       },
+      "description_short": {
+        "S": "Yes this is short v7"
+      },
+      "image_original": {
+        "S": "test/9788210053412/original/9788210053412.jpg"
+      },
       "author": {
         "S": "Calvert, Christine"
       },
@@ -66,7 +72,7 @@
         "S": "2018"
       },
       "description_long": {
-        "S": "No this is long v6"
+        "S": "No this is long v7"
       },
       "modified": {
         "S": "2021-04-19T07:39:16.379970Z"
@@ -78,7 +84,7 @@
         "S": "Smaug"
       },
       "table_of_contents": {
-        "S": "First Second Third v6"
+        "S": "First Second Third v7"
       }
     },
     "SequenceNumber": "139959700000000009428553953",

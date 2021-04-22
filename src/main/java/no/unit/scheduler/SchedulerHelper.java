@@ -81,26 +81,26 @@ public class SchedulerHelper {
      * @return The DynamoDbItem.
      */
     private BibItem extractFromJsonObject(JsonObject image) {
-        BibItem dynamoItem = new BibItem();
+        BibItem bibItem = new BibItem();
         if (image.get("description_short") != null) {
-            dynamoItem.setDescriptionShort(image.get("description_short").getAsJsonObject().get(S).getAsString());
+            bibItem.setDescriptionShort(image.get("description_short").getAsJsonObject().get(S).getAsString());
         }
         if (image.get("image_large") != null) {
-            dynamoItem.setImageLarge(image.get("image_large").getAsJsonObject().get(S).getAsString());
+            bibItem.setImageLarge(image.get("image_large").getAsJsonObject().get(S).getAsString());
         }
         if (image.get("description_long") != null) {
-            dynamoItem.setDescriptionLong(image.get("description_long").getAsJsonObject().get(S).getAsString());
+            bibItem.setDescriptionLong(image.get("description_long").getAsJsonObject().get(S).getAsString());
         }
         if (image.get("image_small") != null) {
-            dynamoItem.setImageSmall(image.get("image_small").getAsJsonObject().get(S).getAsString());
+            bibItem.setImageSmall(image.get("image_small").getAsJsonObject().get(S).getAsString());
         }
         if (image.get("table_of_contents") != null) {
-            dynamoItem.setTableOfContents(image.get("table_of_contents").getAsJsonObject().get(S).getAsString());
+            bibItem.setTableOfContents(image.get("table_of_contents").getAsJsonObject().get(S).getAsString());
         }
         if (image.get("image_original") != null) {
-            dynamoItem.setImageOriginal(image.get("image_original").getAsJsonObject().get(S).getAsString());
+            bibItem.setImageOriginal(image.get("image_original").getAsJsonObject().get(S).getAsString());
         }
-        return dynamoItem;
+        return bibItem;
     }
 
     /**
@@ -140,10 +140,9 @@ public class SchedulerHelper {
      * @return A UpdateItem.
      */
     public UpdateItem createImageLink(String imageSize, String isbn) {
-        String link = "";
         String secondLinkPart = isbn.substring(isbn.length() - 2, isbn.length() - 1);
         String firstLinkPart = isbn.substring(isbn.length() - 1);
-        link = String.format(envHandler.readEnv(CONTENT_URL_KEY) + IMAGE_KEY + imageSize
+        String link = String.format(envHandler.readEnv(CONTENT_URL_KEY) + IMAGE_KEY + imageSize
                 + "/%s/%s/%s.jpg", firstLinkPart, secondLinkPart, isbn);
 
         String specifiedMaterial;
@@ -172,8 +171,8 @@ public class SchedulerHelper {
      * @return A UpdateItem.
      */
     public UpdateItem createContentLink(String contentType, String isbn) {
-        String link = "";
-        link = envHandler.readEnv(CONTENT_URL_KEY) + isbn + "?type=" + contentType.toUpperCase(Locale.getDefault());
+        String link = envHandler.readEnv(CONTENT_URL_KEY) + isbn + "?type="
+                + contentType.toUpperCase(Locale.getDefault());
 
         String specifiedMaterial;
         switch (contentType.toLowerCase(Locale.getDefault())) {

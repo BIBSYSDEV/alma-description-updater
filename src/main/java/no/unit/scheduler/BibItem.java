@@ -137,6 +137,7 @@ public class BibItem {
         this.imageOriginal = imageOriginal;
     }
 
+
     @Override
     @JacocoGenerated
     public String toString() {

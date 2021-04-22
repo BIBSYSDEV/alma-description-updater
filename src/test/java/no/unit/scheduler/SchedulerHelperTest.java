@@ -22,8 +22,8 @@ class SchedulerHelperTest {
 
     private static final String CREATED_KEY = "created";
     private static final String MODIFIED_KEY = "modified";
-    private static final String IMAGE_URL_KEY = "image-url-com";
-    private static final String CONTENT_URL_KEY = "content-url-com";
+    private static final String IMAGE_KEY = "image/";
+    private static final String CONTENT_URL_KEY = "content-url-com/";
     private static final String ISBN = "9788205377547";
     private static final String IMAGE_SIZE = "small";
     private static final String CONTENT_TYPE = "description_short";
@@ -56,7 +56,6 @@ class SchedulerHelperTest {
     }
 
     private void initEnv() {
-        when(mockEnv.readEnv("STANDARD_IMAGE_URL")).thenReturn(IMAGE_URL_KEY);
         when(mockEnv.readEnv("STANDARD_CONTENT_URL")).thenReturn(CONTENT_URL_KEY);
     }
 
@@ -73,7 +72,7 @@ class SchedulerHelperTest {
     @Test
     void generateImageLinkTest() throws Exception {
         UpdateItem payload = mockSchedulerHelper.createImageLink(IMAGE_SIZE, ISBN);
-        String expectedLink = String.format(IMAGE_URL_KEY + IMAGE_SIZE + "/%s/%s/%s.jpg", 7, 4, ISBN);
+        String expectedLink = String.format(CONTENT_URL_KEY + IMAGE_KEY + IMAGE_SIZE + "/%s/%s/%s.jpg", 7, 4, ISBN);
         assertEquals(expectedLink, payload.getLink());
     }
 
