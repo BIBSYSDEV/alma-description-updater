@@ -16,7 +16,7 @@ import java.util.Locale;
 
 public class SchedulerHelper {
 
-    private static final String IMAGE_URL_KEY = "STANDARD_IMAGE_URL";
+    private static final String IMAGE_KEY = "image/";
     private static final String CONTENT_URL_KEY = "STANDARD_CONTENT_URL";
 
 
@@ -60,18 +60,18 @@ public class SchedulerHelper {
                 .getAsJsonObject().get("isbn").getAsJsonObject().get(S).getAsString();
         String eventName = eventBodyObject.get("eventName").getAsString();
         JsonObject newImage = eventBodyObject.get("dynamodb").getAsJsonObject().get("NewImage").getAsJsonObject();
-        BibItem newDynamoItem = extractFromJsonObject(newImage);
-        newDynamoItem.setIsbn(isbn);
+        BibItem newBibItem = extractFromJsonObject(newImage);
+        newBibItem.setIsbn(isbn);
         if (MODIFY.equals(eventName)) {
             JsonObject oldImage = eventBodyObject.get("dynamodb").getAsJsonObject().get("OldImage").getAsJsonObject();
-            BibItem oldDynamoItem = extractFromJsonObject(oldImage);
-            oldDynamoItem.setIsbn(isbn);
+            BibItem oldBibItem = extractFromJsonObject(oldImage);
+            oldBibItem.setIsbn(isbn);
 
-            BibItem diffDynamoItem = extractDiffs(newDynamoItem, oldDynamoItem);
+            BibItem diffBibItem = extractDiffs(newBibItem, oldBibItem);
 
-            return createLinks(diffDynamoItem);
+            return createLinks(diffBibItem);
         } else {
-            return createLinks(newDynamoItem);
+            return createLinks(newBibItem);
         }
     }
 
@@ -143,7 +143,7 @@ public class SchedulerHelper {
         String link = "";
         String secondLinkPart = isbn.substring(isbn.length() - 2, isbn.length() - 1);
         String firstLinkPart = isbn.substring(isbn.length() - 1);
-        link = String.format(envHandler.readEnv(IMAGE_URL_KEY) + imageSize
+        link = String.format(envHandler.readEnv(CONTENT_URL_KEY) + IMAGE_KEY + imageSize
                 + "/%s/%s/%s.jpg", firstLinkPart, secondLinkPart, isbn);
 
         String specifiedMaterial;

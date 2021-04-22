@@ -1,6 +1,6 @@
 package no.unit.scheduler;
 
-import com.amazonaws.services.dynamodbv2.xspec.B;
+
 import com.fasterxml.jackson.databind.ObjectMapper;
 import com.google.gson.Gson;
 import no.unit.alma.XmlParserTest;

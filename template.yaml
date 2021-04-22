@@ -25,14 +25,10 @@ Parameters:
     Type: Number
     Description: Age limit in month (negativ number) for messages to be put back to retry update Alma for not found records
     Default: -6
-  ImageUrlStart:
-    Type: String
-    Description: The start of the url where images are stored.
-    Default: 'https://contents.bibsys.no/content/images/'
   ContentUrlStart:
     Type: String
-    Description: The start of the url where summaries and content-tables are stored.
-    Default: 'https://contents.bibsys.no/content/'
+    Description: The start of the url where content is stored.
+    Default: 'https://contents.sandbox.bibs.aws.unit.no/content/'
 
 Conditions:
   HasDomainName: !Not [!Equals [!Ref CustomDomain, '']]
