@@ -3,16 +3,6 @@ Transform: AWS::Serverless-2016-10-31
 Description: >
   Sets up lambda, api and base path mapping to fetch most recent publication for an author
 Parameters:
-  CustomDomain:
-    Type: AWS::SSM::Parameter::Value<String>
-    Default: '/api/domainName'
-    Description: (Optional) Custom domain name for the API endpoint
-  CustomDomainBasePath:
-    Type: String
-    Default: 'alma_update'
-    Description: (Optional) Base path mapping in CustomDomain
-    AllowedPattern: "^[a-zA-Z0-9$\\-_.+!*'(),]*$"
-    ConstraintDescription: "May contain only letters, numbers and one of $-_.+!*'(),"
   AlmaBibsEndpointREST:
     Type: String
     Description: Url endpoint to the Alma API bibs
@@ -266,21 +256,3 @@ Resources:
         - !Ref AlmaDLQAlarmNotification
       OKActions:
         - !Ref AlmaDLQAlarmNotification
-
-  ################
-  #
-  #  Other stuff
-  #
-  ################
-
-  UpdateAlmaDescriptionBasePathMapping:
-    Type: AWS::ApiGateway::BasePathMapping
-    Condition: HasDomainName
-    Properties:
-      BasePath: !If
-        - HasCustomDomainBasePath
-        - !Ref CustomDomainBasePath
-        - !Ref 'AWS::NoValue'
-      DomainName: !Ref CustomDomain
-      RestApiId: !Ref UpdateAlmaDescriptionAPI
-      Stage: !Ref UpdateAlmaDescriptionAPI.Stage
