@@ -158,12 +158,6 @@ Resources:
           ALMA_SRU_HOST: !Ref AlmaSruLambda
           STANDARD_CONTENT_URL: !Ref ContentUrlStart
           DLQ_QUEUE_URL: !Ref AlmaUpdateDLQ
-      Events:
-        SQSQueueEvent:
-          Type: SQS
-          Properties:
-            Queue: !GetAtt AlmaUpdateQueue.Arn
-            BatchSize: 1
       ReservedConcurrentExecutions: 1
       Timeout: 55 # Chosen to be less than the default SQS Visibility Timeout of 60 seconds
       Handler: no.unit.alma.UpdateAlmaDescriptionHandler::handleRequest
