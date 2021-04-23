@@ -70,6 +70,9 @@ public class UpdateAlmaDescriptionHandler implements RequestHandler<SQSEvent, Vo
     @SuppressWarnings("unchecked")
     public Void handleRequest(final SQSEvent event, Context context) {
 
+        if (true) {
+            throw new RuntimeException("THIS IS A TEST");
+        }
         try {
             initVariables();
         } catch (SchedulerException e) {
