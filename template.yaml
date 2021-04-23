@@ -20,9 +20,6 @@ Parameters:
     Description: The start of the url where content is stored.
     Default: 'https://contents.sandbox.bibs.aws.unit.no/content/'
 
-Conditions:
-  HasDomainName: !Not [!Equals [!Ref CustomDomain, '']]
-  HasCustomDomainBasePath: !Not [!Equals [!Ref CustomDomainBasePath, '']]
 
 Globals:
   Function:
