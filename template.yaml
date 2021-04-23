@@ -412,11 +412,3 @@ Resources:
       DomainName: !Ref CustomDomain
       RestApiId: !Ref UpdateAlmaDescriptionAPI
       Stage: !Ref UpdateAlmaDescriptionAPI.Stage
-
-Outputs:
-  ApiEndpoint:
-    Description: "Endpoint base URL for the API"
-    Value: !If
-      - HasDomainName
-      - !Sub "https://${CustomDomain}/${CustomDomainBasePath}"
-      - !Sub "https://${UpdateAlmaDescriptionAPI}.execute-api.${AWS::Region}.amazonaws.com/${UpdateAlmaDescriptionAPI.Stage}/"
