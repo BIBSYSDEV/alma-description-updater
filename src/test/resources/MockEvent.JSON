@@ -13,10 +13,10 @@
     },
     "NewImage": {
       "image_small": {
-        "S": "/9788210053412/small/9788210053412.jpg"
+        "S": "test/9788210053412/small/9788210053412.jpg"
       },
       "description_short": {
-        "S": "Yes this is short v7"
+        "S": "Yes this is short v8"
       },
       "image_original": {
         "S": "test/9788210053412/original/9788210053412.jpg"
@@ -34,7 +34,7 @@
         "S": "2018"
       },
       "description_long": {
-        "S": "No this is long v7"
+        "S": "No this is long v8"
       },
       "modified": {
         "S": "2021-04-19T07:48:32.769721Z"
@@ -46,7 +46,7 @@
         "S": "Smaug"
       },
       "table_of_contents": {
-        "S": "First Second Third v7"
+        "S": "First Second Third v8"
       }
     },
     "OldImage": {
