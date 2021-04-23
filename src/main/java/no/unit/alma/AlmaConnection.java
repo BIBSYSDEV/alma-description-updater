@@ -1,5 +1,7 @@
 package no.unit.alma;
 
+import nva.commons.utils.JacocoGenerated;
+
 import javax.ws.rs.core.HttpHeaders;
 import javax.ws.rs.core.MediaType;
 import java.io.IOException;
@@ -24,6 +26,7 @@ public final class AlmaConnection {
 
     }
 
+    @JacocoGenerated
     public static AlmaConnection getInstance() {
         return instance;
     }
@@ -36,6 +39,7 @@ public final class AlmaConnection {
      * @throws IOException When something goes wrong.
      * @throws InterruptedException When something goes wrong.
      */
+    @JacocoGenerated
     public HttpResponse<String> sendGet(String mmsId, String apiKey, String url)
             throws IOException,  InterruptedException {
 
@@ -59,6 +63,7 @@ public final class AlmaConnection {
      * @throws IOException When something goes wrong.
      * @throws InterruptedException When something goes wrong.
      */
+    @JacocoGenerated
     public HttpResponse<String> sendPut(String mmsId, String apiKey, String xml, String url)
             throws IOException, InterruptedException {
         HttpRequest request = HttpRequest.newBuilder()
