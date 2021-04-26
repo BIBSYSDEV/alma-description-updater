@@ -2,5 +2,6 @@
   "isbn": "123456789",
   "descriptionShort": "The short description. With some modification",
   "imageLarge": "123456789/larger/123456789",
-  "imageSmall": "123456789/smaller/123456789"
+  "imageSmall": "123456789/smaller/123456789",
+  "audioFile": "123456789/audio/123456789"
 }

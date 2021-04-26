@@ -37,17 +37,21 @@ public class DocumentXmlParser {
     public static final int MARC_TAG_956 = 956;
     public static final char MARC_CODE_U = 'u';
     public static final char MARC_CODE_3 = '3';
+    public static final String JPG_ENDING = ".jpg";
+    public static final String MP3_ENDING = ".mp3";
     public static final String MARC_PREFIX = "marc:";
     public static final String DATAFIELD = "datafield";
     public static final String NODE_TEMPLATE_856 = "<datafield ind1='4' ind2='2' tag='856'>"
             + "<subfield code='3'>1</subfield>"
             + "<subfield code='u'>2</subfield>"
             + "<subfield code='q'>image/jpeg</subfield>"
+            + "<subfield code='q'>audio/mpeg</subfield>"
             + "</datafield>";
     public static final String NODE_TEMPLATE_956 = "<datafield ind1='4' ind2='2' tag='956'>"
             + "<subfield code='3'>1</subfield>"
             + "<subfield code='u'>2</subfield>"
             + "<subfield code='q'>image/jpeg</subfield>"
+            + "<subfield code='q'>audio/mpeg</subfield>"
             + "<subfield code='9'>local</subfield>"
             + "</datafield>";
 
@@ -79,8 +83,12 @@ public class DocumentXmlParser {
             subfields.item(0).setTextContent(specifiedMaterial);
             subfields.item(1).setTextContent(url);
 
-            if (!url.endsWith(".jpg")) {
+            if (!url.endsWith(JPG_ENDING)) {
                 datafields.item(0).removeChild(subfields.item(2));
+            }
+            if (!url.endsWith(MP3_ENDING)) {
+                int theIndex = url.endsWith(JPG_ENDING) ? 3 : 2;
+                datafields.item(0).removeChild(subfields.item(theIndex));
             }
             return doc;
 

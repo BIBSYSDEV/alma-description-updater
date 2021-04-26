@@ -11,5 +11,6 @@
   "imageSmall": "123456789/smaller/123456789",
   "tableOfContents": "chapter1 chapter2 chapter3",
   "author": "Nils Nilsen",
-  "imageOriginal": "123456789/original/123456789"
+  "imageOriginal": "123456789/original/123456789",
+  "audioFile": "123456789/audio/123456789"
 }

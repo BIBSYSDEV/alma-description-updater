@@ -18,6 +18,7 @@ public class BibItem {
     private transient String tableOfContents;
     private transient String author;
     private transient String imageOriginal;
+    private transient String audioFile;
 
     @JacocoGenerated
     public String getIsbn() {
@@ -84,6 +85,11 @@ public class BibItem {
         return imageOriginal;
     }
 
+    @JacocoGenerated
+    public String getAudioFile() {
+        return audioFile;
+    }
+
     public void setIsbn(String isbn) {
 
         this.isbn = isbn;
@@ -137,6 +143,9 @@ public class BibItem {
         this.imageOriginal = imageOriginal;
     }
 
+    public void setAudioFile(String audioFile) {
+        this.audioFile = audioFile;
+    }
 
     @Override
     @JacocoGenerated
