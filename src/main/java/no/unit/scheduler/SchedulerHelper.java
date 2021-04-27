@@ -17,6 +17,7 @@ import java.util.Locale;
 public class SchedulerHelper {
 
     private static final String IMAGE_KEY = "image/";
+    private static final String AUDIO_MP3_KEY = "audio/mp3";
     private static final String CONTENT_URL_KEY = "STANDARD_CONTENT_URL";
 
 
@@ -100,6 +101,9 @@ public class SchedulerHelper {
         if (image.get("image_original") != null) {
             bibItem.setImageOriginal(image.get("image_original").getAsJsonObject().get(S).getAsString());
         }
+        if (image.get("audio_file") != null) {
+            bibItem.setAudioFile(image.get("audio_file").getAsJsonObject().get(S).getAsString());
+        }
         return bibItem;
     }
 
@@ -128,6 +132,9 @@ public class SchedulerHelper {
         }
         if (item.getImageOriginal() != null) {
             items.add(createImageLink(ORIGINAL_KEY, item.getIsbn()));
+        }
+        if (item.getAudioFile() != null) {
+            items.add(createAudioLink(item.getIsbn()));
         }
 
         return items;
@@ -194,6 +201,24 @@ public class SchedulerHelper {
     }
 
     /**
+     * Creates a UpdateItem containing the correct isbn, link and specifiedMaterial.
+     * @param isbn The isbn to create the UpdateItem for.
+     * @return A UpdateItem.
+     */
+    public UpdateItem createAudioLink(String isbn) {
+        String secondLinkPart = isbn.substring(isbn.length() - 2, isbn.length() - 1);
+        String firstLinkPart = isbn.substring(isbn.length() - 1);
+        String link = String.format(envHandler.readEnv(CONTENT_URL_KEY) + AUDIO_MP3_KEY
+                + "/%s/%s/%s.mp3", firstLinkPart, secondLinkPart, isbn);
+        String specifiedMaterial = "Lydfil";
+        UpdateItem item = new UpdateItem();
+        item.setIsbn(isbn);
+        item.setLink(link);
+        item.setSpecifiedMaterial(specifiedMaterial);
+        return item;
+    }
+
+    /**
      * Method to fill the actually updated fields of a BibItem.
      * @param newVersion BibItem containing the new version of the db-record.
      * @param oldVersion BibItem containing the old version of the db-record.
@@ -226,6 +251,10 @@ public class SchedulerHelper {
         if (newVersion.getImageLarge() != null && !newVersion.getImageLarge()
                 .equals(oldVersion.getImageLarge())) {
             returnVersion.setImageLarge(newVersion.getImageLarge());
+        }
+        if (newVersion.getAudioFile() != null && !newVersion.getAudioFile()
+                .equals(oldVersion.getAudioFile())) {
+            returnVersion.setAudioFile(newVersion.getAudioFile());
         }
         return returnVersion;
     }

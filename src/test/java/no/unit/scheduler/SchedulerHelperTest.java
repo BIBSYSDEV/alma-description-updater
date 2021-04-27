@@ -2,7 +2,6 @@ package no.unit.scheduler;
 
 
 import com.fasterxml.jackson.databind.ObjectMapper;
-import com.google.gson.Gson;
 import no.unit.alma.XmlParserTest;
 import nva.commons.utils.Environment;
 import org.junit.jupiter.api.BeforeEach;
@@ -20,9 +19,8 @@ import static org.mockito.Mockito.when;
 
 class SchedulerHelperTest {
 
-    private static final String CREATED_KEY = "created";
-    private static final String MODIFIED_KEY = "modified";
     private static final String IMAGE_KEY = "image/";
+    private static final String AUDIO_MP3_KEY = "audio/mp3";
     private static final String CONTENT_URL_KEY = "content-url-com/";
     private static final String ISBN = "9788205377547";
     private static final String IMAGE_SIZE = "small";
@@ -84,8 +82,14 @@ class SchedulerHelperTest {
     }
 
     @Test
+    void generateAudioLinkTest() throws Exception {
+        UpdateItem payload = mockSchedulerHelper.createAudioLink(ISBN);
+        String expectedLink = String.format(CONTENT_URL_KEY + AUDIO_MP3_KEY + "/%s/%s/%s.mp3", 7, 4, ISBN);
+        assertEquals(expectedLink, payload.getLink());
+    }
+
+    @Test
     void extractDiffsTest() throws Exception {
-        Gson gson = new Gson();
         ObjectMapper objectMapper = new ObjectMapper();
         String oldVersion = setup(OLDVERSION);
         String newVersion = setup(NEWVERSION);

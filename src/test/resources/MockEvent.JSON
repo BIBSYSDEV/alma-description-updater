@@ -13,13 +13,13 @@
     },
     "NewImage": {
       "image_small": {
-        "S": "test/9788210053412/small/9788210053412.jpg"
+        "S": "small/2/1/9788210053412.jpg"
       },
       "description_short": {
-        "S": "Yes this is short v8"
+        "S": "Short description v8"
       },
       "image_original": {
-        "S": "test/9788210053412/original/9788210053412.jpg"
+        "S": "original/2/1/9788210053412.jpg"
       },
       "author": {
         "S": "Calvert, Christine"
@@ -34,7 +34,7 @@
         "S": "2018"
       },
       "description_long": {
-        "S": "No this is long v8"
+        "S": "Long description v8"
       },
       "modified": {
         "S": "2021-04-19T07:48:32.769721Z"
@@ -46,18 +46,18 @@
         "S": "Smaug"
       },
       "table_of_contents": {
-        "S": "First Second Third v8"
+        "S": "Table of contents v8"
+      },
+      "audio_file": {
+        "S": "mp3/2/1/9788210053412.mp3"
       }
     },
     "OldImage": {
-      "image_small": {
-        "S": "/9788210053412/small/9788210053412.jpg"
-      },
       "description_short": {
-        "S": "Yes this is short v7"
+        "S": "Short description v7"
       },
       "image_original": {
-        "S": "test/9788210053412/original/9788210053412.jpg"
+        "S": "original/2/1/9788210053412.jpg"
       },
       "author": {
         "S": "Calvert, Christine"
@@ -72,7 +72,7 @@
         "S": "2018"
       },
       "description_long": {
-        "S": "No this is long v7"
+        "S": "Long description v7"
       },
       "modified": {
         "S": "2021-04-19T07:39:16.379970Z"
@@ -84,7 +84,7 @@
         "S": "Smaug"
       },
       "table_of_contents": {
-        "S": "First Second Third v7"
+        "S": "Table of contents v7"
       }
     },
     "SequenceNumber": "139959700000000009428553953",

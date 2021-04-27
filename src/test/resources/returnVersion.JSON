@@ -1,6 +1,7 @@
 {
   "isbn": "123456789",
   "descriptionShort": "The short description. With some modification",
-  "imageLarge": "123456789/larger/123456789",
-  "imageSmall": "123456789/smaller/123456789"
+  "imageLarge": "large/9/8/123456789",
+  "imageSmall": "small/9/8/123456789",
+  "audioFile": "mp3/9/8/123456789"
 }
