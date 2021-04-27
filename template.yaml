@@ -126,7 +126,7 @@ Resources:
           Type: DynamoDB
           Properties:
             BatchSize: 100 #Default
-            Stream: '{{resolve:ssm:dynamoDBStreamArnContents:1}}'
+            Stream: '{{resolve:ssm:/contents/dynamoDBStreamArnContents:1}}'
             StartingPosition: LATEST
             MaximumBatchingWindowInSeconds: 5
             MaximumRecordAgeInSeconds: 60
@@ -145,7 +145,7 @@ Resources:
             QueueName:
               !GetAtt AlmaUpdateQueue.QueueName
         - DynamoDBStreamReadPolicy:
-            TableName: '{{resolve:ssm:dynamoDBTableNameContents:1}}'
+            TableName: '{{resolve:ssm:/contents/dynamoDBTableNameContents:1}}'
             StreamName: "*"
 
   UpdateAlmaDescriptionFunction:
