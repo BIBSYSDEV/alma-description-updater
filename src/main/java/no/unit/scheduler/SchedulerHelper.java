@@ -16,7 +16,7 @@ import java.util.Locale;
 
 public class SchedulerHelper {
 
-    private static final String IMAGE_KEY = "image/";
+    private static final String IMAGE_KEY = "images/";
     private static final String AUDIO_MP3_KEY = "audio/mp3";
     private static final String CONTENT_URL_KEY = "STANDARD_CONTENT_URL";
 

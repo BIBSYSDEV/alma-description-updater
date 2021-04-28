@@ -15,11 +15,6 @@ Parameters:
     Type: Number
     Description: Age limit in month (negativ number) for messages to be put back to retry update Alma for not found records
     Default: -6
-  ContentUrlStart:
-    Type: String
-    Description: The start of the url where content is stored.
-    Default: 'https://contents.sandbox.bibs.aws.unit.no/content/'
-
 
 Globals:
   Function:
@@ -156,7 +151,7 @@ Resources:
           ALLOWED_ORIGIN: '*'
           ALMA_API_HOST: !Ref AlmaBibsEndpointREST
           ALMA_SRU_HOST: !Ref AlmaSruLambda
-          STANDARD_CONTENT_URL: !Ref ContentUrlStart
+          STANDARD_CONTENT_URL: '{{resolve:ssm:contentsUrlStart:1}}'
           DLQ_QUEUE_URL: !Ref AlmaUpdateDLQ
       ReservedConcurrentExecutions: 1
       Timeout: 55 # Chosen to be less than the default SQS Visibility Timeout of 60 seconds
