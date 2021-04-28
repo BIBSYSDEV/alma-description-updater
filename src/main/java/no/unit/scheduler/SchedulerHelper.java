@@ -16,8 +16,10 @@ import java.util.Locale;
 
 public class SchedulerHelper {
 
+    private static final String FILE_KEY = "files/";
     private static final String IMAGE_KEY = "images/";
     private static final String AUDIO_MP3_KEY = "audio/mp3";
+    private static final String CONTENTS_URL_PART = "content/";
     private static final String CONTENT_URL_KEY = "STANDARD_CONTENT_URL";
 
 
@@ -149,7 +151,7 @@ public class SchedulerHelper {
     public UpdateItem createImageLink(String imageSize, String isbn) {
         String secondLinkPart = isbn.substring(isbn.length() - 2, isbn.length() - 1);
         String firstLinkPart = isbn.substring(isbn.length() - 1);
-        String link = String.format(envHandler.readEnv(CONTENT_URL_KEY) + IMAGE_KEY + imageSize
+        String link = String.format(envHandler.readEnv(CONTENT_URL_KEY) + FILE_KEY + IMAGE_KEY + imageSize
                 + "/%s/%s/%s.jpg", firstLinkPart, secondLinkPart, isbn);
 
         String specifiedMaterial;
@@ -178,8 +180,7 @@ public class SchedulerHelper {
      * @return A UpdateItem.
      */
     public UpdateItem createContentLink(String contentType, String isbn) {
-        String link = envHandler.readEnv(CONTENT_URL_KEY) + isbn + "?type="
-                + contentType.toUpperCase(Locale.getDefault());
+        String link = envHandler.readEnv(CONTENT_URL_KEY) + CONTENTS_URL_PART + "?isbn=" + isbn;
 
         String specifiedMaterial;
         switch (contentType.toLowerCase(Locale.getDefault())) {
@@ -208,7 +209,7 @@ public class SchedulerHelper {
     public UpdateItem createAudioLink(String isbn) {
         String secondLinkPart = isbn.substring(isbn.length() - 2, isbn.length() - 1);
         String firstLinkPart = isbn.substring(isbn.length() - 1);
-        String link = String.format(envHandler.readEnv(CONTENT_URL_KEY) + AUDIO_MP3_KEY
+        String link = String.format(envHandler.readEnv(CONTENT_URL_KEY) + FILE_KEY + AUDIO_MP3_KEY
                 + "/%s/%s/%s.mp3", firstLinkPart, secondLinkPart, isbn);
         String specifiedMaterial = "Lydfil";
         UpdateItem item = new UpdateItem();

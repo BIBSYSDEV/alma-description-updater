@@ -19,7 +19,8 @@ import static org.mockito.Mockito.when;
 
 class SchedulerHelperTest {
 
-    private static final String IMAGE_KEY = "image/";
+    private static final String FILE_KEY = "files/";
+    private static final String IMAGE_KEY = "images/";
     private static final String AUDIO_MP3_KEY = "audio/mp3";
     private static final String CONTENT_URL_KEY = "content-url-com/";
     private static final String ISBN = "9788205377547";
@@ -70,21 +71,21 @@ class SchedulerHelperTest {
     @Test
     void generateImageLinkTest() throws Exception {
         UpdateItem payload = mockSchedulerHelper.createImageLink(IMAGE_SIZE, ISBN);
-        String expectedLink = String.format(CONTENT_URL_KEY + IMAGE_KEY + IMAGE_SIZE + "/%s/%s/%s.jpg", 7, 4, ISBN);
+        String expectedLink = String.format(CONTENT_URL_KEY + FILE_KEY + IMAGE_KEY + IMAGE_SIZE + "/%s/%s/%s.jpg", 7, 4, ISBN);
         assertEquals(expectedLink, payload.getLink());
     }
 
     @Test
     void generateContentLinkTest() throws Exception {
         UpdateItem payload = mockSchedulerHelper.createContentLink(CONTENT_TYPE, ISBN);
-        String expectedLink = String.format(CONTENT_URL_KEY + ISBN + "?type=" + CONTENT_TYPE.toUpperCase());
+        String expectedLink = String.format(CONTENT_URL_KEY  + "content/" + "?isbn=" + ISBN);
         assertEquals(expectedLink, payload.getLink());
     }
 
     @Test
     void generateAudioLinkTest() throws Exception {
         UpdateItem payload = mockSchedulerHelper.createAudioLink(ISBN);
-        String expectedLink = String.format(CONTENT_URL_KEY + AUDIO_MP3_KEY + "/%s/%s/%s.mp3", 7, 4, ISBN);
+        String expectedLink = String.format(CONTENT_URL_KEY + FILE_KEY + AUDIO_MP3_KEY + "/%s/%s/%s.mp3", 7, 4, ISBN);
         assertEquals(expectedLink, payload.getLink());
     }
 
