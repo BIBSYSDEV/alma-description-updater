@@ -151,7 +151,7 @@ Resources:
           ALLOWED_ORIGIN: '*'
           ALMA_API_HOST: !Ref AlmaBibsEndpointREST
           ALMA_SRU_HOST: !Ref AlmaSruLambda
-          STANDARD_CONTENT_URL: '{{resolve:ssm:contentsUrlStart:1}}'
+          STANDARD_CONTENT_URL: '{{resolve:ssm:contentsUrlStart:2}}'
           DLQ_QUEUE_URL: !Ref AlmaUpdateDLQ
       Events:
         SQSQueueEvent:
