@@ -65,11 +65,12 @@ exports.almaErrorScheduler =  function(event, context) {
 
 
 const addMonths = (input, months) => {
-    const date = new Date(input)
-    date.setDate(1)
-    date.setMonth(date.getMonth() + months)
-    date.setDate(Math.min(input.getDate(), getDaysInMonth(date.getFullYear(), date.getMonth()+1)))
-    return date
+    const oldDate = new Date(input)
+    const newDate = new Date(input)
+    oldDate.setDate(1)
+    oldDate.setMonth(oldDate.getMonth() + months)
+    oldDate.setDate(Math.min(newDate.getDate(), getDaysInMonth(oldDate.getFullYear(), oldDate.getMonth()+1)))
+    return oldDate
 }
 
 
