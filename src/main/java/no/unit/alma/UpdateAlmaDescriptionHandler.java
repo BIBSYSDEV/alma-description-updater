@@ -94,7 +94,7 @@ public class UpdateAlmaDescriptionHandler implements RequestHandler<SQSEvent, Vo
         try {
             /* Step 2. Get a REFERENCE LIST from alma-sru through a lambda. */
             List<Reference> referenceList = getReferenceListByIsbn(updateItems.get(0).getIsbn());
-            if (referenceList == null) {
+            if (referenceList == null || referenceList.size() == 0) {
                 schedulerHelper.writeToDLQ(event.getRecords().get(0).getBody());
                 return null;
             }
