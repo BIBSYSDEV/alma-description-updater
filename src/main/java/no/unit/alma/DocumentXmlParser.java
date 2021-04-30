@@ -52,7 +52,7 @@ public class DocumentXmlParser {
             + "<subfield code='u'>2</subfield>"
             + "<subfield code='q'>image/jpeg</subfield>"
             + "<subfield code='q'>audio/mpeg</subfield>"
-            + "<subfield code='9'>local</subfield>"
+            + "<subfield code='9'>LOCAL</subfield>"
             + "</datafield>";
 
     /**
