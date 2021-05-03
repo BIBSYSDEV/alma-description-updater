@@ -37,9 +37,11 @@ exports.almaErrorHandler =  function(event, context) {
         let queueUrl;
         if (msgCreationDate < sixMonthAgo)
         {
-            queueUrl = process.env.SqsUrlAlmaDLQ;
+            queueUrl = process.env.SqsUrlAlmaExhausted;
+            console.log("Sending message to Exhausted");
         } else {
             queueUrl = process.env.SqsUrlAlmaQ;
+            console.log("Sending message to updateQueue")
         }
         let params = {MessageBody: record.body, QueueUrl: queueUrl};
         sqs.sendMessage(params).promise()

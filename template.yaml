@@ -181,7 +181,7 @@ Resources:
       Environment:
         Variables:
           SqsUrlAlmaQ: !Ref AlmaUpdateQueue
-          SqsUrlAlmaDLQ: !Ref AlmaUpdateDLQ
+          SqsUrlAlmaExhausted: !Ref AlmaUpdateExhausted
           messageAgeLimitAlmaUpdateQueue: !Ref AgeLimit
       Events:
         SQSQueueEvent:
