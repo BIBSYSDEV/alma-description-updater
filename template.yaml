@@ -198,6 +198,9 @@ Resources:
         - SQSSendMessagePolicy:
             QueueName:
               !GetAtt AlmaUpdateQueue.QueueName
+        - SQSSendMessagePolicy:
+            QueueName:
+              !GetAtt AlmaUpdateExhausted.QueueName
 
 
   AlmaErrorScheduler:
