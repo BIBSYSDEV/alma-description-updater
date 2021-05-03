@@ -34,6 +34,7 @@ exports.almaErrorHandler =  function(event, context) {
         let msgCreationDate = new Date(timestamp * 1000);
         console.log("date message was created: "+ msgCreationDate);
         let sixMonthAgo = addMonths(Date.now(), process.env.MessageAgeLimitAlmaUpdateQueue);
+        console.log("Six months ago was: " + sixMonthAgo);
         let queueUrl;
         if (msgCreationDate < sixMonthAgo)
         {
