@@ -41,7 +41,7 @@ exports.almaErrorHandler =  function(event, context) {
         } else {
             queueUrl = process.env.SqsUrlAlmaQ;
         }
-        let params = {MessageBody: JSON.stringify(record), QueueUrl: queueUrl};
+        let params = {MessageBody: JSON.stringify(record.body), QueueUrl: queueUrl};
         sqs.sendMessage(params).promise()
             .then(data => console.log("Successfully added message to queue", data.MessageId))
             .catch(err => console.log("There was an Error: ", err));
