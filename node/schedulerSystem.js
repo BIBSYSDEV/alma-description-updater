@@ -71,7 +71,7 @@ const addMonths = (input, months) => {
     const oldDate = new Date(input)
     const newDate = new Date(input)
     oldDate.setDate(1)
-    oldDate.setMonth(oldDate.getMonth() + months)
+    oldDate.setMonth(oldDate.getMonth() + parseInt(months))
     oldDate.setDate(Math.min(newDate.getDate(), getDaysInMonth(oldDate.getFullYear(), oldDate.getMonth()+1)))
     return oldDate
 }
