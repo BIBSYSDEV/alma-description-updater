@@ -5,223 +5,196 @@ import java.lang.reflect.Type;
 import java.net.URL;
 import java.net.http.HttpResponse;
 import java.util.List;
-import java.util.Map;
-import java.util.Objects;
-import java.util.concurrent.ConcurrentHashMap;
 import java.util.stream.Collectors;
 import com.amazonaws.services.lambda.runtime.Context;
 import com.amazonaws.services.lambda.runtime.RequestHandler;
+import com.amazonaws.services.lambda.runtime.events.SQSEvent;
 import com.google.gson.Gson;
 import com.google.gson.GsonBuilder;
 import com.google.gson.reflect.TypeToken;
+import no.unit.scheduler.SchedulerHelper;
+import no.unit.scheduler.UpdateItem;
+import no.unit.exceptions.SchedulerException;
+import no.unit.exceptions.ParsingException;
+import no.unit.exceptions.SecretRetrieverException;
 import no.unit.marc.Reference;
+import no.unit.secret.SecretRetriever;
+import no.unit.utils.DebugUtils;
 import nva.commons.utils.Environment;
 import org.w3c.dom.Document;
-import software.amazon.awssdk.http.HttpStatusCode;
 
-import javax.ws.rs.core.Response;
 import java.io.BufferedReader;
 import java.io.InputStreamReader;
 
 
-public class UpdateAlmaDescriptionHandler implements RequestHandler<Map<String, Object>, GatewayResponse> {
+public class UpdateAlmaDescriptionHandler implements RequestHandler<SQSEvent, Void> {
 
-    public static final String QUERY_STRING_PARAMETERS_KEY = "queryStringParameters";
-    public static final String ISBN_KEY = "isbn";
-    public static final String SPECIFIEDMATERIAL_KEY = "specifiedMaterial";
-    public static final String URL_KEY = "url";
-    public static final String RESPONSE_MESSAGE_KEY = "responseMessage";
-    public static final String RESPONSE_STATUS_KEY = "responseStatus";
-    public static final String ALMA_GET_SUCCESS_MESSAGE = "Got the BIB-post for: ";
-    public static final String ALMA_GET_FAILURE_MESSAGE = "Couldn't get the BIB-post for: ";
     public static final String ALMA_SRU_HOST_KEY = "ALMA_SRU_HOST";
     public static final String ALMA_API_KEY = "ALMA_API_HOST";
 
-    public static final String MISSING_EVENT_ELEMENT_QUERYSTRINGPARAMETERS =
-            "Missing event element 'queryStringParameters'.";
-    public static final String MANDATORY_PARAMETER_MISSING =
-            "Mandatory parameter 'isbn', 'specifiedMaterial' or 'url' is missing.";
-    public static final String ALMA_GET_RESPONDED_WITH_STATUSCODE = ". Alma responded with statuscode: ";
-    public static final String ALMA_PUT_SUCCESS_MESSAGE = "Updated the BIB-post in alma with id: ";
-    public static final String ALMA_PUT_FAILURE_MESSAGE = "Failed to updated the BIB-post with id: ";
-    public static final String ALMA_POST_ALREADY_UPDATED = "The BIB-post with is already up-to-date, post with mms_id: ";
-    public static final int RESPONSE_STATUS_MULTI_STATUS_CODE = 207;
-    public static final String NO_REFERENCE_OBJECT_RETRIEVED_MESSAGE = "No reference object retrieved for this ISBN";
-    public static final String NUMBER_OF_REFERENCE_OBJECTS_MESSAGE = " reference object(s) retrieved from alma-sru.";
-
-    private transient Boolean othersSucceeded = false;
-    private transient Boolean othersFailed = false;
-
     private transient String secretKey;
-    private transient Map<String, String> inputParameters;
-    private transient final Environment envHandler;
+    private final transient  Environment envHandler;
     private transient String almaApiHost;
     private transient String almaSruHost;
+    private final transient AlmaHelper almaHelper = new AlmaHelper();
+    private final transient SchedulerHelper schedulerHelper = new SchedulerHelper();
+    private final transient DocumentXmlParser xmlParser = new DocumentXmlParser();
 
-    public UpdateAlmaDescriptionHandler(Environment envHandler) { this.envHandler = envHandler; };
-    public UpdateAlmaDescriptionHandler() { envHandler = new Environment(); }
+    public UpdateAlmaDescriptionHandler(Environment envHandler) {
+        this.envHandler = envHandler;
+    }
+
+    public UpdateAlmaDescriptionHandler() {
+        envHandler = new Environment();
+    }
 
     /**
      * Main lambda function to update the links in Alma records.
      * Program flow:
-     * 1. Get a REFERENCE LIST from alma-sru through a lambda.
-     * 2. Loop through the LIST (and do the following for every OBJECT).
-     * 3. Get the MMS_ID from the REFERENCE OBJECT.
-     * 4. Use the MMS_ID to get a BIB-RECORD from the alma-api.
-     * 5. Determine whether the post is electronic or print.
-     * 6. Insert the new link-data into the BIB-RECORD.
-     * 7. Push the updated BIB-RECORD back to the alma through a put-request to the api.
-     * @param input payload with identifying parameters
+     * 1. Create an UpdateItem LIST from the input.
+     * 2. Get a REFERENCE LIST from alma-sru through a lambda.
+     * 3. Loop through the REFERENCE LIST (and do the following for every OBJECT).
+     * 3.1 Get the MMS_ID from the REFERENCE OBJECT.
+     * 3.2 Use the MMS_ID to get a BIB-RECORD from the alma-api.
+     * 3.3 Create an XML(String) by updating the existing ALMA xml with all the UpdateItems.
+     * 3.3.1 Loop through every UpdateItem in the UpdateItem LIST.
+     * 3.3.2 Determine whether the post is electronic or print.
+     * 3.3.3 Check if the update already exists.
+     * 3.3.4 Create a node from the UpdateItem.
+     * 3.3.5 Insert update node into the record retrieved from ALMA.
+     * 4. Push the updated BIB-RECORD back to the alma through a put-request to the api.
+     * @param event payload with identifying parameters
      * @return a GatewayResponse
      */
     @Override
-    @SuppressWarnings("unchecked")
-    public GatewayResponse handleRequest(final Map<String, Object> input, Context context) {
-        GatewayResponse gatewayResponse = new GatewayResponse();
+    @SuppressWarnings({"unchecked", "PMD.NPathComplexity"})
+    public Void handleRequest(final SQSEvent event, Context context) {
 
-        Map<String, Object> errorMessage = initVariables(input);
+        try {
+            initVariables();
+        } catch (SchedulerException e) {
+            throw new RuntimeException("Error while setting up env-variables and secretKeys. " + e.getMessage());
+        }
 
-        if(errorMessage != null) {
-            gatewayResponse.setErrorBody((String) errorMessage.get(RESPONSE_MESSAGE_KEY));
-            gatewayResponse.setStatusCode((int) errorMessage.get(RESPONSE_STATUS_KEY));
-            return gatewayResponse;
+        /* 1. Create an UpdateItem LIST from the input. */
+        List<UpdateItem> updateItems;
+
+        try {
+            updateItems = schedulerHelper.splitEventIntoUpdateItems(event.getRecords().get(0).getBody());
+        } catch (Exception e) {
+            throw new RuntimeException("Error while processing input event. " + e.getMessage());
+        }
+
+        if (updateItems.isEmpty()) {
+            //In case we recieve an update without any relevant information
+            // (at the time this include audiofiles) we just skip them.
+            return null;
         }
 
         try {
-            /* Step 1. Get a REFERENCE LIST from alma-sru through a lambda. */
-            List<Reference> referenceList = getReferenceListByIsbn(inputParameters.get(ISBN_KEY));
-            if (referenceList == null) {
-                gatewayResponse = createErrorResponse(NO_REFERENCE_OBJECT_RETRIEVED_MESSAGE,
-                        Response.Status.BAD_REQUEST.getStatusCode());
-                return gatewayResponse;
+            /* Step 2. Get a REFERENCE LIST from alma-sru through a lambda. */
+            List<Reference> referenceList = getReferenceListByIsbn(updateItems.get(0).getIsbn());
+            if (referenceList == null || referenceList.isEmpty()) {
+                schedulerHelper.writeToDLQ(event.getRecords().get(0).getBody());
+                return null;
             }
-            StringBuilder gatewayResponseBody = new StringBuilder(41);
-            gatewayResponseBody.append(referenceList.size()).append(NUMBER_OF_REFERENCE_OBJECTS_MESSAGE).append(System.lineSeparator());
 
-            DocumentXmlParser xmlParser = new DocumentXmlParser();
-
-            /* 2. Loop through the LIST. */
+            int sucessCounter = 0;
+            /* 3. Loop through the LIST. */
             for (Reference reference : referenceList) {
 
-                /* 3. Get the MMS_ID from the REFERENCE OBJECT. */
+                /* 3.1 Get the MMS_ID from the REFERENCE OBJECT. */
                 String mmsId = reference.getId();
 
-                /* 4. Use the MMS_ID to get a BIB-RECORD from the alma-api. */
-                HttpResponse<String> almaResponse = getBibRecordFromAlma(gatewayResponse, gatewayResponseBody, mmsId);
-                if (almaResponse.statusCode() != HttpStatusCode.OK) {
-                    othersFailed = true;
+                /* 3.2 Use the MMS_ID to get a BIB-RECORD from the alma-api. */
+                HttpResponse<String> almaResponse = almaHelper
+                        .getBibRecordFromAlmaWithRetries(mmsId, secretKey, almaApiHost);
+
+                if (almaResponse == null) {
                     continue;
                 }
 
-                /* 5. Determine whether the post is electronic or print. */
-                int marcTag = xmlParser.determineElectronicOrPrint(almaResponse.body());
+                String xmlFromAlma = almaResponse.body();
 
-                /* 6. Insert the new link-data into the BIB-RECORD. */
-                Boolean alreadyExists = xmlParser.alreadyExists(inputParameters.get(SPECIFIEDMATERIAL_KEY),
-                        inputParameters.get(URL_KEY), almaResponse.body(), marcTag);
-                if (alreadyExists) {
-                    gatewayResponseBody.append(ALMA_POST_ALREADY_UPDATED + mmsId);
-                    gatewayResponse.setStatusCode(HttpStatusCode.BAD_REQUEST);
-                    othersFailed = true;
+                /* 3.3 Create an XML(String) by updating the existing ALMA xml with all the updateItems. */
+                String updatedRecord = updateBibRecord(updateItems, xmlFromAlma);
+
+                /* 4. Push the updated BIB-RECORD back to the alma through a put-request to the api. */
+                HttpResponse<String> response = almaHelper
+                        .putBibRecordInAlmaWithRetries(mmsId, updatedRecord, secretKey, almaApiHost);
+
+                if (response == null) {
                     continue;
                 }
-
-                Document updateNode = xmlParser.createNode(inputParameters.get(SPECIFIEDMATERIAL_KEY),
-                                inputParameters.get(URL_KEY), marcTag);
-
-                Document updatedDocument = xmlParser.insertUpdatedIntoRecord(almaResponse.body(), updateNode, marcTag);
-                String updatedXml = xmlParser.convertDocToString(updatedDocument);
-
-                /* 7. Push the updated BIB-RECORD back to the alma through a put-request to the api. */
-                HttpResponse<String> response = putBibRecordInAlma(gatewayResponse, gatewayResponseBody, mmsId, updatedXml);
-
-                if (response.statusCode() == HttpStatusCode.OK) {
-                    othersSucceeded = true;
-                } else {
-                    othersFailed = true;
-                }
+                sucessCounter++;
             }
-            gatewayResponse.setBody(gatewayResponseBody.toString());
+            if (sucessCounter < referenceList.size()) {
+                throw new RuntimeException("1 or more mms_id's did not go through");
+            }
         } catch (ParsingException | IOException | IllegalArgumentException
-                | InterruptedException | SecurityException e) {
+                | InterruptedException | SecurityException | SchedulerException e) {
             DebugUtils.dumpException(e);
-            gatewayResponse = createErrorResponse(e.getMessage(), HttpStatusCode.INTERNAL_SERVER_ERROR);
-        }
-        return gatewayResponse;
-    }
-
-    /**
-     * A method that sends a get request to ALMA.
-     * @param gatewayResponse The main response object.
-     * @param gatewayResponseBody The stringbuilder used to build a response body.
-     * @param mmsId The mms id needed to specify which post to retrieve.
-     * @return A http response mirroring the response from the get request sent to ALMA.
-     * @throws InterruptedException When something goes wrong.
-     * @throws IOException When something goes wrong.
-     */
-    private HttpResponse<String> getBibRecordFromAlma(GatewayResponse gatewayResponse, StringBuilder gatewayResponseBody, String mmsId) throws InterruptedException, IOException {
-        Map<String, Object> responseMap;
-        HttpResponse<String> almaResponse = AlmaConnection.getInstance().sendGet(mmsId, secretKey, almaApiHost);
-        responseMap = createGatewayResponse(almaResponse.statusCode(),
-                ALMA_GET_SUCCESS_MESSAGE + mmsId + System.lineSeparator(),
-                ALMA_GET_FAILURE_MESSAGE + mmsId + ALMA_GET_RESPONDED_WITH_STATUSCODE
-                        + almaResponse.statusCode() + System.lineSeparator());
-        gatewayResponseBody.append((String) responseMap.get(RESPONSE_MESSAGE_KEY));
-        gatewayResponse.setStatusCode((int) responseMap.get(RESPONSE_STATUS_KEY));
-        return almaResponse;
-    }
-
-    /**
-     * A method that sends a put request to ALMA.
-     * @param gatewayResponse The main response object.
-     * @param gatewayResponseBody The stringbuilder used to build a response body.
-     * @param mmsId The mms id needed to specify which post to update.
-     * @param updatedXml The string which we want to update the post with.
-     * @return A http response mirroring the response from the put request sent to ALMA.
-     * @throws InterruptedException When something goes wrong.
-     * @throws IOException When something goes wrong.
-     */
-    private HttpResponse<String> putBibRecordInAlma(GatewayResponse gatewayResponse, StringBuilder gatewayResponseBody, String mmsId, String updatedXml) throws InterruptedException, IOException {
-        Map<String, Object> responseMap;
-        HttpResponse<String> almaResponse = AlmaConnection.getInstance().sendPut(mmsId, secretKey, updatedXml, almaApiHost);
-        responseMap = createGatewayResponse(almaResponse.statusCode(),
-                ALMA_PUT_SUCCESS_MESSAGE + mmsId + System.lineSeparator(),
-                ALMA_PUT_FAILURE_MESSAGE + mmsId + ALMA_GET_RESPONDED_WITH_STATUSCODE
-                        + almaResponse.statusCode() + System.lineSeparator());
-        gatewayResponseBody.append((String) responseMap.get(RESPONSE_MESSAGE_KEY));
-        gatewayResponse.setStatusCode((int) responseMap.get(RESPONSE_STATUS_KEY));
-        return almaResponse;
-    }
-
-    /**
-     * A method for assigning values to the inputparameters and secretkey
-     * @param input The same input received by the handleRequest method
-     * @return returns null if everything works. If not it will return a Map
-     * containing an appropriate errormessage and errorsatus.
-     */
-    private Map<String, Object> initVariables(Map<String, Object> input) {
-        Map<String, Object> response = new ConcurrentHashMap<>();
-        try {
-            checkProperties();
-            inputParameters = this.checkParameters(input);
-        } catch (RuntimeException e) {
-            DebugUtils.dumpException(e);
-            response.put(RESPONSE_MESSAGE_KEY, e.getMessage());
-            response.put(RESPONSE_STATUS_KEY, Response.Status.BAD_REQUEST.getStatusCode());
-            return response;
-        }
-
-        try {
-            secretKey = SecretRetriever.getAlmaApiKeySecret();
-        } catch (SecretRetrieverException e) {
-            response.put(RESPONSE_MESSAGE_KEY, "Couldn't retrieve the API-key " + e.getMessage());
-            response.put(RESPONSE_STATUS_KEY, HttpStatusCode.INTERNAL_SERVER_ERROR);
-            return response;
+            throw new RuntimeException("General error: " + e.getMessage());
         }
         return null;
     }
 
-    public boolean checkProperties() {
+    /**
+     * Create an XML(String) by updating the existing ALMA xml with all the UpdateItems.
+     * @param updateItems A list of UpdateItems.
+     * @param xmlFromAlma A String in the shape of an XML the data is retrieved from ALMA.
+     * @return The same XML data that was entered now with added fields (either 856 or 956).
+     * @throws ParsingException When something goes wrong.
+     */
+    public String updateBibRecord(List<UpdateItem> updateItems, String xmlFromAlma) throws ParsingException {
+        String xmlBuilderString = xmlFromAlma;
+        /* 3.3.1 Loop through every UpdateItem in the UpdateItem LIST. */
+        for (UpdateItem item : updateItems) {
+            /* 3.3.2 Determine whether the post is electronic or print. */
+            int marcTag = xmlParser.determineElectronicOrPrint(xmlBuilderString);
+
+            /* 3.3.3 Check if the update already exists. */
+            Boolean alreadyExists = xmlParser.alreadyExists(item.getSpecifiedMaterial(),
+                    item.getLink(), xmlBuilderString, marcTag);
+            if (alreadyExists) {
+                continue;
+            }
+
+            /* 3.3.4 Create a node from the UpdateItem. */
+            Document updateNode = xmlParser.createNode(item.getSpecifiedMaterial(),
+                    item.getLink(), marcTag);
+
+            /* 3.3.5 Insert update node into the record retrieved from ALMA. */
+            Document updatedDocument = xmlParser.insertUpdatedIntoRecord(xmlBuilderString,
+                    updateNode, marcTag);
+            xmlBuilderString = xmlParser.convertDocToString(updatedDocument);
+
+        }
+        return xmlBuilderString;
+    }
+
+
+    /**
+     * A method for assigning values to the secretkey and checking the environment variables.
+     * @return returns null if everything works. If not it will return a Map
+     *     containing an appropriate errormessage and errorsatus.
+     * @throws SchedulerException When something goes wrong.
+     */
+    private void initVariables() throws SchedulerException {
+        try {
+            readEnvVariables();
+            secretKey = SecretRetriever.getAlmaApiKeySecret();
+        } catch (IllegalStateException | SecretRetrieverException e) {
+            throw new SchedulerException("Failed to initialize variables. ", e);
+        }
+
+    }
+
+    /**
+     * Stores the systemvariable properties.
+     * @return It returnes a boolean indicating that it retrieved the systemvariables.
+     */
+    public boolean readEnvVariables() {
         almaApiHost = envHandler.readEnv(ALMA_API_KEY);
         almaSruHost = envHandler.readEnv(ALMA_SRU_HOST_KEY);
         return true;
@@ -253,62 +226,6 @@ public class UpdateAlmaDescriptionHandler implements RequestHandler<Map<String, 
         } finally {
             streamReader.close();
         }
-    }
-
-    @SuppressWarnings("unchecked")
-    private Map<String, String> checkParameters(Map<String, Object> input) {
-        if (Objects.isNull(input) || !input.containsKey(QUERY_STRING_PARAMETERS_KEY)
-                || Objects.isNull(input.get(QUERY_STRING_PARAMETERS_KEY))) {
-            throw new ParameterException(MISSING_EVENT_ELEMENT_QUERYSTRINGPARAMETERS);
-        }
-        Map<String, String> queryStringParameters = (Map<String, String>) input.get(QUERY_STRING_PARAMETERS_KEY);
-        if (!queryStringParameters.containsKey(ISBN_KEY)
-                || !queryStringParameters.containsKey(SPECIFIEDMATERIAL_KEY)
-                || !queryStringParameters.containsKey(URL_KEY)
-                || Objects.isNull(queryStringParameters.get(ISBN_KEY))
-                || Objects.isNull(queryStringParameters.get(SPECIFIEDMATERIAL_KEY))
-                || Objects.isNull(queryStringParameters.get(URL_KEY))
-        ) {
-            throw new ParameterException(MANDATORY_PARAMETER_MISSING);
-        }
-        return queryStringParameters;
-    }
-
-    /**
-     * Assigns the correct message and statusCode based on the input condition.
-     * @param status Status-code to determine what String input to use.
-     * @param success The String used in case of the condition being true.
-     * @param failure The String used in case of the condition being false.
-     * @return A Map containing both a message and a statusCode
-     */
-    public Map<String, Object> createGatewayResponse(int status, String success, String failure) {
-        String responseMessage;
-        int responseStatus;
-        if (status == HttpStatusCode.OK) {
-            responseMessage = success;
-            responseStatus = othersFailed ? RESPONSE_STATUS_MULTI_STATUS_CODE : HttpStatusCode.OK;
-        } else {
-            responseMessage = failure;
-            responseStatus = othersSucceeded ? RESPONSE_STATUS_MULTI_STATUS_CODE : HttpStatusCode.BAD_REQUEST;
-        }
-
-        Map<String, Object> payload = new ConcurrentHashMap<>();
-        payload.put(RESPONSE_MESSAGE_KEY, responseMessage);
-        payload.put(RESPONSE_STATUS_KEY, responseStatus);
-        return payload;
-    }
-
-    /**
-     * Creates a GatewayResponse object with an errormessage and status code.
-     * @param errorMessage The errormessage.
-     * @param errorCode The status code.
-     * @return A gatewayResponse with information about an error.
-     */
-    public GatewayResponse createErrorResponse(String errorMessage, int errorCode) {
-        GatewayResponse gatewayResponse = new GatewayResponse();
-        gatewayResponse.setErrorBody(errorMessage);
-        gatewayResponse.setStatusCode(errorCode);
-        return gatewayResponse;
     }
 
 }

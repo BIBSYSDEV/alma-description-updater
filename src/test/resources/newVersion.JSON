@@ -1,0 +1,16 @@
+{
+  "isbn": "123456789",
+  "title": "The title",
+  "created": "08.04.2021",
+  "source": "NIELSEN",
+  "descriptionShort": "The short description. With some modification",
+  "dateOfPublication": "01.04.2021",
+  "imageLarge": "large/9/8/123456789",
+  "descriptionLong": "The long description",
+  "modified": "09.04.2021",
+  "imageSmall": "small/9/8/123456789",
+  "tableOfContents": "chapter1 chapter2 chapter3",
+  "author": "Nils Nilsen",
+  "imageOriginal": "original/9/8/123456789",
+  "audioFile": "mp3/9/8/123456789"
+}
