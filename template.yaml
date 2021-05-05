@@ -254,7 +254,7 @@ Resources:
       Period: 60
       Statistic: Average
       ComparisonOperator: GreaterThanThreshold
-      Threshold:  3 #7200.0
+      Threshold:  7200.0
       TreatMissingData: notBreaching
       AlarmActions:
         - !Ref AlmaDLQAlarmNotification
