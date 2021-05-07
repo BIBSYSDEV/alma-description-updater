@@ -44,18 +44,20 @@ public class AlmaHelper {
      * @throws InterruptedException when the sleep is interrupted.
      */
     public HttpResponse<String> getBibRecordFromAlmaWithRetries(String mmsId, String secretKey, String almaApiHost)
-            throws InterruptedException {
+            throws InterruptedException, IOException {
         HttpResponse<String> almaResponse;
         try {
 
             almaResponse = getBibRecordFromAlma(mmsId, secretKey, almaApiHost);
         } catch (InterruptedException | IOException e) {
             almaResponse = null; //NOPMD
+            System.err.println(e.getMessage());
         }
 
         if (almaResponse != null && almaResponse.statusCode() == HttpStatusCode.OK) {
             return almaResponse;
         } else {
+
             TimeUnit.SECONDS.sleep(3);
             try {
                 almaResponse = getBibRecordFromAlma(mmsId, secretKey, almaApiHost);
@@ -66,16 +68,8 @@ public class AlmaHelper {
                 return almaResponse;
             } else {
                 TimeUnit.SECONDS.sleep(3);
-                try {
-                    almaResponse = getBibRecordFromAlma(mmsId, secretKey, almaApiHost);
-                } catch (InterruptedException | IOException e) {
-                    almaResponse = null; //NOPMD
-                }
-                if (almaResponse != null && almaResponse.statusCode() == HttpStatusCode.OK) {
-                    return almaResponse;
-                } else {
-                    return null;
-                }
+                almaResponse = getBibRecordFromAlma(mmsId, secretKey, almaApiHost);
+                return almaResponse;
             }
         }
     }
