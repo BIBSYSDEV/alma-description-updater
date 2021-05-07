@@ -299,7 +299,7 @@ Resources:
       Threshold: 200
       ComparisonOperator: GreaterThanThreshold
       AlarmActions:
-        - !Ref AlmaUpdateDLQAlarmAlarmNotification
+        - !Ref AlmaUpdateDLQAlarmNotification
 
   AlmaUpdateDLQAlarmNotification:
     Type: AWS::SNS::Topic
