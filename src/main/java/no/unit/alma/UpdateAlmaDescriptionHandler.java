@@ -109,6 +109,7 @@ public class UpdateAlmaDescriptionHandler implements RequestHandler<SQSEvent, Vo
             /* 3. Loop through the LIST. */
             for (Reference reference : referenceList) {
 
+                System.out.println("Found " + referenceList.size() + " different posts for the isbn: " + updateItems.get(0).getIsbn());
                 /* 3.1 Get the MMS_ID from the REFERENCE OBJECT. */
                 String mmsId = reference.getId();
 
@@ -132,6 +133,7 @@ public class UpdateAlmaDescriptionHandler implements RequestHandler<SQSEvent, Vo
                 if (response == null || response.statusCode() != HttpStatusCode.OK) {
                     continue;
                 }
+                System.out.println("Completed the update in Alma for post with mms_id: " + mmsId);
                 sucessCounter++;
             }
             if (sucessCounter < referenceList.size()) {
