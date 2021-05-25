@@ -99,6 +99,7 @@ public class UpdateAlmaDescriptionHandler implements RequestHandler<SQSEvent, Vo
                 referenceList = getReferenceListByIsbn(almaHelper.convertIsbn(updateItems.get(0).getIsbn()));
                 if (referenceList == null || referenceList.isEmpty()) {
                     schedulerHelper.writeToDLQ(event.getRecords().get(0).getBody());
+                    System.out.println("No answer from SRU for isbn: " + updateItems.get(0).getIsbn() + " or : " + almaHelper.convertIsbn(updateItems.get(0).getIsbn()));
                     return null;
                 }
             }
