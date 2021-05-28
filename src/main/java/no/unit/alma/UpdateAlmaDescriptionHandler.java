@@ -22,6 +22,7 @@ import no.unit.secret.SecretRetriever;
 import no.unit.utils.DebugUtils;
 import nva.commons.utils.Environment;
 import org.w3c.dom.Document;
+import software.amazon.awssdk.http.HttpStatusCode;
 
 import java.io.BufferedReader;
 import java.io.InputStreamReader;
@@ -95,22 +96,29 @@ public class UpdateAlmaDescriptionHandler implements RequestHandler<SQSEvent, Vo
             /* Step 2. Get a REFERENCE LIST from alma-sru through a lambda. */
             List<Reference> referenceList = getReferenceListByIsbn(updateItems.get(0).getIsbn());
             if (referenceList == null || referenceList.isEmpty()) {
-                schedulerHelper.writeToDLQ(event.getRecords().get(0).getBody());
-                return null;
+                referenceList = getReferenceListByIsbn(almaHelper.convertIsbn(updateItems.get(0).getIsbn()));
+                if (referenceList == null || referenceList.isEmpty()) {
+                    schedulerHelper.writeToDLQ(event.getRecords().get(0).getBody());
+                    System.out.println("No answer from SRU for isbn: " + updateItems.get(0).getIsbn() + " or : " + almaHelper.convertIsbn(updateItems.get(0).getIsbn()));
+                    return null;
+                }
             }
 
+            HttpResponse<String> almaResponse = null;
+            HttpResponse<String> response = null;
             int sucessCounter = 0;
             /* 3. Loop through the LIST. */
             for (Reference reference : referenceList) {
 
+                System.out.println("Found " + referenceList.size() + " different posts for the isbn: " + updateItems.get(0).getIsbn());
                 /* 3.1 Get the MMS_ID from the REFERENCE OBJECT. */
                 String mmsId = reference.getId();
 
                 /* 3.2 Use the MMS_ID to get a BIB-RECORD from the alma-api. */
-                HttpResponse<String> almaResponse = almaHelper
+                almaResponse = almaHelper
                         .getBibRecordFromAlmaWithRetries(mmsId, secretKey, almaApiHost);
 
-                if (almaResponse == null) {
+                if (almaResponse == null || almaResponse.statusCode() != HttpStatusCode.OK) {
                     continue;
                 }
 
@@ -120,17 +128,34 @@ public class UpdateAlmaDescriptionHandler implements RequestHandler<SQSEvent, Vo
                 String updatedRecord = updateBibRecord(updateItems, xmlFromAlma);
 
                 /* 4. Push the updated BIB-RECORD back to the alma through a put-request to the api. */
-                HttpResponse<String> response = almaHelper
+                response = almaHelper
                         .putBibRecordInAlmaWithRetries(mmsId, updatedRecord, secretKey, almaApiHost);
 
-                if (response == null) {
+                if (response == null || response.statusCode() != HttpStatusCode.OK) {
                     continue;
                 }
+                System.out.println("Completed the update in Alma for post with mms_id: " + mmsId);
                 sucessCounter++;
             }
             if (sucessCounter < referenceList.size()) {
-                throw new RuntimeException("1 or more mms_id's did not go through");
+                if (almaResponse == null) {
+                    throw new RuntimeException("1 or more mms_id's did not go through with mms_id: "
+                            + updateItems.get(0).getIsbn()
+                            + System.lineSeparator() + "Get failed");
+
+                }
+                if (response == null) {
+                    throw new RuntimeException("1 or more mms_id's did not go through with mms_id: "
+                            + updateItems.get(0).getIsbn()
+                            + System.lineSeparator() + "Get response " + almaResponse.body());
+
+                }
+                throw new RuntimeException("1 or more mms_id's did not go through with mms_id: "
+                        + updateItems.get(0).getIsbn()
+                        + System.lineSeparator() + "Get response " + almaResponse.body()
+                        + "Put response: " + response.body());
             }
+
         } catch (ParsingException | IOException | IllegalArgumentException
                 | InterruptedException | SecurityException | SchedulerException e) {
             DebugUtils.dumpException(e);

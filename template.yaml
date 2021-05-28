@@ -202,7 +202,6 @@ Resources:
             QueueName:
               !GetAtt AlmaUpdateExhausted.QueueName
 
-
   AlmaErrorScheduler:
     Type: AWS::Serverless::Function
     Properties:
@@ -260,3 +259,96 @@ Resources:
         - !Ref AlmaDLQAlarmNotification
       OKActions:
         - !Ref AlmaDLQAlarmNotification
+
+  DynamodbStreamDLQAlarm:
+    Type: AWS::CloudWatch::Alarm
+    Properties:
+      AlarmName: !Sub "DynamodbStreamDLQAlarm-${AWS::StackName}"
+      AlarmDescription: 'There are messages in the dead letter queue.'
+      Namespace: AWS/SQS
+      MetricName: NumberOfMessagesReceived
+      Dimensions:
+        -   Name: QueueName
+            Value: !GetAtt DynamodbStreamDLQ.QueueName
+      Statistic: Sum
+      EvaluationPeriods: 1
+      Period: 600 #10 minutes
+      Threshold: 0
+      ComparisonOperator: GreaterThanThreshold
+      AlarmActions:
+        - !Ref DynamodbStreamDLQAlarmNotification
+
+  DynamodbStreamDLQAlarmNotification:
+    Type: AWS::SNS::Topic
+    Properties:
+      TopicName: !Sub "DynamodbStreamDLQAlarmNotification-${AWS::StackName}"
+
+  AlmaUpdateDLQAlarm:
+    Type: AWS::CloudWatch::Alarm
+    Properties:
+      AlarmName: !Sub "AlmaUpdateDLQAlarm-${AWS::StackName}"
+      AlarmDescription: 'Messages in the dead letter queue exceeds defined threshold.'
+      Namespace: AWS/SQS
+      MetricName: ApproximateNumberOfMessagesVisible
+      Dimensions:
+        -   Name: QueueName
+            Value: !GetAtt AlmaUpdateDLQ.QueueName
+      Statistic: Sum
+      EvaluationPeriods: 1
+      Period: 86400 #1 day
+      Threshold: 200
+      ComparisonOperator: GreaterThanThreshold
+      AlarmActions:
+        - !Ref AlmaUpdateDLQAlarmNotification
+
+  AlmaUpdateDLQAlarmNotification:
+    Type: AWS::SNS::Topic
+    Properties:
+      TopicName: !Sub "AlmaUpdateDLQAlarmNotification-${AWS::StackName}"
+
+  AlmaUpdateExhaustedAlarm:
+    Type: AWS::CloudWatch::Alarm
+    Properties:
+      AlarmName: !Sub "AlmaUpdateExhaustedAlarm-${AWS::StackName}"
+      AlarmDescription: 'There are messages in the queue.'
+      Namespace: AWS/SQS
+      MetricName: ApproximateNumberOfMessagesVisible
+      Dimensions:
+        -   Name: QueueName
+            Value: !GetAtt AlmaUpdateExhausted.QueueName
+      Statistic: Sum
+      EvaluationPeriods: 1
+      Period: 86400 #1 day
+      Threshold: 1
+      ComparisonOperator: GreaterThanThreshold
+      AlarmActions:
+        - !Ref AlmaUpdateExhaustedAlarmNotification
+
+  AlmaUpdateExhaustedAlarmNotification:
+    Type: AWS::SNS::Topic
+    Properties:
+      TopicName: !Sub "AlmaUpdateExhaustedAlarmNotification-${AWS::StackName}"
+
+  UpdateAlmaDescriptionFunctionAlarm:
+    Type: AWS::CloudWatch::Alarm
+    Properties:
+      AlarmName: !Sub "UpdateAlmaDescriptionFunctionAlarm-${AWS::StackName}"
+      AlarmDescription: 'Error occurred in function.'
+      Namespace: AWS/Lambda
+      Dimensions:
+        - Name: FunctionName
+          Value: !Ref UpdateAlmaDescriptionFunction
+      MetricName: Errors
+      Statistic: Sum
+      Period: 300 #5 minutes
+      EvaluationPeriods: 1
+      Threshold: 0
+      ComparisonOperator: GreaterThanThreshold
+      TreatMissingData: notBreaching
+      AlarmActions:
+        - !Ref UpdateAlmaDescriptionFunctionAlarmNotification
+
+  UpdateAlmaDescriptionFunctionAlarmNotification:
+    Type: AWS::SNS::Topic
+    Properties:
+      TopicName: !Sub "UpdateAlmaDescriptionFunctionAlarmNotification-${AWS::StackName}"
