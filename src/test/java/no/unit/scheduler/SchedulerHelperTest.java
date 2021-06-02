@@ -71,7 +71,8 @@ class SchedulerHelperTest {
     @Test
     void generateImageLinkTest() throws Exception {
         UpdateItem payload = mockSchedulerHelper.createImageLink(IMAGE_SIZE, ISBN);
-        String expectedLink = String.format(CONTENT_URL_KEY + FILE_KEY + IMAGE_KEY + IMAGE_SIZE + "/%s/%s/%s.jpg", 7, 4, ISBN);
+        String expectedLink = String.format(CONTENT_URL_KEY + FILE_KEY + IMAGE_KEY + IMAGE_SIZE
+                + "/%s/%s/%s.jpg", 7, 4, ISBN);
         assertEquals(expectedLink, payload.getLink());
     }
 
