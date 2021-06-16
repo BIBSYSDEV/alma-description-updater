@@ -65,7 +65,7 @@ Resources:
       MessageRetentionPeriod: 1209600 #14 days
       ReceiveMessageWaitTimeSeconds: 20
       VisibilityTimeout: 60
-      DelaySeconds: 600  # Lang delay så ting ikke skal gå i loop her
+      DelaySeconds: 900  # Lang delay så ting ikke skal gå i loop her
       RedrivePolicy:
         deadLetterTargetArn: !GetAtt AlmaUpdateExhausted.Arn
         maxReceiveCount: 2
@@ -190,7 +190,6 @@ Resources:
             Queue: !GetAtt AlmaUpdateDLQ.Arn
             BatchSize: 1
             Enabled: false
-      ReservedConcurrentExecutions: 1
       MemorySize: 128
       Timeout: 55
       Policies:
