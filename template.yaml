@@ -65,10 +65,17 @@ Resources:
       MessageRetentionPeriod: 1209600 #14 days
       ReceiveMessageWaitTimeSeconds: 20
       VisibilityTimeout: 60
-      DelaySeconds: 600  # Lang delay så ting ikke skal gå i loop her
+      DelaySeconds: 900  # Lang delay så ting ikke skal gå i loop her
       RedrivePolicy:
-        deadLetterTargetArn: !GetAtt AlmaUpdateExhausted.Arn
+        deadLetterTargetArn: !GetAtt AlmaUpdateErrorDLQ.Arn
         maxReceiveCount: 2
+
+  AlmaUpdateErrorDLQ:
+    Type: AWS::SQS::Queue
+    Properties:
+      MessageRetentionPeriod: 1209600 #14 days
+      ReceiveMessageWaitTimeSeconds: 20
+      VisibilityTimeout: 60
 
   AlmaUpdateExhausted:
     Type: AWS::SQS::Queue
@@ -190,7 +197,6 @@ Resources:
             Queue: !GetAtt AlmaUpdateDLQ.Arn
             BatchSize: 1
             Enabled: false
-      ReservedConcurrentExecutions: 1
       MemorySize: 128
       Timeout: 55
       Policies:
@@ -305,6 +311,29 @@ Resources:
     Type: AWS::SNS::Topic
     Properties:
       TopicName: !Sub "AlmaUpdateDLQAlarmNotification-${AWS::StackName}"
+
+  AlmaUpdateErrorDLQAlarm:
+    Type: AWS::CloudWatch::Alarm
+    Properties:
+      AlarmName: !Sub "AlmaUpdateErrorDLQAlarm-${AWS::StackName}"
+      AlarmDescription: 'Messages in the dead letter queue exceeds defined threshold.'
+      Namespace: AWS/SQS
+      MetricName: ApproximateNumberOfMessagesVisible
+      Dimensions:
+        -   Name: QueueName
+            Value: !GetAtt AlmaUpdateErrorDLQ.QueueName
+      Statistic: Sum
+      EvaluationPeriods: 1
+      Period: 86400 #1 day
+      Threshold: 1
+      ComparisonOperator: GreaterThanThreshold
+      AlarmActions:
+        - !Ref AlmaUpdateErrorDLQAlarmNotification
+
+  AlmaUpdateErrorDLQAlarmNotification:
+    Type: AWS::SNS::Topic
+    Properties:
+      TopicName: !Sub "AlmaUpdateErrorDLQAlarmNotification-${AWS::StackName}"
 
   AlmaUpdateExhaustedAlarm:
     Type: AWS::CloudWatch::Alarm
