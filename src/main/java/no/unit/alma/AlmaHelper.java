@@ -44,7 +44,7 @@ public class AlmaHelper {
     /**
      * Method to retry GET-calls to ALMA, sleeps for 3 seconds before retrying.
      * @param mmsId For identifying the record in ALMA.
-     * @return HttpResponse<String> with the ALMA response or null if failing.
+     * @return HttpResponse with the ALMA response or null if failing.
      * @throws InterruptedException when the sleep is interrupted.
      */
     public HttpResponse<String> getBibRecordFromAlmaWithRetries(String mmsId, String secretKey, String almaApiHost)
@@ -81,7 +81,7 @@ public class AlmaHelper {
     /**
      * Method to retry Put-calls to ALMA, sleeps for 3 seconds before retrying.
      * @param mmsId For identifying the record in ALMA.
-     * @return HttpResponse<String> with the ALMA response or null if failing.
+     * @return HttpResponse with the ALMA response or null if failing.
      * @throws InterruptedException when the sleep is interrupted.
      */
     public HttpResponse<String> putBibRecordInAlmaWithRetries(String mmsId, String updatedRecord,

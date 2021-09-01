@@ -3,7 +3,7 @@ package no.unit.scheduler;
 
 import com.fasterxml.jackson.databind.ObjectMapper;
 import no.unit.alma.XmlParserTest;
-import nva.commons.utils.Environment;
+import nva.commons.core.Environment;
 import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.Test;
 

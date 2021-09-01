@@ -7,7 +7,7 @@ import com.amazonaws.services.sqs.model.SendMessageRequest;
 import com.google.gson.JsonObject;
 import com.google.gson.JsonParser;
 import no.unit.exceptions.SchedulerException;
-import nva.commons.utils.Environment;
+import nva.commons.core.Environment;
 import software.amazon.awssdk.regions.Region;
 
 import java.util.ArrayList;
