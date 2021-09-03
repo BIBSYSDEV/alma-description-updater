@@ -8,7 +8,7 @@ import nva.commons.core.Environment;
 public class Config {
 
     public static final String ALMA_SRU_HOST_KEY = "ALMA_SRU_HOST";
-    public static final String ALMA_API_KEY = "ALMA_API_HOST";
+    public static final String ALMA_API_HOST_KEY = "ALMA_API_HOST";
 
     protected transient String secretKey;
     private final transient Environment environment;
@@ -48,7 +48,7 @@ public class Config {
      */
     private void initVariables() throws SchedulerException {
         try {
-            almaApiHost = environment.readEnv(ALMA_API_KEY);
+            almaApiHost = environment.readEnv(ALMA_API_HOST_KEY);
             almaSruHost = environment.readEnv(ALMA_SRU_HOST_KEY);
             secretKey = SecretRetriever.getAlmaApiKeySecret();
         } catch (IllegalStateException | SecretRetrieverException e) {
