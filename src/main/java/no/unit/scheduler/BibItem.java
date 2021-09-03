@@ -1,6 +1,6 @@
 package no.unit.scheduler;
 
-import nva.commons.utils.JacocoGenerated;
+import nva.commons.core.JacocoGenerated;
 
 @JacocoGenerated
 public class BibItem {

@@ -1,6 +1,6 @@
 package no.unit.utils;
 
-import nva.commons.utils.JacocoGenerated;
+import nva.commons.core.JacocoGenerated;
 
 import java.io.PrintWriter;
 import java.io.StringWriter;

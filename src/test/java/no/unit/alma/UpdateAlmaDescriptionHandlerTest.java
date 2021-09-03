@@ -3,14 +3,10 @@ package no.unit.alma;
 
 import com.google.gson.Gson;
 import no.unit.scheduler.UpdateItem;
-import nva.commons.utils.Environment;
+import nva.commons.core.Environment;
 import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.Test;
 
-import com.amazonaws.services.sqs.AmazonSQS;
-import com.amazonaws.services.sqs.AmazonSQSClientBuilder;
-import com.amazonaws.services.sqs.model.SendMessageRequest;
-import software.amazon.awssdk.regions.Region;
 
 import java.io.BufferedReader;
 import java.io.InputStream;
@@ -19,7 +15,6 @@ import java.util.ArrayList;
 import java.util.List;
 
 import static org.junit.jupiter.api.Assertions.assertEquals;
-import static org.junit.jupiter.api.Assertions.assertTrue;
 import static org.mockito.Mockito.mock;
 import static org.mockito.Mockito.when;
 
@@ -27,9 +22,8 @@ public class UpdateAlmaDescriptionHandlerTest {
 
     public static final String CORRECT_XML_FILE = "/Mock_xml.xml";
     public static final String UPDATED_XML_FILE = "/UpdatedGroupXml.xml";
-    public static final String MOCKEVENT_FILE = "/MockEvent.JSON";
 
-
+    Config mockConfig;
     Environment mockEnv;
     UpdateAlmaDescriptionHandler mockedHandler;
 
@@ -45,8 +39,9 @@ public class UpdateAlmaDescriptionHandlerTest {
     @BeforeEach
     public void init() {
         mockEnv = mock(Environment.class);
+        mockConfig = mock(Config.class);
         initEnv();
-        mockedHandler = new UpdateAlmaDescriptionHandler(mockEnv);
+        mockedHandler = new UpdateAlmaDescriptionHandler(mockConfig);
     }
 
     /**
@@ -83,9 +78,5 @@ public class UpdateAlmaDescriptionHandlerTest {
         assertEquals(mockUpdatedXml, updatedXml);
     }
 
-    @Test
-    public void testCheckProperties() throws Exception {
-        assertTrue(mockedHandler.readEnvVariables());
-    }
 
 }

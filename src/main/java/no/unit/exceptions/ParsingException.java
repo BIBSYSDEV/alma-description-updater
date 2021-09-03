@@ -1,6 +1,6 @@
 package no.unit.exceptions;
 
-import nva.commons.utils.JacocoGenerated;
+import nva.commons.core.JacocoGenerated;
 
 public class ParsingException extends Exception {
     @JacocoGenerated
