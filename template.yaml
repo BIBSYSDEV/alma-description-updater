@@ -256,10 +256,10 @@ Resources:
       EvaluationPeriods: 1
       MetricName: ApproximateAgeOfOldestMessage
       Namespace: AWS/SQS
-      Period: 60
+      Period: 86400
       Statistic: Average
       ComparisonOperator: GreaterThanThreshold
-      Threshold:  7200.0
+      Threshold:  864000.0
       TreatMissingData: notBreaching
       AlarmActions:
         - !Ref AlmaDLQAlarmNotification

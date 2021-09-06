@@ -1,52 +1,42 @@
 package no.unit.alma;
 
-import java.io.IOException;
-import java.lang.reflect.Type;
-import java.net.URL;
-import java.net.http.HttpResponse;
-import java.util.List;
-import java.util.stream.Collectors;
 import com.amazonaws.services.lambda.runtime.Context;
 import com.amazonaws.services.lambda.runtime.RequestHandler;
 import com.amazonaws.services.lambda.runtime.events.SQSEvent;
 import com.google.gson.Gson;
 import com.google.gson.GsonBuilder;
 import com.google.gson.reflect.TypeToken;
+import java.io.BufferedReader;
+import java.io.IOException;
+import java.io.InputStreamReader;
+import java.lang.reflect.Type;
+import java.net.URL;
+import java.net.http.HttpResponse;
+import java.util.List;
+import java.util.stream.Collectors;
+import no.unit.exceptions.ParsingException;
+import no.unit.exceptions.SchedulerException;
+import no.unit.marc.Reference;
 import no.unit.scheduler.SchedulerHelper;
 import no.unit.scheduler.UpdateItem;
-import no.unit.exceptions.SchedulerException;
-import no.unit.exceptions.ParsingException;
-import no.unit.exceptions.SecretRetrieverException;
-import no.unit.marc.Reference;
-import no.unit.secret.SecretRetriever;
 import no.unit.utils.DebugUtils;
-import nva.commons.utils.Environment;
 import org.w3c.dom.Document;
 import software.amazon.awssdk.http.HttpStatusCode;
-
-import java.io.BufferedReader;
-import java.io.InputStreamReader;
 
 
 public class UpdateAlmaDescriptionHandler implements RequestHandler<SQSEvent, Void> {
 
-    public static final String ALMA_SRU_HOST_KEY = "ALMA_SRU_HOST";
-    public static final String ALMA_API_KEY = "ALMA_API_HOST";
-
-    private transient String secretKey;
-    private final transient  Environment envHandler;
-    private transient String almaApiHost;
-    private transient String almaSruHost;
+    private final transient Config config;
     private final transient AlmaHelper almaHelper = new AlmaHelper();
     private final transient SchedulerHelper schedulerHelper = new SchedulerHelper();
     private final transient DocumentXmlParser xmlParser = new DocumentXmlParser();
 
-    public UpdateAlmaDescriptionHandler(Environment envHandler) {
-        this.envHandler = envHandler;
+    public UpdateAlmaDescriptionHandler(Config config) {
+        this.config = config;
     }
 
     public UpdateAlmaDescriptionHandler() {
-        envHandler = new Environment();
+        config = new Config();
     }
 
     /**
@@ -70,12 +60,6 @@ public class UpdateAlmaDescriptionHandler implements RequestHandler<SQSEvent, Vo
     @Override
     @SuppressWarnings({"unchecked", "PMD.NPathComplexity"})
     public Void handleRequest(final SQSEvent event, Context context) {
-
-        try {
-            initVariables();
-        } catch (SchedulerException e) {
-            throw new RuntimeException("Error while setting up env-variables and secretKeys. " + e.getMessage());
-        }
         /* 1. Create an UpdateItem LIST from the input. */
         List<UpdateItem> updateItems;
         try {
@@ -125,7 +109,7 @@ public class UpdateAlmaDescriptionHandler implements RequestHandler<SQSEvent, Vo
 
                 /* 3.2 Use the MMS_ID to get a BIB-RECORD from the alma-api. */
                 almaResponse = almaHelper
-                        .getBibRecordFromAlmaWithRetries(mmsId, secretKey, almaApiHost);
+                        .getBibRecordFromAlmaWithRetries(mmsId, config.secretKey, config.almaApiHost);
 
                 if (almaResponse == null || almaResponse.statusCode() != HttpStatusCode.OK) {
                     continue;
@@ -138,7 +122,7 @@ public class UpdateAlmaDescriptionHandler implements RequestHandler<SQSEvent, Vo
 
                 /* 4. Push the updated BIB-RECORD back to the alma through a put-request to the api. */
                 response = almaHelper
-                        .putBibRecordInAlmaWithRetries(mmsId, updatedRecord, secretKey, almaApiHost);
+                        .putBibRecordInAlmaWithRetries(mmsId, updatedRecord, config.secretKey, config.almaApiHost);
 
                 if (response == null || response.statusCode() != HttpStatusCode.OK) {
                     continue;
@@ -204,33 +188,6 @@ public class UpdateAlmaDescriptionHandler implements RequestHandler<SQSEvent, Vo
         return xmlBuilderString;
     }
 
-
-    /**
-     * A method for assigning values to the secretkey and checking the environment variables.
-     * @return returns null if everything works. If not it will return a Map
-     *     containing an appropriate errormessage and errorsatus.
-     * @throws SchedulerException When something goes wrong.
-     */
-    private void initVariables() throws SchedulerException {
-        try {
-            readEnvVariables();
-            secretKey = SecretRetriever.getAlmaApiKeySecret();
-        } catch (IllegalStateException | SecretRetrieverException e) {
-            throw new SchedulerException("Failed to initialize variables. ", e);
-        }
-
-    }
-
-    /**
-     * Stores the systemvariable properties.
-     * @return It returnes a boolean indicating that it retrieved the systemvariables.
-     */
-    public boolean readEnvVariables() {
-        almaApiHost = envHandler.readEnv(ALMA_API_KEY);
-        almaSruHost = envHandler.readEnv(ALMA_SRU_HOST_KEY);
-        return true;
-    }
-
     /**
      * Retrieve a list of referenceobjects based on the isbn you enter.
      * @param isbn The isbn you wish to retrieve refrenceobjects based on.
@@ -238,7 +195,7 @@ public class UpdateAlmaDescriptionHandler implements RequestHandler<SQSEvent, Vo
      * @throws IOException when something goes wrong
      */
     private List<Reference> getReferenceListByIsbn(String isbn) throws IOException {
-        URL theURL = new URL(almaSruHost + isbn);
+        URL theURL = new URL(config.almaSruHost + isbn);
         InputStreamReader streamReader = new InputStreamReader(theURL.openStream());
         try {
             String referenceString = new BufferedReader(streamReader)
