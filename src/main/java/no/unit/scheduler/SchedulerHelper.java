@@ -164,6 +164,7 @@ public class SchedulerHelper {
                 specifiedMaterial = ORIGINAL_DESCRIPTION;
                 break;
         }
+
         UpdateItem item = new UpdateItem();
         item.setIsbn(isbn);
         item.setLink(link);
