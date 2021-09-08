@@ -434,7 +434,7 @@ Resources:
                     "PipelineApprovalAction": "${PipelineApprovalAction}",
                     "PipelineApprovalEmail": "${PipelineApprovalEmail}",
                     "AlertTopicArn": "${AlertTopicArn}",
-                    "CodeStarConnectionArn": "${CodeStarConnectionArn}"
+                    "CodeStarConnectionArn": "/github-connection"
                   }
               InputArtifacts:
                 - Name: BuildArtifacts
