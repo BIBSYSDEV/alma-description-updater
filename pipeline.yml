@@ -78,7 +78,7 @@ Parameters:
     Description: Git repository branch
   CodeStarConnectionArn:
     Type: AWS::SSM::Parameter::Value<String>
-    Default: 'github-connection'
+    Default: '/github-connection'
     Description: The ARN for the CodestarConnection that connects to the Git (BitBucket) repo
   PipelineApprovalAction:
     Description: Do you want to add a manual approval action to the Release stage of this Pipeline?
