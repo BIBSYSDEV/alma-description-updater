@@ -426,7 +426,7 @@ Resources:
                     "PipelineApprovalAction": "${PipelineApprovalAction}",
                     "PipelineApprovalEmail": "${PipelineApprovalEmail}",
                     "AlertTopicArn": "${AlertTopicArn}",
-                    "CodeStarConnectionArn": "{$CodeStarConnectionArn}"
+                    "CodeStarConnectionArn": "${CodeStarConnectionArn}"
                   }
               InputArtifacts:
                 - Name: BuildArtifacts
