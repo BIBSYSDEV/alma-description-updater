@@ -421,7 +421,8 @@ Resources:
                     "GitBranch": "${GitBranch}",
                     "PipelineApprovalAction": "${PipelineApprovalAction}",
                     "PipelineApprovalEmail": "${PipelineApprovalEmail}",
-                    "AlertTopicArn": "${AlertTopicArn}"
+                    "AlertTopicArn": "${AlertTopicArn}",
+                    "CodeStarConnectionArn": "{$CodeStarConnectionArn}"
                   }
               InputArtifacts:
                 - Name: BuildArtifacts
