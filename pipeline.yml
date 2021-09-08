@@ -64,10 +64,10 @@ Parameters:
     NoEcho: true
     Type: String
     Default: '{{resolve:secretsmanager:githubtoken:SecretString}}'
-    GitHubOwner:
-      Description: GitHub username owning the repo
-      Type: String
-      Default: BIBSYSDEV
+  GitHubOwner:
+    Description: GitHub username owning the repo
+    Type: String
+    Default: BIBSYSDEV
   GitRepo:
     Type: String
     Default: alma-description-updater
@@ -373,7 +373,7 @@ Resources:
                 Category: Source
                 Owner: ThirdParty
                 Version: '1'
-                Provider: CodeStarSourceConnection
+                Provider: GitHub
               Configuration:
                 Owner: !Ref GitHubOwner
                 OAuthToken: !Ref GitHubOAuthToken
