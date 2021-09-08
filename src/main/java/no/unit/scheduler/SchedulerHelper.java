@@ -21,8 +21,6 @@ public class SchedulerHelper {
     private static final String AUDIO_MP3_KEY = "audio/mp3";
     private static final String CONTENTS_URL_PART = "content/";
     private static final String CONTENT_URL_KEY = "STANDARD_CONTENT_URL";
-
-
     private static final String SMALL_KEY = "small";
     private static final String LARGE_KEY = "large";
     private static final String ORIGINAL_KEY = "original";
