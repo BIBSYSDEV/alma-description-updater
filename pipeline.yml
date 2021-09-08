@@ -59,13 +59,18 @@ Parameters:
     Type: String
     Default: alma-description-updater
     Description: The name to use for the CloudFormation stack managed by this pipeline. (The stack created with the template in StackTemplatePath).
-  CodeStarConnectionArn:
-    Type: AWS::SSM::Parameter::Value<String>
-    Default: '/github-connection'
-    Description: The ARN for the CodestarConnection that connects to the Git (BitBucket) repo
+  GitHubOAuthToken:
+    Description: OAuth token used by AWS CodePipeline to connect to GitHub
+    NoEcho: true
+    Type: String
+    Default: '{{resolve:secretsmanager:githubtoken:SecretString}}'
+  GitHubOwner:
+    Description: GitHub username owning the repo
+    Type: String
+    Default: BIBSYSDEV
   GitRepo:
     Type: String
-    Default: BIBSYSDEV/alma-description-updater
+    Default: alma-description-updater
     Description: Git repository name
   GitBranch:
     Type: String
@@ -76,7 +81,7 @@ Parameters:
     AllowedValues:
       - 'Yes'
       - 'No'
-    Default: 'Yes'
+    Default: 'No'
     Type: String
   PipelineApprovalEmail:
     Type: String
@@ -199,10 +204,6 @@ Resources:
                   - !Sub 'arn:aws:cloudformation:${AWS::Region}:${AWS::AccountId}:stack/${DeployStackName}/*'
               - Effect: Allow
                 Action:
-                  - codestar-connections:UseConnection
-                Resource: !Ref CodeStarConnectionArn
-              - Effect: Allow
-                Action:
                   - codebuild:BatchGetBuilds
                   - codebuild:StartBuild
                 Resource:
@@ -272,10 +273,6 @@ Resources:
                   - resource-groups:*
                   - route53:* # GetHostedZone
                 Resource: '*'
-              - Effect: Allow
-                Action:
-                  - codestar-connections:PassConnection
-                Resource: !Ref CodeStarConnectionArn
 
   CodeBuildRole:
     DependsOn: CloudFormationRole # make sure that CloudFormationRole is deleted last
@@ -331,10 +328,10 @@ Resources:
             reason: "Skip encryption for CodeBuild project"
     Properties:
       Artifacts:
-        Type: CODEPIPELINE
+        Type: NO_ARTIFACTS
       Environment:
         ComputeType: BUILD_GENERAL1_SMALL
-        Image: aws/codebuild/standard:4.0
+        Image: aws/codebuild/standard:5.0
         Type: LINUX_CONTAINER
         EnvironmentVariables:
           - Name: S3_BUCKET
@@ -344,8 +341,14 @@ Resources:
       Name: !Sub '${AWS::StackName}-build'
       ServiceRole: !GetAtt 'CodeBuildRole.Arn'
       Source:
-        Type: CODEPIPELINE
-      TimeoutInMinutes: 10
+        Type: GITHUB
+        Location: https://github.com/BIBSYSDEV/innholdstjeneste-backend-api.git
+      Triggers:
+        Webhook: true
+      TimeoutInMinutes: 30
+      Cache:
+        Type: S3
+        Location: !Sub '${ArtifactsBucket}/codebuildcache'
 
   Pipeline:
     Type: 'AWS::CodePipeline::Pipeline'
@@ -368,14 +371,15 @@ Resources:
             - Name: Source
               ActionTypeId:
                 Category: Source
-                Owner: AWS
+                Owner: ThirdParty
                 Version: '1'
-                Provider: CodeStarSourceConnection
+                Provider: GitHub
               Configuration:
-                ConnectionArn: !Ref CodeStarConnectionArn
-                FullRepositoryId: !Ref GitRepo
-                BranchName: !Ref GitBranch
-                OutputArtifactFormat: "CODE_ZIP"
+                Owner: !Ref GitHubOwner
+                OAuthToken: !Ref GitHubOAuthToken
+                Repo: !Ref GitRepo
+                Branch: !Ref GitBranch
+                PollForSourceChanges: false
               OutputArtifacts: [Name: SourceArtifacts]
               Namespace: SourceVariables
               RunOrder: 1
@@ -413,7 +417,6 @@ Resources:
                     "StackTemplatePath": "${StackTemplatePath}",
                     "StackTemplateConfigurationPath": "${StackTemplateConfigurationPath}",
                     "DeployStackName": "${DeployStackName}",
-                    "CodeStarConnectionArn": "/github-connection",
                     "GitRepo": "${GitRepo}",
                     "GitBranch": "${GitBranch}",
                     "PipelineApprovalAction": "${PipelineApprovalAction}",
