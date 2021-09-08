@@ -208,6 +208,10 @@ Resources:
                   - !Sub 'arn:aws:cloudformation:${AWS::Region}:${AWS::AccountId}:stack/${DeployStackName}/*'
               - Effect: Allow
                 Action:
+                  - codestar-connections:UseConnection
+                Resource: !Ref CodeStarConnectionArn
+              - Effect: Allow
+                Action:
                   - codebuild:BatchGetBuilds
                   - codebuild:StartBuild
                 Resource:
@@ -277,6 +281,10 @@ Resources:
                   - resource-groups:*
                   - route53:* # GetHostedZone
                 Resource: '*'
+              - Effect: Allow
+                Action:
+                  - codestar-connections:PassConnection
+                Resource: !Ref CodeStarConnectionArn
 
   CodeBuildRole:
     DependsOn: CloudFormationRole # make sure that CloudFormationRole is deleted last
