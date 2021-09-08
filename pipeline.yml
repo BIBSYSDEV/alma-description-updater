@@ -342,7 +342,7 @@ Resources:
       ServiceRole: !GetAtt 'CodeBuildRole.Arn'
       Source:
         Type: GITHUB
-        Location: https://github.com/BIBSYSDEV/innholdstjeneste-backend-api.git
+        Location: https://github.com/BIBSYSDEV/alma-description-updater.git
       Triggers:
         Webhook: true
       TimeoutInMinutes: 30
