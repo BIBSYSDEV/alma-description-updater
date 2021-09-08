@@ -19,9 +19,9 @@ public class AlmaHelper {
      * @throws InterruptedException When something goes wrong.
      * @throws IOException When something goes wrong.
      */
-    private HttpResponse<String> getBibRecordFromAlma(String mmsId, String secretKey, String almaApiHost)
+    private HttpResponse<String> getBibRecordFromAlma(String mmsId)
             throws InterruptedException, IOException {
-        HttpResponse<String> almaResponse = AlmaConnection.getInstance().sendGet(mmsId, secretKey, almaApiHost);
+        HttpResponse<String> almaResponse = AlmaConnection.getInstance().sendGet(mmsId);
         return almaResponse;
     }
 
@@ -33,11 +33,10 @@ public class AlmaHelper {
      * @throws InterruptedException When something goes wrong.
      * @throws IOException When something goes wrong.
      */
-    private HttpResponse<String> putBibRecordInAlma(String mmsId, String updatedXml,
-                                                    String secretKey, String almaApiHost)
+    private HttpResponse<String> putBibRecordInAlma(String mmsId, String updatedXml)
             throws InterruptedException, IOException {
-        HttpResponse<String> almaResponse = AlmaConnection.getInstance().sendPut(mmsId, secretKey,
-                updatedXml, almaApiHost);
+        HttpResponse<String> almaResponse = AlmaConnection.getInstance().sendPut(mmsId,
+            updatedXml);
         return almaResponse;
     }
 
@@ -47,12 +46,12 @@ public class AlmaHelper {
      * @return HttpResponse with the ALMA response or null if failing.
      * @throws InterruptedException when the sleep is interrupted.
      */
-    public HttpResponse<String> getBibRecordFromAlmaWithRetries(String mmsId, String secretKey, String almaApiHost)
+    public HttpResponse<String> getBibRecordFromAlmaWithRetries(String mmsId)
             throws InterruptedException, IOException {
         HttpResponse<String> almaResponse;
         try {
 
-            almaResponse = getBibRecordFromAlma(mmsId, secretKey, almaApiHost);
+            almaResponse = getBibRecordFromAlma(mmsId);
         } catch (InterruptedException | IOException e) {
             almaResponse = null; //NOPMD
             System.err.println(e.getMessage());
@@ -64,7 +63,7 @@ public class AlmaHelper {
 
             TimeUnit.SECONDS.sleep(3);
             try {
-                almaResponse = getBibRecordFromAlma(mmsId, secretKey, almaApiHost);
+                almaResponse = getBibRecordFromAlma(mmsId);
             } catch (InterruptedException | IOException e) {
                 almaResponse = null; //NOPMD
             }
@@ -72,7 +71,7 @@ public class AlmaHelper {
                 return almaResponse;
             } else {
                 TimeUnit.SECONDS.sleep(3);
-                almaResponse = getBibRecordFromAlma(mmsId, secretKey, almaApiHost);
+                almaResponse = getBibRecordFromAlma(mmsId);
                 return almaResponse;
             }
         }
@@ -84,12 +83,11 @@ public class AlmaHelper {
      * @return HttpResponse with the ALMA response or null if failing.
      * @throws InterruptedException when the sleep is interrupted.
      */
-    public HttpResponse<String> putBibRecordInAlmaWithRetries(String mmsId, String updatedRecord,
-                                                              String secretKey, String almaApiHost)
+    public HttpResponse<String> putBibRecordInAlmaWithRetries(String mmsId, String updatedRecord)
             throws InterruptedException {
         HttpResponse<String> response;
         try {
-            response = putBibRecordInAlma(mmsId, updatedRecord, secretKey, almaApiHost);
+            response = putBibRecordInAlma(mmsId, updatedRecord);
         } catch (InterruptedException | IOException e) {
             response = null; //NOPMD
         }
@@ -98,7 +96,7 @@ public class AlmaHelper {
         } else {
             TimeUnit.SECONDS.sleep(3);
             try {
-                response = putBibRecordInAlma(mmsId, updatedRecord, secretKey, almaApiHost);
+                response = putBibRecordInAlma(mmsId, updatedRecord);
             } catch (InterruptedException | IOException e) {
                 response = null; //NOPMD
             }
@@ -107,7 +105,7 @@ public class AlmaHelper {
             } else {
                 TimeUnit.SECONDS.sleep(3);
                 try {
-                    response = putBibRecordInAlma(mmsId, updatedRecord, secretKey, almaApiHost);
+                    response = putBibRecordInAlma(mmsId, updatedRecord);
                 } catch (InterruptedException | IOException e) {
                     response = null; //NOPMD
                 }

@@ -108,8 +108,7 @@ public class UpdateAlmaDescriptionHandler implements RequestHandler<SQSEvent, Vo
                 String mmsId = reference.getId();
 
                 /* 3.2 Use the MMS_ID to get a BIB-RECORD from the alma-api. */
-                almaResponse = almaHelper
-                        .getBibRecordFromAlmaWithRetries(mmsId, config.secretKey, config.almaApiHost);
+                almaResponse = almaHelper.getBibRecordFromAlmaWithRetries(mmsId);
 
                 if (almaResponse == null || almaResponse.statusCode() != HttpStatusCode.OK) {
                     continue;
@@ -121,8 +120,7 @@ public class UpdateAlmaDescriptionHandler implements RequestHandler<SQSEvent, Vo
                 String updatedRecord = updateBibRecord(updateItems, xmlFromAlma);
 
                 /* 4. Push the updated BIB-RECORD back to the alma through a put-request to the api. */
-                response = almaHelper
-                        .putBibRecordInAlmaWithRetries(mmsId, updatedRecord, config.secretKey, config.almaApiHost);
+                response = almaHelper.putBibRecordInAlmaWithRetries(mmsId, updatedRecord);
 
                 if (response == null || response.statusCode() != HttpStatusCode.OK) {
                     continue;
