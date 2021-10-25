@@ -4,8 +4,8 @@ plugins {
     id 'pmd'
     id 'jacoco'
     id 'com.github.johnrengelman.shadow' version '5.2.0'
-    id 'org.owasp.dependencycheck' version '6.3.0'
-    id 'nebula.lint' version '17.1.1'
+    id 'org.owasp.dependencycheck' version '6.4.1.1'
+    id 'nebula.lint' version '17.2.3'
 }
 
 group 'no.unit.alma'
@@ -25,15 +25,15 @@ dependencies {
     implementation group: 'javax.ws.rs', name: 'javax.ws.rs-api', version: '2.1.1'
     implementation group: 'com.amazonaws', name: 'aws-lambda-java-events', version: '3.10.0'
     implementation group: 'com.amazonaws', name: 'aws-lambda-java-core', version: '1.2.1'
-    implementation group: 'software.amazon.awssdk', name: 'secretsmanager', version: '2.17.24'
-    implementation group: 'com.amazonaws', name: 'aws-java-sdk-dynamodb', version: '1.12.58'
-    implementation group: 'com.amazonaws', name: 'aws-java-sdk-sqs', version: '1.12.53'
+    implementation group: 'software.amazon.awssdk', name: 'secretsmanager', version: '2.17.65'
+    implementation group: 'com.amazonaws', name: 'aws-java-sdk-dynamodb', version: '1.12.94'
+    implementation group: 'com.amazonaws', name: 'aws-java-sdk-sqs', version: '1.12.93'
     implementation group: 'com.github.BIBSYSDEV', name: 'marc21-xml-parser', version: '2.11.3'
     implementation group: 'org.slf4j', name: 'slf4j-simple', version: '1.7.32'
-    implementation group: 'com.github.bibsysdev', name: 'core', version: '1.8.0'
-    testImplementation group: 'org.junit.jupiter', name: 'junit-jupiter', version: '5.7.2'
-    testImplementation group: 'org.mockito', name: 'mockito-core', version: '3.12.4'
-    testCompile group: 'junit', name: 'junit', version: '4.12'
+    implementation group: 'com.github.bibsysdev', name: 'core', version: '1.16.0'
+    testImplementation group: 'org.junit.jupiter', name: 'junit-jupiter', version: '5.8.1'
+    testImplementation group: 'org.mockito', name: 'mockito-core', version: '4.0.0'
+    testCompile group: 'junit', name: 'junit', version: '4.13.2'
 
     shadowJar {
         archiveClassifier.set('')
