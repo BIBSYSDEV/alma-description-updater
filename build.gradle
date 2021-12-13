@@ -19,21 +19,23 @@ repositories {
     maven { url 'https://jitpack.io' }
 }
 
+wrapper {
+    distributionType = Wrapper.DistributionType.ALL
+    gradleVersion = "7.3.1"
+}
+
 dependencies {
     implementation group: 'org.marc4j', name: 'marc4j', version: '2.9.2'
     implementation group: 'com.google.code.gson', name: 'gson', version: '2.8.9'
     implementation group: 'javax.ws.rs', name: 'javax.ws.rs-api', version: '2.1.1'
     implementation group: 'com.amazonaws', name: 'aws-lambda-java-events', version: '3.11.0'
-    implementation group: 'com.amazonaws', name: 'aws-lambda-java-core', version: '1.2.1'
     implementation group: 'software.amazon.awssdk', name: 'secretsmanager', version: '2.17.99'
     implementation group: 'com.amazonaws', name: 'aws-java-sdk-dynamodb', version: '1.12.128'
     implementation group: 'com.amazonaws', name: 'aws-java-sdk-sqs', version: '1.12.128'
     implementation group: 'com.github.BIBSYSDEV', name: 'marc21-xml-parser', version: '2.11.5'
-    implementation group: 'org.slf4j', name: 'slf4j-simple', version: '1.7.32'
-    implementation group: 'com.github.bibsysdev', name: 'core', version: '1.16.22'
+    implementation group: 'com.github.bibsysdev', name: 'core', version: '1.16.23'
     testImplementation group: 'org.junit.jupiter', name: 'junit-jupiter', version: '5.8.2'
     testImplementation group: 'org.mockito', name: 'mockito-core', version: '4.1.0'
-    testCompile group: 'junit', name: 'junit', version: '4.13.2'
 
     shadowJar {
         archiveClassifier.set('')
