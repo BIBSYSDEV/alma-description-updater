@@ -1,14 +1,12 @@
 package no.unit.scheduler;
 
-import com.amazonaws.services.sqs.AmazonSQS;
-import com.amazonaws.services.sqs.AmazonSQSClientBuilder;
-import com.amazonaws.services.sqs.model.InvalidMessageContentsException;
-import com.amazonaws.services.sqs.model.SendMessageRequest;
 import com.google.gson.JsonObject;
 import com.google.gson.JsonParser;
 import no.unit.exceptions.SchedulerException;
 import nva.commons.core.Environment;
 import software.amazon.awssdk.regions.Region;
+import software.amazon.awssdk.services.sqs.SqsClient;
+import software.amazon.awssdk.services.sqs.model.SendMessageRequest;
 
 import java.util.ArrayList;
 import java.util.List;
@@ -51,11 +49,12 @@ public class SchedulerHelper {
 
     /**
      * Creates a list of UpdateItem objects, if the event is "MODIFIED" this will be from the
-     *     difference between the new and the old image, if created simply from the new image.
+     * difference between the new and the old image, if created simply from the new image.
+     *
      * @param eventBody The body of the SQSEvent.
      * @return A list of UpdateItem objects.
      */
-    public List<UpdateItem> splitEventIntoUpdateItems(String eventBody)  {
+    public List<UpdateItem> splitEventIntoUpdateItems(String eventBody) {
         JsonObject eventBodyObject = JsonParser.parseString(eventBody).getAsJsonObject();
         String isbn = eventBodyObject.get("dynamodb").getAsJsonObject().get("Keys")
                 .getAsJsonObject().get("isbn").getAsJsonObject().get(S).getAsString();
@@ -78,6 +77,7 @@ public class SchedulerHelper {
 
     /**
      * Extracts the data needed to create an DynamoDbItem from a JsonObject.
+     *
      * @param image Either the new or the old image, containing the dynamoDbItem.
      * @return The DynamoDbItem.
      */
@@ -109,7 +109,8 @@ public class SchedulerHelper {
 
     /**
      * Creates a list of UpdateItem objects based on a list of DynamoDbItems.
-     *     The DynamoDbItem may result in several UpdateItem objects.
+     * The DynamoDbItem may result in several UpdateItem objects.
+     *
      * @param item The DynamoDbItem from which to extract and create UpdateItems from.
      * @return A list of UpdateItems.
      */
@@ -142,8 +143,9 @@ public class SchedulerHelper {
 
     /**
      * Creates a UpdateItem containing the correct isbn, link and specifiedMaterial.
+     *
      * @param imageSize The size of the Image to create a link for.
-     * @param isbn The isbn to create the UpdateItem for.
+     * @param isbn      The isbn to create the UpdateItem for.
      * @return A UpdateItem.
      */
     public UpdateItem createImageLink(String imageSize, String isbn) {
@@ -174,8 +176,9 @@ public class SchedulerHelper {
 
     /**
      * Creates a UpdateItem containing the correct isbn, link and specifiedMaterial.
+     *
      * @param contentType The type of content to create a link for.
-     * @param isbn The isbn to create the UpdateItem for.
+     * @param isbn        The isbn to create the UpdateItem for.
      * @return A UpdateItem.
      */
     public UpdateItem createContentLink(String contentType, String isbn) {
@@ -202,6 +205,7 @@ public class SchedulerHelper {
 
     /**
      * Creates a UpdateItem containing the correct isbn, link and specifiedMaterial.
+     *
      * @param isbn The isbn to create the UpdateItem for.
      * @return A UpdateItem.
      */
@@ -220,6 +224,7 @@ public class SchedulerHelper {
 
     /**
      * Method to fill the actually updated fields of a BibItem.
+     *
      * @param newVersion BibItem containing the new version of the db-record.
      * @param oldVersion BibItem containing the old version of the db-record.
      * @return A BibItem with only the field of interest filed.
@@ -261,19 +266,19 @@ public class SchedulerHelper {
 
     /**
      * Method that writes a message to an already specified queue.
+     *
      * @param message The message thats to be sent to the queue.
      * @throws SchedulerException when something goes wrong.
      */
     public void writeToDLQ(String message) throws SchedulerException {
-        try {
-            AmazonSQS sqs = AmazonSQSClientBuilder.standard().withRegion(Region.EU_WEST_1.toString()).build();
-            String queueUrl = envHandler.readEnv(DLQ_QUEUE_URL_KEY);
-            SendMessageRequest sendMsgRequest = new SendMessageRequest()
-                    .withQueueUrl(queueUrl)
-                    .withMessageBody(message)
-                    .withDelaySeconds(5);
+        try (SqsClient sqs = SqsClient.builder().region(Region.EU_WEST_1).build()) {
+            SendMessageRequest sendMsgRequest = SendMessageRequest.builder()
+                    .queueUrl(envHandler.readEnv(DLQ_QUEUE_URL_KEY))
+                    .messageBody(message)
+                    .delaySeconds(5)
+                    .build();
             sqs.sendMessage(sendMsgRequest);
-        } catch (InvalidMessageContentsException | UnsupportedOperationException e) {
+        } catch (UnsupportedOperationException e) {
             throw new SchedulerException("Failed to send message to DLQ. ", e);
         }
     }

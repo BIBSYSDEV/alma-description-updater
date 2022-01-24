@@ -1,7 +1,6 @@
 package no.unit.scheduler;
 
 
-import com.fasterxml.jackson.databind.ObjectMapper;
 import no.unit.alma.XmlParserTest;
 import nva.commons.core.Environment;
 import org.junit.jupiter.api.BeforeEach;
@@ -16,6 +15,7 @@ import java.util.List;
 import static org.junit.jupiter.api.Assertions.assertEquals;
 import static org.mockito.Mockito.mock;
 import static org.mockito.Mockito.when;
+import static nva.commons.core.JsonUtils.dtoObjectMapper;
 
 class SchedulerHelperTest {
 
@@ -92,13 +92,12 @@ class SchedulerHelperTest {
 
     @Test
     void extractDiffsTest() throws Exception {
-        ObjectMapper objectMapper = new ObjectMapper();
         String oldVersion = setup(OLDVERSION);
         String newVersion = setup(NEWVERSION);
         String returnVersion = setup(RETURNVERSION);
-        BibItem oldItem = objectMapper.readValue(oldVersion, BibItem.class);
-        BibItem newItem = objectMapper.readValue(newVersion, BibItem.class);
-        BibItem returnItem = objectMapper.readValue(returnVersion, BibItem.class);
+        BibItem oldItem = dtoObjectMapper.readValue(oldVersion, BibItem.class);
+        BibItem newItem = dtoObjectMapper.readValue(newVersion, BibItem.class);
+        BibItem returnItem = dtoObjectMapper.readValue(returnVersion, BibItem.class);
         BibItem theItem = mockSchedulerHelper.extractDiffs(newItem, oldItem);
         assertEquals(returnItem.toString(), theItem.toString());
     }
