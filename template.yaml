@@ -128,7 +128,7 @@ Resources:
           Type: DynamoDB
           Properties:
             BatchSize: 100 #Default
-            Stream: '{{resolve:ssm:/contents/dynamoDBStreamArnContents:2}}'
+            Stream: '{{resolve:ssm:/contents/dynamoDBStreamArnContents:1}}'
             StartingPosition: LATEST
             MaximumBatchingWindowInSeconds: 5
             MaximumRecordAgeInSeconds: 60
