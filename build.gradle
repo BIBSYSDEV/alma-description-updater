@@ -30,7 +30,7 @@ dependencies {
     implementation group: 'javax.ws.rs', name: 'javax.ws.rs-api', version: '2.1.1'
     implementation group: 'com.amazonaws', name: 'aws-lambda-java-events', version: '3.11.0'
     implementation group: 'software.amazon.awssdk', name: 'secretsmanager', version: '2.18.10'
-    implementation group: 'software.amazon.awssdk', name: 'dynamodb', version: '2.18.11'
+    implementation group: 'software.amazon.awssdk', name: 'dynamodb', version: '2.19.5'
     implementation group: 'software.amazon.awssdk', name: 'sqs', version: '2.18.11'
     implementation group: 'com.amazonaws', name: 'aws-lambda-java-core', version: '1.2.1'
     implementation group: 'com.github.BIBSYSDEV', name: 'marc21-xml-parser', version: '2.11.5'
