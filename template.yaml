@@ -118,7 +118,7 @@ Resources:
     Type: AWS::Serverless::Function
     Properties:
       Description: A Lambda function that get data from dynamodb and put in sqs
-      Runtime: nodejs12.x
+      Runtime: nodejs22.x
       Handler: node/schedulerSystem.streamReader
       Environment:
         Variables:
@@ -183,7 +183,7 @@ Resources:
     Type: AWS::Serverless::Function
     Properties:
       Description: A Lambda function that handles Alma DLQ
-      Runtime: nodejs12.x
+      Runtime: nodejs22.x
       Handler: node/schedulerSystem.almaErrorHandler
       Environment:
         Variables:
@@ -212,7 +212,7 @@ Resources:
     Type: AWS::Serverless::Function
     Properties:
       Description: A Lambda function that schedules DLQ-reads based on alarms
-      Runtime: nodejs12.x
+      Runtime: nodejs22.x
       Handler: node/schedulerSystem.almaErrorScheduler
       Environment:
         Variables:
