@@ -7,7 +7,7 @@ phases:
 
   install:
     runtime-versions:
-      java: corretto11
+      java: corretto21
       nodejs: 12
     commands:
       - pip3 install --upgrade cfn-lint
