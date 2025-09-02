@@ -1,14 +1,13 @@
 package no.unit.alma;
 
 import no.unit.exceptions.SchedulerException;
-import no.unit.exceptions.SecretRetrieverException;
-import no.unit.secret.SecretRetriever;
 import nva.commons.core.Environment;
 
 public class Config {
 
     public static final String ALMA_SRU_HOST_KEY = "ALMA_SRU_HOST";
     public static final String ALMA_API_HOST_KEY = "ALMA_API_HOST";
+    public static final String ALMA_API_KEY = "ALMA_APIKEY";
 
     protected transient String secretKey;
     private final transient Environment environment;
@@ -50,8 +49,8 @@ public class Config {
         try {
             almaApiHost = environment.readEnv(ALMA_API_HOST_KEY);
             almaSruHost = environment.readEnv(ALMA_SRU_HOST_KEY);
-            secretKey = SecretRetriever.getAlmaApiKeySecret();
-        } catch (IllegalStateException | SecretRetrieverException e) {
+            secretKey = environment.readEnv(ALMA_API_KEY);
+        } catch (IllegalStateException e) {
             throw new SchedulerException("Failed to initialize variables. ", e);
         }
 

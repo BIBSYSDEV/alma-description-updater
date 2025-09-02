@@ -2,9 +2,10 @@ package no.unit.scheduler;
 
 import com.google.gson.JsonObject;
 import com.google.gson.JsonParser;
+import no.unit.aws.DefaultSqsClientFactory;
+import no.unit.aws.SqsClientFactory;
 import no.unit.exceptions.SchedulerException;
 import nva.commons.core.Environment;
-import software.amazon.awssdk.regions.Region;
 import software.amazon.awssdk.services.sqs.SqsClient;
 import software.amazon.awssdk.services.sqs.model.SendMessageRequest;
 
@@ -33,17 +34,19 @@ public class SchedulerHelper {
     private static final String SHORT_DESCRIPTION = "Forlagets beskrivelse (kort)";
     private static final String LONG_DESCRIPTION = "Forlagets beskrivelse (lang)";
     private static final String CONTENTS_DESCRIPTION = "Innholdsfortegnelse";
-    private static final String DLQ_QUEUE_URL_KEY = "DLQ_QUEUE_URL";
+    public static final String DLQ_QUEUE_URL_KEY = "DLQ_QUEUE_URL";
 
     private final transient Environment envHandler;
+    private final transient SqsClientFactory sqsClientFactory;
 
 
-    public SchedulerHelper(Environment envHandler) {
+    public SchedulerHelper(Environment envHandler, SqsClientFactory sqsClientFactory) {
         this.envHandler = envHandler;
+        this.sqsClientFactory = sqsClientFactory;
     }
 
     public SchedulerHelper() {
-        this.envHandler = new Environment();
+        this(new Environment(), new DefaultSqsClientFactory());
     }
 
 
@@ -271,15 +274,20 @@ public class SchedulerHelper {
      * @throws SchedulerException when something goes wrong.
      */
     public void writeToDLQ(String message) throws SchedulerException {
-        try (SqsClient sqs = SqsClient.builder().region(Region.EU_WEST_1).build()) {
-            SendMessageRequest sendMsgRequest = SendMessageRequest.builder()
-                    .queueUrl(envHandler.readEnv(DLQ_QUEUE_URL_KEY))
-                    .messageBody(message)
-                    .delaySeconds(5)
-                    .build();
+        try (SqsClient sqs = sqsClientFactory.createSqsClient()) {
+            var sendMsgRequest = createSendMessageRequest(message);
             sqs.sendMessage(sendMsgRequest);
         } catch (UnsupportedOperationException e) {
             throw new SchedulerException("Failed to send message to DLQ. ", e);
         }
     }
+
+    private SendMessageRequest createSendMessageRequest(String message) {
+        return SendMessageRequest.builder()
+                .queueUrl(envHandler.readEnv(DLQ_QUEUE_URL_KEY))
+                .messageBody(message)
+                .delaySeconds(5)
+                .build();
+    }
+
 }

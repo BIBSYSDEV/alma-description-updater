@@ -3,6 +3,8 @@ package no.unit.scheduler;
 
 import com.fasterxml.jackson.databind.ObjectMapper;
 import no.unit.alma.XmlParserTest;
+import no.unit.aws.SqsClientFactory;
+import no.unit.exceptions.SchedulerException;
 import nva.commons.core.Environment;
 import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.Test;
@@ -12,9 +14,19 @@ import java.io.InputStream;
 import java.io.InputStreamReader;
 import java.util.Iterator;
 import java.util.List;
+import org.mockito.ArgumentCaptor;
+import software.amazon.awssdk.services.sqs.SqsClient;
+import software.amazon.awssdk.services.sqs.model.SendMessageRequest;
 
+import static no.unit.scheduler.SchedulerHelper.DLQ_QUEUE_URL_KEY;
 import static org.junit.jupiter.api.Assertions.assertEquals;
+import static org.junit.jupiter.api.Assertions.assertThrows;
+import static org.mockito.ArgumentMatchers.any;
+import static org.mockito.Mockito.doReturn;
+import static org.mockito.Mockito.doThrow;
 import static org.mockito.Mockito.mock;
+import static org.mockito.Mockito.times;
+import static org.mockito.Mockito.verify;
 import static org.mockito.Mockito.when;
 
 class SchedulerHelperTest {
@@ -34,14 +46,7 @@ class SchedulerHelperTest {
     Environment mockEnv;
     SchedulerHelper mockSchedulerHelper;
     ObjectMapper objectMapper = new ObjectMapper();
-
-    public void printList(List<?> theList) {
-        Iterator<?> iter = theList.iterator();
-        while (iter.hasNext()) {
-            Object item = iter.next();
-            System.out.println(item.toString());
-        }
-    }
+    SqsClient mockSqsClient;
 
     public String setup(String file) throws Exception {
         InputStream stream = XmlParserTest.class.getResourceAsStream(file);
@@ -63,14 +68,18 @@ class SchedulerHelperTest {
      * Sets up a mock environment for use when testing.
      */
     @BeforeEach
+    @SuppressWarnings("resource")
     public void init() {
         mockEnv = mock(Environment.class);
+        var mockSqsClientFactory = mock(SqsClientFactory.class);
+        mockSqsClient = mock(SqsClient.class);
+        doReturn(mockSqsClient).when(mockSqsClientFactory).createSqsClient();
         initEnv();
-        mockSchedulerHelper = new SchedulerHelper(mockEnv);
+        mockSchedulerHelper = new SchedulerHelper(mockEnv, mockSqsClientFactory);
     }
 
     @Test
-    void generateImageLinkTest() throws Exception {
+    void generateImageLinkTest() {
         UpdateItem payload = mockSchedulerHelper.createImageLink(IMAGE_SIZE, ISBN);
         String expectedLink = String.format(CONTENT_URL_KEY + FILE_KEY + IMAGE_KEY + IMAGE_SIZE
                 + "/%s/%s/%s.jpg", 7, 4, ISBN);
@@ -78,14 +87,14 @@ class SchedulerHelperTest {
     }
 
     @Test
-    void generateContentLinkTest() throws Exception {
+    void generateContentLinkTest() {
         UpdateItem payload = mockSchedulerHelper.createContentLink(CONTENT_TYPE, ISBN);
         String expectedLink = String.format(CONTENT_URL_KEY  + "content/" + "?isbn=" + ISBN);
         assertEquals(expectedLink, payload.getLink());
     }
 
     @Test
-    void generateAudioLinkTest() throws Exception {
+    void generateAudioLinkTest() {
         UpdateItem payload = mockSchedulerHelper.createAudioLink(ISBN);
         String expectedLink = String.format(CONTENT_URL_KEY + FILE_KEY + AUDIO_MP3_KEY + "/%s/%s/%s.mp3", 7, 4, ISBN);
         assertEquals(expectedLink, payload.getLink());
@@ -111,4 +120,26 @@ class SchedulerHelperTest {
             System.out.println(payload.toString());
         }
     }
+
+    @Test
+    public void shouldWriteToDlqWithCorrectContent() throws Exception {
+        doReturn("someDlqUrl").when(mockEnv).readEnv(DLQ_QUEUE_URL_KEY);
+
+        mockSchedulerHelper.writeToDLQ("message");
+
+        var captor = ArgumentCaptor.forClass(SendMessageRequest.class);
+
+        verify(mockSqsClient, times(1)).sendMessage(captor.capture());
+        assertEquals("message", captor.getValue().messageBody());
+        assertEquals(5, captor.getValue().delaySeconds());
+        assertEquals("someDlqUrl", captor.getValue().queueUrl());
+    }
+
+    @Test
+    public void shouldThrowExceptionWhenWriteToDlqFails() {
+        doThrow(UnsupportedOperationException.class).when(mockSqsClient).sendMessage(any(SendMessageRequest.class));
+
+        assertThrows(SchedulerException.class, () -> mockSchedulerHelper.writeToDLQ("message"));
+    }
+
 }
