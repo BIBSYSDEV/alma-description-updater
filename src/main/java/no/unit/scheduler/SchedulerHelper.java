@@ -157,18 +157,11 @@ public class SchedulerHelper {
         String link = String.format(envHandler.readEnv(CONTENT_URL_KEY) + FILE_KEY + IMAGE_KEY + imageSize
                 + "/%s/%s/%s.jpg", firstLinkPart, secondLinkPart, isbn);
 
-        String specifiedMaterial;
-        switch (imageSize) {
-            case SMALL_KEY:
-                specifiedMaterial = SMALL_DESCRIPTION;
-                break;
-            case LARGE_KEY:
-                specifiedMaterial = LARGE_DESCRIPTION;
-                break;
-            default:
-                specifiedMaterial = ORIGINAL_DESCRIPTION;
-                break;
-        }
+        String specifiedMaterial = switch (imageSize) {
+            case SMALL_KEY -> SMALL_DESCRIPTION;
+            case LARGE_KEY -> LARGE_DESCRIPTION;
+            default -> ORIGINAL_DESCRIPTION;
+        };
 
         UpdateItem item = new UpdateItem();
         item.setIsbn(isbn);
@@ -187,18 +180,11 @@ public class SchedulerHelper {
     public UpdateItem createContentLink(String contentType, String isbn) {
         String link = envHandler.readEnv(CONTENT_URL_KEY) + CONTENTS_URL_PART + "?isbn=" + isbn;
 
-        String specifiedMaterial;
-        switch (contentType.toLowerCase(Locale.getDefault())) {
-            case SHORT_KEY:
-                specifiedMaterial = SHORT_DESCRIPTION;
-                break;
-            case LONG_KEY:
-                specifiedMaterial = LONG_DESCRIPTION;
-                break;
-            default:
-                specifiedMaterial = CONTENTS_DESCRIPTION;
-                break;
-        }
+        String specifiedMaterial = switch (contentType.toLowerCase(Locale.getDefault())) {
+            case SHORT_KEY -> SHORT_DESCRIPTION;
+            case LONG_KEY -> LONG_DESCRIPTION;
+            default -> CONTENTS_DESCRIPTION;
+        };
         UpdateItem item = new UpdateItem();
         item.setIsbn(isbn);
         item.setLink(link);

@@ -18,12 +18,7 @@ public class Config {
      * Config class to hold common variables for caching.
      */
     public Config() {
-        environment = new Environment();
-        try {
-            initVariables();
-        } catch (SchedulerException e) {
-            throw new RuntimeException("Error while setting up env-variables and secretKeys. " + e.getMessage());
-        }
+        this(new Environment());
     }
 
     /**
@@ -41,8 +36,6 @@ public class Config {
 
     /**
      * A method for assigning values to the secretkey and checking the environment variables.
-     * @return returns null if everything works. If not it will return a Map
-     *     containing an appropriate errormessage and errorsatus.
      * @throws SchedulerException When something goes wrong.
      */
     private void initVariables() throws SchedulerException {

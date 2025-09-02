@@ -12,12 +12,12 @@ import org.junit.jupiter.api.Test;
 import java.io.BufferedReader;
 import java.io.InputStream;
 import java.io.InputStreamReader;
-import java.util.Iterator;
 import java.util.List;
 import org.mockito.ArgumentCaptor;
 import software.amazon.awssdk.services.sqs.SqsClient;
 import software.amazon.awssdk.services.sqs.model.SendMessageRequest;
 
+import static java.util.Objects.isNull;
 import static no.unit.scheduler.SchedulerHelper.DLQ_QUEUE_URL_KEY;
 import static org.junit.jupiter.api.Assertions.assertEquals;
 import static org.junit.jupiter.api.Assertions.assertThrows;
@@ -50,6 +50,9 @@ class SchedulerHelperTest {
 
     public String setup(String file) throws Exception {
         InputStream stream = XmlParserTest.class.getResourceAsStream(file);
+        if (isNull(stream)) {
+            throw new RuntimeException("Could not load xml file " + file);
+        }
         InputStreamReader reader = new InputStreamReader(stream);
         BufferedReader br = new BufferedReader(reader);
         String line;
