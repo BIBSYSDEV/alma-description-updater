@@ -83,6 +83,7 @@ public class AlmaHelper {
      * @return HttpResponse with the ALMA response or null if failing.
      * @throws InterruptedException when the sleep is interrupted.
      */
+    @SuppressWarnings("PMD.CognitiveComplexity")
     public HttpResponse<String> putBibRecordInAlmaWithRetries(String mmsId, String updatedRecord)
             throws InterruptedException {
         HttpResponse<String> response;

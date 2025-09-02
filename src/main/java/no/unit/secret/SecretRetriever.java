@@ -2,6 +2,7 @@ package no.unit.secret;
 
 import com.google.gson.Gson;
 import no.unit.exceptions.SecretRetrieverException;
+import nva.commons.core.JacocoGenerated;
 import software.amazon.awssdk.regions.Region;
 import software.amazon.awssdk.services.secretsmanager.SecretsManagerClient;
 import software.amazon.awssdk.services.secretsmanager.model.GetSecretValueRequest;
@@ -31,29 +32,19 @@ public class SecretRetriever {
         final String secretName = "ALMA_APIKEY";
         Region region = Region.EU_WEST_1;
 
-        // Create a Secrets Manager client
-        SecretsManagerClient client = SecretsManagerClient.builder()
-                .region(region)
-                .build();
-
         // In this sample we only handle the specific exceptions for the 'GetSecretValue' API.
         // See https://docs.aws.amazon.com/secretsmanager/latest/apireference/API_GetSecretValue.html
         // We rethrow the exception by default.
 
-        GetSecretValueRequest getSecretValueRequest = GetSecretValueRequest.builder()
-                .secretId(secretName)
-                .build();
         GetSecretValueResponse getSecretValueResponse;
 
-        try {
-            getSecretValueResponse = client.getSecretValue(getSecretValueRequest);
+        try (var client = defaultSecretManagerClient(region)) {
+            getSecretValueResponse = client.getSecretValue(defaultSecretValueRequest(secretName));
         } catch (DecryptionFailureException | InternalServiceErrorException
                 | InvalidParameterException | InvalidRequestException | ResourceNotFoundException e) {
             // Secrets Manager can't decrypt the protected secret text using the provided KMS key.
             // Deal with the exception here, and/or rethrow at your discretion.
             throw new SecretRetrieverException(SECRET_ERROR_MESSAGE, e);
-        } finally {
-            client.close();
         }
 
         Gson g = new Gson();
@@ -72,4 +63,19 @@ public class SecretRetriever {
             return secretJson.ALMA_APIKEY;
         }
     }
+
+    @JacocoGenerated
+    private static SecretsManagerClient defaultSecretManagerClient(Region region) {
+        return SecretsManagerClient.builder()
+                .region(region)
+                .build();
+    }
+
+    @JacocoGenerated
+    private static GetSecretValueRequest defaultSecretValueRequest(String secretName) {
+        return GetSecretValueRequest.builder()
+                   .secretId(secretName)
+                   .build();
+    }
+
 }

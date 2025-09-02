@@ -58,7 +58,7 @@ public class UpdateAlmaDescriptionHandler implements RequestHandler<SQSEvent, Vo
      * @return a GatewayResponse
      */
     @Override
-    @SuppressWarnings({"unchecked", "PMD.NPathComplexity"})
+    @SuppressWarnings("PMD.CognitiveComplexity")
     public Void handleRequest(final SQSEvent event, Context context) {
         /* 1. Create an UpdateItem LIST from the input. */
         List<UpdateItem> updateItems;
@@ -192,13 +192,13 @@ public class UpdateAlmaDescriptionHandler implements RequestHandler<SQSEvent, Vo
      * @return A list of reference objects matching the isbn, this list will usually contain only one reference object.
      * @throws IOException when something goes wrong
      */
+    @SuppressWarnings("PMD.ReturnEmptyCollectionRatherThanNull")
     private List<Reference> getReferenceListByIsbn(String isbn) throws IOException {
         URL theURL = new URL(config.almaSruHost + isbn);
-        InputStreamReader streamReader = new InputStreamReader(theURL.openStream());
-        try {
+        try (InputStreamReader streamReader = new InputStreamReader(theURL.openStream())) {
             String referenceString = new BufferedReader(streamReader)
-                    .lines()
-                    .collect(Collectors.joining(System.lineSeparator()));
+                                         .lines()
+                                         .collect(Collectors.joining(System.lineSeparator()));
             streamReader.close();
             if (referenceString.isEmpty()) {
                 return null;
@@ -206,11 +206,10 @@ public class UpdateAlmaDescriptionHandler implements RequestHandler<SQSEvent, Vo
             List<Reference> referenceList;
             GsonBuilder gsonBuilder = new GsonBuilder();
             Gson gson = gsonBuilder.create();
-            Type listOfMyClassObject = new TypeToken<List<Reference>>() {}.getType();
+            Type listOfMyClassObject = new TypeToken<List<Reference>>() {
+            }.getType();
             referenceList = gson.fromJson(referenceString, listOfMyClassObject);
             return referenceList;
-        } finally {
-            streamReader.close();
         }
     }
 
