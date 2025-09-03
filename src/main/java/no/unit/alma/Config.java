@@ -2,6 +2,7 @@ package no.unit.alma;
 
 import no.unit.exceptions.SchedulerException;
 import nva.commons.core.Environment;
+import nva.commons.core.JacocoGenerated;
 
 public class Config {
 
@@ -17,6 +18,7 @@ public class Config {
     /**
      * Config class to hold common variables for caching.
      */
+    @JacocoGenerated
     public Config() {
         this(new Environment());
     }
