@@ -1,11 +1,16 @@
 package no.unit.aws;
 
+import nva.commons.core.JacocoGenerated;
 import software.amazon.awssdk.services.sqs.SqsClient;
 
 
-@FunctionalInterface
-public interface SqsClientFactory {
+public abstract class SqsClientFactory {
 
-    SqsClient createSqsClient();
+    @JacocoGenerated
+    public SqsClient create() {
+        return createSqsClient();
+    }
+
+    protected abstract SqsClient createSqsClient();
 
 }

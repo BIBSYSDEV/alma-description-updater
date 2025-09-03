@@ -260,7 +260,7 @@ public class SchedulerHelper {
      * @throws SchedulerException when something goes wrong.
      */
     public void writeToDLQ(String message) throws SchedulerException {
-        try (SqsClient sqs = sqsClientFactory.createSqsClient()) {
+        try (SqsClient sqs = sqsClientFactory.create()) {
             var sendMsgRequest = createSendMessageRequest(message);
             sqs.sendMessage(sendMsgRequest);
         } catch (UnsupportedOperationException e) {

@@ -76,7 +76,7 @@ class SchedulerHelperTest {
         mockEnv = mock(Environment.class);
         var mockSqsClientFactory = mock(SqsClientFactory.class);
         mockSqsClient = mock(SqsClient.class);
-        doReturn(mockSqsClient).when(mockSqsClientFactory).createSqsClient();
+        doReturn(mockSqsClient).when(mockSqsClientFactory).create();
         initEnv();
         mockSchedulerHelper = new SchedulerHelper(mockEnv, mockSqsClientFactory);
     }
