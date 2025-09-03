@@ -1,5 +1,6 @@
 package no.unit.scheduler;
 
+import java.util.Objects;
 import nva.commons.core.JacocoGenerated;
 
 @JacocoGenerated
@@ -44,4 +45,21 @@ public class UpdateItem {
     public String toString() {
         return "ISBN: " + isbn + "\nLink: " + link + "\nSpecifiedMaterial: " + specifiedMaterial;
     }
+
+    @Override
+    public boolean equals(Object o) {
+        if (o == null || getClass() != o.getClass()) {
+            return false;
+        }
+        UpdateItem that = (UpdateItem) o;
+        return Objects.equals(getIsbn(), that.getIsbn())
+               && Objects.equals(getLink(), that.getLink())
+               && Objects.equals(getSpecifiedMaterial(), that.getSpecifiedMaterial());
+    }
+
+    @Override
+    public int hashCode() {
+        return Objects.hash(getIsbn(), getLink(), getSpecifiedMaterial());
+    }
+
 }

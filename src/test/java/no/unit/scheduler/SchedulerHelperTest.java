@@ -2,6 +2,7 @@ package no.unit.scheduler;
 
 
 import com.fasterxml.jackson.databind.ObjectMapper;
+import java.util.List;
 import no.unit.alma.XmlParserTest;
 import no.unit.aws.SqsClientFactory;
 import no.unit.exceptions.SchedulerException;
@@ -12,13 +13,16 @@ import org.junit.jupiter.api.Test;
 import java.io.BufferedReader;
 import java.io.InputStream;
 import java.io.InputStreamReader;
-import java.util.List;
 import org.mockito.ArgumentCaptor;
 import software.amazon.awssdk.services.sqs.SqsClient;
 import software.amazon.awssdk.services.sqs.model.SendMessageRequest;
 
 import static java.util.Objects.isNull;
 import static no.unit.scheduler.SchedulerHelper.DLQ_QUEUE_URL_KEY;
+import static org.hamcrest.MatcherAssert.assertThat;
+import static org.hamcrest.Matchers.containsInAnyOrder;
+import static org.hamcrest.Matchers.empty;
+import static org.hamcrest.Matchers.is;
 import static org.junit.jupiter.api.Assertions.assertEquals;
 import static org.junit.jupiter.api.Assertions.assertThrows;
 import static org.mockito.ArgumentMatchers.any;
@@ -42,6 +46,8 @@ class SchedulerHelperTest {
     private static final String OLDVERSION = "/oldVersion.JSON";
     private static final String RETURNVERSION = "/returnVersion.JSON";
     public static final String MOCKEVENT_FILE = "/MockEvent.JSON";
+    public static final String MOCKEVENT_FILE_MISSING_FIELDS = "/mock_event_missing_fields.json";
+    public static final String MOCKEVENT_FILE_EQUAL_FIELDS = "/mock_event_equal_fields.json";
 
     Environment mockEnv;
     SchedulerHelper mockSchedulerHelper;
@@ -116,12 +122,84 @@ class SchedulerHelperTest {
     }
 
     @Test
-    public void mockingEventTest() throws Exception {
-        String mockEvent = setup(MOCKEVENT_FILE);
-        List<UpdateItem> payloadList = mockSchedulerHelper.splitEventIntoUpdateItems(mockEvent);
-        for (UpdateItem payload: payloadList) {
-            System.out.println(payload.toString());
-        }
+    public void shouldCreateUpdateItemFromModifyEvent() throws Exception {
+        var mockEvent = setup(MOCKEVENT_FILE);
+        var payloadList = mockSchedulerHelper.splitEventIntoUpdateItems(mockEvent);
+
+        var expectedList = List.of(
+            createUpdateItem("9788210053412",
+                             "content-url-com/content/?isbn=9788210053412",
+                             "Forlagets beskrivelse (kort)"),
+            createUpdateItem("9788210053412",
+                             "content-url-com/content/?isbn=9788210053412",
+                             "Forlagets beskrivelse (lang)"),
+            createUpdateItem("9788210053412",
+                             "content-url-com/content/?isbn=9788210053412",
+                             "Innholdsfortegnelse"),
+            createUpdateItem("9788210053412",
+                             "content-url-com/files/images/small/2/1/9788210053412.jpg",
+                             "Miniatyrbilde"),
+            createUpdateItem("9788210053412",
+                             "content-url-com/files/images/large/2/1/9788210053412.jpg",
+                             "Omslagsbilde"),
+            createUpdateItem("9788210053412",
+                             "content-url-com/files/images/original/2/1/9788210053412.jpg",
+                             "Originalt bilde"),
+            createUpdateItem("9788210053412",
+                             "content-url-com/files/audio/mp3/2/1/9788210053412.mp3",
+                             "Lydfil")
+        );
+
+        assertThat(payloadList, containsInAnyOrder(expectedList.toArray()));
+    }
+
+    @Test
+    public void shouldCreateUpdateItemFromNewEvent() throws Exception {
+        var mockEvent = setup(MOCKEVENT_FILE);
+        mockEvent = mockEvent.replace("MODIFY", "NEW");
+        var payloadList = mockSchedulerHelper.splitEventIntoUpdateItems(mockEvent);
+
+        var expectedList = List.of(
+            createUpdateItem("9788210053412",
+                             "content-url-com/content/?isbn=9788210053412",
+                             "Forlagets beskrivelse (kort)"),
+            createUpdateItem("9788210053412",
+                             "content-url-com/content/?isbn=9788210053412",
+                             "Forlagets beskrivelse (lang)"),
+            createUpdateItem("9788210053412",
+                             "content-url-com/content/?isbn=9788210053412",
+                             "Innholdsfortegnelse"),
+            createUpdateItem("9788210053412",
+                             "content-url-com/files/images/small/2/1/9788210053412.jpg",
+                             "Miniatyrbilde"),
+            createUpdateItem("9788210053412",
+                             "content-url-com/files/images/large/2/1/9788210053412.jpg",
+                             "Omslagsbilde"),
+            createUpdateItem("9788210053412",
+                             "content-url-com/files/images/original/2/1/9788210053412.jpg",
+                             "Originalt bilde"),
+            createUpdateItem("9788210053412",
+                             "content-url-com/files/audio/mp3/2/1/9788210053412.mp3",
+                             "Lydfil")
+        );
+
+        assertThat(payloadList, containsInAnyOrder(expectedList.toArray()));
+    }
+
+    @Test
+    public void shouldIgnoreMissingFieldsFromEvent() throws Exception {
+        var mockEvent = setup(MOCKEVENT_FILE_MISSING_FIELDS);
+        var payloadList = mockSchedulerHelper.splitEventIntoUpdateItems(mockEvent);
+
+        assertThat(payloadList, is(empty()));
+    }
+
+    @Test
+    public void shouldIgnoreEqualFieldsFromEvent() throws Exception {
+        var mockEvent = setup(MOCKEVENT_FILE_EQUAL_FIELDS);
+        var payloadList = mockSchedulerHelper.splitEventIntoUpdateItems(mockEvent);
+
+        assertThat(payloadList, is(empty()));
     }
 
     @Test
@@ -143,6 +221,15 @@ class SchedulerHelperTest {
         doThrow(UnsupportedOperationException.class).when(mockSqsClient).sendMessage(any(SendMessageRequest.class));
 
         assertThrows(SchedulerException.class, () -> mockSchedulerHelper.writeToDLQ("message"));
+    }
+
+    private UpdateItem createUpdateItem(String isbn, String link, String specifiedMaterial) {
+        var  updateItem = new UpdateItem();
+        updateItem.setIsbn(isbn);
+        updateItem.setLink(link);
+        updateItem.setSpecifiedMaterial(specifiedMaterial);
+
+        return updateItem;
     }
 
 }

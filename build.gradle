@@ -39,6 +39,7 @@ dependencies {
     testImplementation group: 'com.fasterxml.jackson.core', name: 'jackson-databind', version: '2.13.4.2'
     testImplementation group: 'org.junit.jupiter', name: 'junit-jupiter', version: '5.9.1'
     testImplementation group: 'org.mockito', name: 'mockito-core', version: '4.8.0'
+    testImplementation group: 'org.hamcrest', name: 'hamcrest', version: '3.0'
 }
 
 gradleLint {
@@ -102,7 +103,7 @@ tasks.named('jacocoTestCoverageVerification').configure {
             limit {
                 counter = 'CLASS'
                 value = 'COVEREDRATIO'
-                minimum = 0.6
+                minimum = 0.7
             }
         }
     }
