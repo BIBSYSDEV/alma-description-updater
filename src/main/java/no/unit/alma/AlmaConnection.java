@@ -1,9 +1,5 @@
 package no.unit.alma;
 
-import nva.commons.core.JacocoGenerated;
-
-import javax.ws.rs.core.HttpHeaders;
-import javax.ws.rs.core.MediaType;
 import java.io.IOException;
 import java.net.URI;
 import java.net.http.HttpClient;
@@ -12,23 +8,17 @@ import java.net.http.HttpResponse;
 
 public final class AlmaConnection {
 
-    private static AlmaConnection instance = new AlmaConnection();
+    private static final String AUTHORIZATION = "Authorization";
+    private static final String AUTHORIZATION_KEY = "apikey ";
+    private static final String CONTENT_TYPE = "Content-Type";
+    private static final String APPLICATION_XML = "application/xml";
 
-    private static final  String AUTHORIZATION_KEY = "Authorization";
-    private static final  String APIKEY_KEY = "apikey";
-    private static final  String SPACE_KEY = " ";
-    private static final Config config = new Config();
+    private final HttpClient httpClient;
+    private final Config config;
 
-    private static final HttpClient httpClient = HttpClient.newBuilder()
-            .version(HttpClient.Version.HTTP_2)
-            .build();
-
-    private AlmaConnection() {
-    }
-
-    @JacocoGenerated
-    public static AlmaConnection getInstance() {
-        return instance;
+    public AlmaConnection(Config config, HttpClient httpClient) {
+        this.config = config;
+        this.httpClient = httpClient;
     }
 
     /**
@@ -38,19 +28,14 @@ public final class AlmaConnection {
      * @throws IOException When something goes wrong.
      * @throws InterruptedException When something goes wrong.
      */
-    @JacocoGenerated
-    public HttpResponse<String> sendGet(String mmsId)
-            throws IOException,  InterruptedException {
+    public HttpResponse<String> sendGet(String mmsId) throws IOException, InterruptedException {
+        var request = HttpRequest.newBuilder()
+                          .GET()
+                          .uri(URI.create(config.almaApiHost + mmsId))
+                          .setHeader(AUTHORIZATION, AUTHORIZATION_KEY + config.secretKey)
+                          .build();
 
-        HttpRequest request = HttpRequest.newBuilder()
-                .GET()
-                .uri(URI.create(config.almaApiHost + mmsId))
-                .setHeader(AUTHORIZATION_KEY, APIKEY_KEY + SPACE_KEY + config.secretKey)
-                .build();
-
-        HttpResponse<String> response = httpClient.send(request, HttpResponse.BodyHandlers.ofString());
-
-        return response;
+        return httpClient.send(request, HttpResponse.BodyHandlers.ofString());
     }
 
     /**
@@ -61,18 +46,15 @@ public final class AlmaConnection {
      * @throws IOException When something goes wrong.
      * @throws InterruptedException When something goes wrong.
      */
-    @JacocoGenerated
-    public HttpResponse<String> sendPut(String mmsId, String xml)
-            throws IOException, InterruptedException {
-        HttpRequest request = HttpRequest.newBuilder()
-                .PUT(HttpRequest.BodyPublishers.ofString(xml))
-                .uri(URI.create(config.almaApiHost + mmsId))
-                .setHeader(AUTHORIZATION_KEY, APIKEY_KEY + SPACE_KEY + config.secretKey) // add request header
-                .header(HttpHeaders.CONTENT_TYPE, MediaType.APPLICATION_XML)
-                .build();
-        HttpResponse<String> response = httpClient.send(request, HttpResponse.BodyHandlers.ofString());
+    public HttpResponse<String> sendPut(String mmsId, String xml) throws IOException, InterruptedException {
+        var request = HttpRequest.newBuilder()
+                          .PUT(HttpRequest.BodyPublishers.ofString(xml))
+                          .uri(URI.create(config.almaApiHost + mmsId))
+                          .setHeader(AUTHORIZATION, AUTHORIZATION_KEY + config.secretKey)
+                          .header(CONTENT_TYPE, APPLICATION_XML)
+                          .build();
 
-        return response;
+        return httpClient.send(request, HttpResponse.BodyHandlers.ofString());
     }
 
 }

@@ -2,6 +2,7 @@ package no.unit.alma;
 
 
 import com.google.gson.Gson;
+import java.net.http.HttpClient;
 import no.unit.scheduler.UpdateItem;
 import nva.commons.core.Environment;
 import org.junit.jupiter.api.BeforeEach;
@@ -26,6 +27,7 @@ public class UpdateAlmaDescriptionHandlerTest {
     Config mockConfig;
     Environment mockEnv;
     UpdateAlmaDescriptionHandler mockedHandler;
+    AlmaConnection mockConnection;
 
     private void initEnv() {
         when(mockEnv.readEnv("ALLOWED_ORIGIN")).thenReturn("Allow-origins");
@@ -38,10 +40,14 @@ public class UpdateAlmaDescriptionHandlerTest {
      */
     @BeforeEach
     public void init() {
-        mockEnv = mock(Environment.class);
-        mockConfig = mock(Config.class);
+        mockEnv = mock(Environment.class);;
         initEnv();
-        mockedHandler = new UpdateAlmaDescriptionHandler(mockConfig);
+        mockConfig = new Config(mockEnv);
+        var mockHttpClient = mock(HttpClient.class);
+        mockConnection = new AlmaConnection(mockConfig, mockHttpClient);
+        mockedHandler = new UpdateAlmaDescriptionHandler(mockConfig,
+                                                         new AlmaHelper(mockConnection),
+                                                         new IsbnConverter());
     }
 
     /**

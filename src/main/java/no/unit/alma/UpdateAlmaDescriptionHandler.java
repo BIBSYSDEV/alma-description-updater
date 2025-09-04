@@ -27,16 +27,20 @@ import software.amazon.awssdk.http.HttpStatusCode;
 public class UpdateAlmaDescriptionHandler implements RequestHandler<SQSEvent, Void> {
 
     private final transient Config config;
-    private final transient AlmaHelper almaHelper = new AlmaHelper();
+    private final transient AlmaHelper almaHelper;
     private final transient SchedulerHelper schedulerHelper = new SchedulerHelper();
     private final transient DocumentXmlParser xmlParser = new DocumentXmlParser();
+    private final transient IsbnConverter isbnConverter;
 
-    public UpdateAlmaDescriptionHandler(Config config) {
-        this.config = config;
+    @SuppressWarnings("unused")
+    public UpdateAlmaDescriptionHandler() {
+        this(new Config(), new AlmaHelper(), new IsbnConverter());
     }
 
-    public UpdateAlmaDescriptionHandler() {
-        config = new Config();
+    public UpdateAlmaDescriptionHandler(Config config, AlmaHelper almaHelper, IsbnConverter isbnConverter) {
+        this.config = config;
+        this.almaHelper = almaHelper;
+        this.isbnConverter = isbnConverter;
     }
 
     /**
@@ -79,19 +83,19 @@ public class UpdateAlmaDescriptionHandler implements RequestHandler<SQSEvent, Vo
             List<Reference> referenceList = getReferenceListByIsbn(updateItems.get(0).getIsbn());
             if (referenceList == null || referenceList.isEmpty()) {
                 System.out.println("No answer from SRU for isbn: " + updateItems.get(0).getIsbn());
-                referenceList = getReferenceListByIsbn(almaHelper.convertIsbn(updateItems.get(0).getIsbn()));
+                referenceList = getReferenceListByIsbn(isbnConverter.convertIsbn(updateItems.get(0).getIsbn()));
                 if (referenceList == null || referenceList.isEmpty()) {
                     System.out.println("No answer from SRU for isbn: "
-                            + almaHelper.convertIsbn(updateItems.get(0).getIsbn()) + ". Writing to DLQ");
+                            + isbnConverter.convertIsbn(updateItems.get(0).getIsbn()) + ". Writing to DLQ");
                     schedulerHelper.writeToDLQ(event.getRecords().get(0).getBody());
                     return null;
                 }
             } else {
-                List<Reference> convertedIsbnList = getReferenceListByIsbn(almaHelper.convertIsbn(updateItems.get(0)
+                List<Reference> convertedIsbnList = getReferenceListByIsbn(isbnConverter.convertIsbn(updateItems.get(0)
                         .getIsbn()));
                 if (convertedIsbnList == null || convertedIsbnList.isEmpty()) {
                     System.out.println("No answer from SRU for isbn: "
-                            + almaHelper.convertIsbn(updateItems.get(0).getIsbn()));
+                            + isbnConverter.convertIsbn(updateItems.get(0).getIsbn()));
                 } else {
                     referenceList.addAll(convertedIsbnList);
                 }
