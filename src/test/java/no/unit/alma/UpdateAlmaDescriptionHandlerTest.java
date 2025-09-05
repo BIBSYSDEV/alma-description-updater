@@ -66,7 +66,7 @@ public class UpdateAlmaDescriptionHandlerTest {
      * @throws Exception when something goes wrong.
      */
     public String setup(String file) throws Exception {
-        InputStream stream = XmlParserTest.class.getResourceAsStream(file);
+        InputStream stream = DocumentXmlParserTest.class.getResourceAsStream(file);
         InputStreamReader reader = new InputStreamReader(stream);
         BufferedReader br = new BufferedReader(reader);
         String line;

@@ -3,7 +3,7 @@ package no.unit.scheduler;
 
 import com.fasterxml.jackson.databind.ObjectMapper;
 import java.util.List;
-import no.unit.alma.XmlParserTest;
+import no.unit.alma.DocumentXmlParserTest;
 import no.unit.aws.SqsClientFactory;
 import no.unit.exceptions.SchedulerException;
 import nva.commons.core.Environment;
@@ -55,7 +55,7 @@ class SchedulerHelperTest {
     SqsClient mockSqsClient;
 
     public String setup(String file) throws Exception {
-        InputStream stream = XmlParserTest.class.getResourceAsStream(file);
+        InputStream stream = DocumentXmlParserTest.class.getResourceAsStream(file);
         if (isNull(stream)) {
             throw new RuntimeException("Could not load xml file " + file);
         }
