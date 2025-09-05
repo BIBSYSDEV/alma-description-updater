@@ -37,9 +37,10 @@ public class DocumentXmlParserTest {
     public static final String MOCK_URL = "This/is/the/url";
     public static final String SHORT_DESCRIPTION = "Beskrivelse fra forlaget (kort)";
     public static final String SOME_URL = "http://content.bibsys.no/content/?type=descr_publ_brief&isbn=8210053418";
-    public static final String ERROR_WHEN_CHECK_ALREADY_EXISTS =
+    public static final String ERROR_WHEN_CHECKING_ALREADY_EXISTS =
         "Caught an error while checking if the update fields already exists";
     public static final String ERROR_WHILE_CONVERTING_TO_DOCUMENT = "Caught an error while converting to document";
+    public static final String HOBBIT_TITLE_TAG = "<title>Hobbiten : Smaugs ødemark i bilder</title>";
 
     /**
      * A helper method that returnes a string from a source.
@@ -154,7 +155,9 @@ public class DocumentXmlParserTest {
         DocumentXmlParser parser = new DocumentXmlParser();
         Document updateDoc = parser.createNode(MOCK_DESCRIPTION, MOCK_URL, MARC_TAG_856);
         Document doc = parser.insertUpdatedIntoRecord(mockXml, updateDoc, MARC_TAG_856);
-        assertNotNull(parser.convertDocToString(doc));
+        var actual = parser.convertDocToString(doc);
+        assertNotNull(actual);
+        assertThat(actual, containsString(HOBBIT_TITLE_TAG));
     }
 
     @Test
@@ -224,7 +227,7 @@ public class DocumentXmlParserTest {
 
         var actual = parser.convertDocToString(doc);
 
-        assertThat(actual, containsString("<title>Hobbiten : Smaugs ødemark i bilder</title>"));
+        assertThat(actual, containsString(HOBBIT_TITLE_TAG));
     }
 
     @Test
@@ -237,7 +240,7 @@ public class DocumentXmlParserTest {
                                                                                         mockXml,
                                                                                         MARC_TAG_856));
 
-        assertThat(exception.getMessage(), containsString(ERROR_WHEN_CHECK_ALREADY_EXISTS));
+        assertThat(exception.getMessage(), containsString(ERROR_WHEN_CHECKING_ALREADY_EXISTS));
     }
 
     @Test
