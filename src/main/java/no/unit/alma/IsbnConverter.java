@@ -26,7 +26,7 @@ public class IsbnConverter {
      * @param isbn10 the isbn to be converted.
      * @return the isbn13.
      */
-    public String convert10To13(String isbn10) {
+    private String convert10To13(String isbn10) {
         String isbn = TAG_978 + isbn10.substring(0, isbn10.length() - 1);
         int sum = 0;
         int mulitiplier;
@@ -49,7 +49,7 @@ public class IsbnConverter {
      * @param isbn13 the isbn to be converted.
      * @return the isbn10.
      */
-    public String convert13To10(String isbn13) {
+    private String convert13To10(String isbn13) {
         String isbn = isbn13.substring(3, isbn13.length() - 1);
         int sum = 0;
         for (int i = 0; i < isbn.length(); i++) {
