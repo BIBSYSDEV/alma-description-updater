@@ -3,13 +3,13 @@ package no.unit.alma;
 import no.unit.exceptions.ParsingException;
 import org.junit.jupiter.api.Test;
 import org.w3c.dom.Document;
-import org.w3c.dom.Node;
 import org.w3c.dom.NodeList;
 
 import java.io.BufferedReader;
 import java.io.InputStream;
 import java.io.InputStreamReader;
 
+import static java.util.Objects.isNull;
 import static no.unit.alma.DocumentXmlParser.MARC_TAG_856;
 import static no.unit.alma.DocumentXmlParser.MARC_TAG_956;
 import static org.hamcrest.MatcherAssert.assertThat;
@@ -50,6 +50,9 @@ public class DocumentXmlParserTest {
      */
     public String setup(String file) throws Exception {
         InputStream stream = DocumentXmlParserTest.class.getResourceAsStream(file);
+        if (isNull(stream)) {
+            throw new RuntimeException("Could not load xml file " + file);
+        }
         InputStreamReader reader = new InputStreamReader(stream);
         BufferedReader br = new BufferedReader(reader);
         String line;
@@ -58,42 +61,6 @@ public class DocumentXmlParserTest {
             sb.append(line.trim());
         }
         return sb.toString();
-    }
-
-    /**
-     * Helper method that lets you print a Document.
-     * @param doc The document you want to print.
-     */
-    public void printDocument(Document doc) {
-        Node topNode = doc.getFirstChild();
-        NodeList nodeList = topNode.getChildNodes();
-        for (int i = 0; i < nodeList.getLength(); i++) {
-            if (nodeList.item(i).hasChildNodes()) {
-                printChildNodes(nodeList.item(i).getChildNodes());
-            } else {
-                if (!nodeList.item(i).getTextContent().isBlank()) {
-                    System.out.println(nodeList.item(i).getTextContent());
-                }
-            }
-        }
-    }
-
-    /**
-     * Helper method to the printDocument method.
-     * Prints the childnodes in a Document.
-     * @param children A nodelist containing the children you wish to print.
-     */
-    public void printChildNodes(NodeList children) {
-        for (int i = 0; i < children.getLength(); i++) {
-            if (children.item(i).hasChildNodes()) {
-                printChildNodes(children.item(i).getChildNodes());
-            } else {
-                if (!children.item(i).getTextContent().isBlank()) {
-                    System.out.println(children.item(i).getTextContent());
-                }
-            }
-
-        }
     }
 
     @Test
