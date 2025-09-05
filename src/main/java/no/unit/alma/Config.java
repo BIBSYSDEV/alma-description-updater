@@ -10,10 +10,11 @@ public class Config {
     public static final String ALMA_API_HOST_KEY = "ALMA_API_HOST";
     public static final String ALMA_API_KEY = "ALMA_APIKEY";
 
-    protected transient String secretKey;
+    private transient String secretKey;
+    private transient String almaApiHost;
+    private transient String almaSruHost;
+
     private final transient Environment environment;
-    protected transient String almaApiHost;
-    protected transient String almaSruHost;
 
     /**
      * Config class to hold common variables for caching.
@@ -49,6 +50,18 @@ public class Config {
             throw new SchedulerException("Failed to initialize variables. ", e);
         }
 
+    }
+
+    public String getAlmaApiHost() {
+        return almaApiHost;
+    }
+
+    public String getAlmaSruHost() {
+        return almaSruHost;
+    }
+
+    public String getSecretKey() {
+        return secretKey;
     }
 
 }

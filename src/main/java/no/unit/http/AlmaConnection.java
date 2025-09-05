@@ -1,13 +1,13 @@
-package no.unit.alma;
+package no.unit.http;
 
 import java.io.IOException;
 import java.net.URI;
 import java.net.http.HttpClient;
 import java.net.http.HttpRequest;
 import java.net.http.HttpResponse;
-import no.unit.http.HttpClientFactory;
+import no.unit.alma.Config;
 
-public final class AlmaConnection {
+public final class AlmaConnection implements Connection {
 
     private static final String AUTHORIZATION = "Authorization";
     private static final String AUTHORIZATION_KEY = "apikey ";
@@ -29,11 +29,12 @@ public final class AlmaConnection {
      * @throws IOException When something goes wrong.
      * @throws InterruptedException When something goes wrong.
      */
+    @Override
     public HttpResponse<String> sendGet(String mmsId) throws IOException, InterruptedException {
         var request = HttpRequest.newBuilder()
                           .GET()
-                          .uri(URI.create(config.almaApiHost + mmsId))
-                          .setHeader(AUTHORIZATION, AUTHORIZATION_KEY + config.secretKey)
+                          .uri(URI.create(config.getAlmaApiHost() + mmsId))
+                          .setHeader(AUTHORIZATION, AUTHORIZATION_KEY + config.getSecretKey())
                           .build();
 
         return httpClient.send(request, HttpResponse.BodyHandlers.ofString());
@@ -47,11 +48,12 @@ public final class AlmaConnection {
      * @throws IOException When something goes wrong.
      * @throws InterruptedException When something goes wrong.
      */
+    @Override
     public HttpResponse<String> sendPut(String mmsId, String xml) throws IOException, InterruptedException {
         var request = HttpRequest.newBuilder()
                           .PUT(HttpRequest.BodyPublishers.ofString(xml))
-                          .uri(URI.create(config.almaApiHost + mmsId))
-                          .setHeader(AUTHORIZATION, AUTHORIZATION_KEY + config.secretKey)
+                          .uri(URI.create(config.getAlmaApiHost() + mmsId))
+                          .setHeader(AUTHORIZATION, AUTHORIZATION_KEY + config.getSecretKey())
                           .header(CONTENT_TYPE, APPLICATION_XML)
                           .build();
 

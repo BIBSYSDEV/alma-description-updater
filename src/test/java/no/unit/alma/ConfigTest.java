@@ -32,9 +32,9 @@ public class ConfigTest {
 
         var config = new Config(mockEnv);
 
-        assertThat(config.almaApiHost, equalTo("alma_host"));
-        assertThat(config.almaSruHost, equalTo("alma_sru_host"));
-        assertThat(config.secretKey, equalTo("alma_api_key"));
+        assertThat(config.getAlmaApiHost(), equalTo("alma_host"));
+        assertThat(config.getAlmaSruHost(), equalTo("alma_sru_host"));
+        assertThat(config.getSecretKey(), equalTo("alma_api_key"));
     }
 
     @Test

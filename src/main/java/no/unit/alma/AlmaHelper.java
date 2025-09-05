@@ -1,6 +1,8 @@
 package no.unit.alma;
 
-import no.unit.http.DefaultHttpClientFactory;
+import no.unit.http.AlmaConnectionFactory;
+import no.unit.http.Connection;
+import no.unit.http.ConnectionFactory;
 import software.amazon.awssdk.http.HttpStatusCode;
 
 import java.io.IOException;
@@ -9,14 +11,14 @@ import java.util.concurrent.TimeUnit;
 
 public class AlmaHelper {
 
-    private final AlmaConnection connection;
+    private final Connection connection;
 
     public AlmaHelper() {
-        connection = new AlmaConnection(new Config(), new DefaultHttpClientFactory());
+        this(new AlmaConnectionFactory());
     }
 
-    public AlmaHelper(AlmaConnection connection) {
-        this.connection = connection;
+    public AlmaHelper(ConnectionFactory connectionFactory) {
+        this.connection = connectionFactory.create();
     }
 
     /**

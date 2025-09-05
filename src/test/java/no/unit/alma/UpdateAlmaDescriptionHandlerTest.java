@@ -3,6 +3,8 @@ package no.unit.alma;
 
 import com.google.gson.Gson;
 import java.net.http.HttpClient;
+import no.unit.http.AlmaConnection;
+import no.unit.http.ConnectionFactory;
 import no.unit.http.HttpClientFactory;
 import no.unit.scheduler.UpdateItem;
 import nva.commons.core.Environment;
@@ -50,8 +52,10 @@ public class UpdateAlmaDescriptionHandlerTest {
         var mockHttpClient = mock(HttpClient.class);
         doReturn(mockHttpClient).when(httpClientFactory).create();
         mockConnection = new AlmaConnection(mockConfig, httpClientFactory);
+        var connectionFactory = mock(ConnectionFactory.class);
+        doReturn(mockConnection).when(connectionFactory).create();
         mockedHandler = new UpdateAlmaDescriptionHandler(mockConfig,
-                                                         new AlmaHelper(mockConnection),
+                                                         new AlmaHelper(connectionFactory),
                                                          new IsbnConverter());
     }
 

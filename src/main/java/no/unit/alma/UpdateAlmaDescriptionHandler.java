@@ -198,7 +198,7 @@ public class UpdateAlmaDescriptionHandler implements RequestHandler<SQSEvent, Vo
      */
     @SuppressWarnings("PMD.ReturnEmptyCollectionRatherThanNull")
     private List<Reference> getReferenceListByIsbn(String isbn) throws IOException {
-        URL theURL = new URL(config.almaSruHost + isbn);
+        URL theURL = new URL(config.getAlmaSruHost() + isbn);
         try (InputStreamReader streamReader = new InputStreamReader(theURL.openStream())) {
             String referenceString = new BufferedReader(streamReader)
                                          .lines()
