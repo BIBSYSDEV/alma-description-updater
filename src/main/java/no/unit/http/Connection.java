@@ -5,8 +5,8 @@ import java.net.http.HttpResponse;
 
 public interface Connection {
 
-    HttpResponse<String> sendGet(String mmsId) throws IOException, InterruptedException;
+    HttpResponse<String> sendGet(String id) throws IOException, InterruptedException;
 
-    HttpResponse<String> sendPut(String mmsId, String xml) throws IOException, InterruptedException;
+    HttpResponse<String> sendPut(String id, String payload) throws IOException, InterruptedException;
 
 }
