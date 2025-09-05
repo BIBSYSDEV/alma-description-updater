@@ -67,7 +67,7 @@ public class UpdateAlmaDescriptionHandler implements RequestHandler<SQSEvent, Vo
         /* 1. Create an UpdateItem LIST from the input. */
         List<UpdateItem> updateItems;
         try {
-            updateItems = schedulerHelper.splitEventIntoUpdateItems(event.getRecords().get(0).getBody());
+            updateItems = schedulerHelper.splitEventIntoUpdateItems(event.getRecords().getFirst().getBody());
         } catch (Exception e) {
             throw new RuntimeException("Error while processing input event. " + e.getMessage());
         }
@@ -80,22 +80,23 @@ public class UpdateAlmaDescriptionHandler implements RequestHandler<SQSEvent, Vo
 
         try {
             /* Step 2. Get a REFERENCE LIST from alma-sru through a lambda. */
-            List<Reference> referenceList = getReferenceListByIsbn(updateItems.get(0).getIsbn());
+            List<Reference> referenceList = getReferenceListByIsbn(updateItems.getFirst().getIsbn());
             if (referenceList == null || referenceList.isEmpty()) {
-                System.out.println("No answer from SRU for isbn: " + updateItems.get(0).getIsbn());
-                referenceList = getReferenceListByIsbn(isbnConverter.convertIsbn(updateItems.get(0).getIsbn()));
+                System.out.println("No answer from SRU for isbn: " + updateItems.getFirst().getIsbn());
+                referenceList = getReferenceListByIsbn(isbnConverter.convertIsbn(updateItems.getFirst().getIsbn()));
                 if (referenceList == null || referenceList.isEmpty()) {
                     System.out.println("No answer from SRU for isbn: "
-                            + isbnConverter.convertIsbn(updateItems.get(0).getIsbn()) + ". Writing to DLQ");
-                    schedulerHelper.writeToDLQ(event.getRecords().get(0).getBody());
+                                       + isbnConverter.convertIsbn(updateItems.getFirst().getIsbn())
+                                       + ". Writing to DLQ");
+                    schedulerHelper.writeToDLQ(event.getRecords().getFirst().getBody());
                     return null;
                 }
             } else {
-                List<Reference> convertedIsbnList = getReferenceListByIsbn(isbnConverter.convertIsbn(updateItems.get(0)
-                        .getIsbn()));
+                List<Reference> convertedIsbnList =
+                    getReferenceListByIsbn(isbnConverter.convertIsbn(updateItems.getFirst().getIsbn()));
                 if (convertedIsbnList == null || convertedIsbnList.isEmpty()) {
                     System.out.println("No answer from SRU for isbn: "
-                            + isbnConverter.convertIsbn(updateItems.get(0).getIsbn()));
+                            + isbnConverter.convertIsbn(updateItems.getFirst().getIsbn()));
                 } else {
                     referenceList.addAll(convertedIsbnList);
                 }
@@ -106,7 +107,7 @@ public class UpdateAlmaDescriptionHandler implements RequestHandler<SQSEvent, Vo
             int sucessCounter = 0;
             /* 3. Loop through the LIST. */
             System.out.println("Found " + referenceList.size() + " different posts for the isbn: "
-                    + updateItems.get(0).getIsbn());
+                    + updateItems.getFirst().getIsbn());
             for (Reference reference : referenceList) {
                 /* 3.1 Get the MMS_ID from the REFERENCE OBJECT. */
                 String mmsId = reference.getId();
@@ -135,16 +136,16 @@ public class UpdateAlmaDescriptionHandler implements RequestHandler<SQSEvent, Vo
             if (sucessCounter < referenceList.size()) {
                 if (almaResponse == null) {
                     throw new RuntimeException("1 or more mms_id's did not go through with mms_id: "
-                            + updateItems.get(0).getIsbn()
+                            + updateItems.getFirst().getIsbn()
                             + System.lineSeparator() + "Get failed");
                 }
                 if (response == null) {
                     throw new RuntimeException("1 or more mms_id's did not go through with mms_id: "
-                            + updateItems.get(0).getIsbn()
+                            + updateItems.getFirst().getIsbn()
                             + System.lineSeparator() + "Get response " + almaResponse.body());
                 }
                 throw new RuntimeException("1 or more mms_id's did not go through with mms_id: "
-                        + updateItems.get(0).getIsbn()
+                        + updateItems.getFirst().getIsbn()
                         + System.lineSeparator() + "Get response " + almaResponse.body()
                         + "Put response: " + response.body());
             }

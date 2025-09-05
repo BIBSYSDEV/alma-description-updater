@@ -45,7 +45,7 @@ public class UpdateAlmaDescriptionHandlerTest {
     @BeforeEach
     @SuppressWarnings("resource")
     public void init() {
-        mockEnv = mock(Environment.class);;
+        mockEnv = mock(Environment.class);
         initEnv();
         mockConfig = new Config(mockEnv);
         var httpClientFactory = mock(HttpClientFactory.class);
