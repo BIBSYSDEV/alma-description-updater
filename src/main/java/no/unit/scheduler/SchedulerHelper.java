@@ -37,12 +37,12 @@ public class SchedulerHelper {
     public static final String DLQ_QUEUE_URL_KEY = "DLQ_QUEUE_URL";
 
     private final transient Environment envHandler;
-    private final transient SqsClientFactory sqsClientFactory;
+    private final transient SqsClient sqsClient;
 
 
     public SchedulerHelper(Environment envHandler, SqsClientFactory sqsClientFactory) {
         this.envHandler = envHandler;
-        this.sqsClientFactory = sqsClientFactory;
+        this.sqsClient = sqsClientFactory.create();
     }
 
     public SchedulerHelper() {
@@ -260,9 +260,9 @@ public class SchedulerHelper {
      * @throws SchedulerException when something goes wrong.
      */
     public void writeToDLQ(String message) throws SchedulerException {
-        try (SqsClient sqs = sqsClientFactory.create()) {
+        try {
             var sendMsgRequest = createSendMessageRequest(message);
-            sqs.sendMessage(sendMsgRequest);
+            sqsClient.sendMessage(sendMsgRequest);
         } catch (UnsupportedOperationException e) {
             throw new SchedulerException("Failed to send message to DLQ. ", e);
         }
