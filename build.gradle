@@ -95,7 +95,7 @@ tasks.named('jacocoTestCoverageVerification').configure {
             limit {
                 counter = 'METHOD'
                 value = 'COVEREDRATIO'
-                minimum = 0.7
+                minimum = 0.8
             }
         }
 
@@ -103,7 +103,7 @@ tasks.named('jacocoTestCoverageVerification').configure {
             limit {
                 counter = 'CLASS'
                 value = 'COVEREDRATIO'
-                minimum = 0.8
+                minimum = 0.9
             }
         }
     }
