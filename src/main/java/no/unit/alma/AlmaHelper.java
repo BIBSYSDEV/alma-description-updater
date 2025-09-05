@@ -12,7 +12,7 @@ public class AlmaHelper {
     private final AlmaConnection connection;
 
     public AlmaHelper() {
-        connection = new AlmaConnection(new Config(), new DefaultHttpClientFactory().create());
+        connection = new AlmaConnection(new Config(), new DefaultHttpClientFactory());
     }
 
     public AlmaHelper(AlmaConnection connection) {

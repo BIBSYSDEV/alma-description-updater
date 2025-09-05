@@ -3,6 +3,7 @@ package no.unit.alma;
 
 import com.google.gson.Gson;
 import java.net.http.HttpClient;
+import no.unit.http.HttpClientFactory;
 import no.unit.scheduler.UpdateItem;
 import nva.commons.core.Environment;
 import org.junit.jupiter.api.BeforeEach;
@@ -16,6 +17,7 @@ import java.util.ArrayList;
 import java.util.List;
 
 import static org.junit.jupiter.api.Assertions.assertEquals;
+import static org.mockito.Mockito.doReturn;
 import static org.mockito.Mockito.mock;
 import static org.mockito.Mockito.when;
 
@@ -39,12 +41,15 @@ public class UpdateAlmaDescriptionHandlerTest {
      * Sets up a mock environment for use when testing.
      */
     @BeforeEach
+    @SuppressWarnings("resource")
     public void init() {
         mockEnv = mock(Environment.class);;
         initEnv();
         mockConfig = new Config(mockEnv);
+        var httpClientFactory = mock(HttpClientFactory.class);
         var mockHttpClient = mock(HttpClient.class);
-        mockConnection = new AlmaConnection(mockConfig, mockHttpClient);
+        doReturn(mockHttpClient).when(httpClientFactory).create();
+        mockConnection = new AlmaConnection(mockConfig, httpClientFactory);
         mockedHandler = new UpdateAlmaDescriptionHandler(mockConfig,
                                                          new AlmaHelper(mockConnection),
                                                          new IsbnConverter());

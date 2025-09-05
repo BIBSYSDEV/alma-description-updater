@@ -1,5 +1,6 @@
 package no.unit.alma;
 
+import no.unit.http.HttpClientFactory;
 import nva.commons.core.Environment;
 import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.Test;
@@ -25,22 +26,25 @@ import static org.mockito.Mockito.when;
 class AlmaConnectionTest {
 
     private AlmaConnection almaConnection;
-    private HttpClient httpClientMock;
-    private HttpResponse<String> httpResponseMock;
+    private HttpClient mockHttpClient;
+    private HttpResponse<String> mockHttpResponse;
 
     @BeforeEach
-    @SuppressWarnings("unchecked")
+    @SuppressWarnings({"unchecked", "resource"})
     void setUp() {
-        httpClientMock = mock(HttpClient.class);
-        httpResponseMock = mock(HttpResponse.class);
-        var envMock = mock(Environment.class);
+        mockHttpClient = mock(HttpClient.class);
+        mockHttpResponse = mock(HttpResponse.class);
+        var mockEnv = mock(Environment.class);
 
-        doReturn("http://mock-alma-api-host/").when(envMock).readEnv(ALMA_API_HOST_KEY);
-        doReturn("http://mock-alma-sru-host/").when(envMock).readEnv(ALMA_SRU_HOST_KEY);
-        doReturn("mock-api-key").when(envMock).readEnv(ALMA_API_KEY);
-        var config = new Config(envMock);
+        doReturn("http://mock-alma-api-host/").when(mockEnv).readEnv(ALMA_API_HOST_KEY);
+        doReturn("http://mock-alma-sru-host/").when(mockEnv).readEnv(ALMA_SRU_HOST_KEY);
+        doReturn("mock-api-key").when(mockEnv).readEnv(ALMA_API_KEY);
+        var config = new Config(mockEnv);
 
-        almaConnection = new AlmaConnection(config, httpClientMock);
+        var httpClientFactory = mock(HttpClientFactory.class);
+        doReturn(mockHttpClient).when(httpClientFactory).create();
+
+        almaConnection = new AlmaConnection(config, httpClientFactory);
     }
 
     @Test
@@ -49,10 +53,10 @@ class AlmaConnectionTest {
         var mmsId = "123456";
         var expectedResponseBody = "<response>Success</response>";
 
-        when(httpResponseMock.body()).thenReturn(expectedResponseBody);
-        when(httpResponseMock.statusCode()).thenReturn(200);
-        when(httpClientMock.send(any(HttpRequest.class), any(HttpResponse.BodyHandler.class)))
-            .thenReturn(httpResponseMock);
+        when(mockHttpResponse.body()).thenReturn(expectedResponseBody);
+        when(mockHttpResponse.statusCode()).thenReturn(200);
+        when(mockHttpClient.send(any(HttpRequest.class), any(HttpResponse.BodyHandler.class)))
+            .thenReturn(mockHttpResponse);
 
         var response = almaConnection.sendGet(mmsId);
 
@@ -60,7 +64,7 @@ class AlmaConnectionTest {
         assertEquals(expectedResponseBody, response.body());
 
         var requestCaptor = ArgumentCaptor.forClass(HttpRequest.class);
-        verify(httpClientMock).send(requestCaptor.capture(), any(HttpResponse.BodyHandler.class));
+        verify(mockHttpClient).send(requestCaptor.capture(), any(HttpResponse.BodyHandler.class));
 
         var capturedRequest = requestCaptor.getValue();
         assertEquals("http://mock-alma-api-host/123456", capturedRequest.uri().toString());
@@ -76,10 +80,10 @@ class AlmaConnectionTest {
         var xmlBody = "<xml>Updated Content</xml>";
         var expectedResponseBody = "<response>Success</response>";
 
-        when(httpResponseMock.body()).thenReturn(expectedResponseBody);
-        when(httpResponseMock.statusCode()).thenReturn(200);
-        when(httpClientMock.send(any(HttpRequest.class), any(HttpResponse.BodyHandler.class)))
-            .thenReturn(httpResponseMock);
+        when(mockHttpResponse.body()).thenReturn(expectedResponseBody);
+        when(mockHttpResponse.statusCode()).thenReturn(200);
+        when(mockHttpClient.send(any(HttpRequest.class), any(HttpResponse.BodyHandler.class)))
+            .thenReturn(mockHttpResponse);
 
         var response = almaConnection.sendPut(mmsId, xmlBody);
 
@@ -87,7 +91,7 @@ class AlmaConnectionTest {
         assertEquals(expectedResponseBody, response.body());
 
         var requestCaptor = ArgumentCaptor.forClass(HttpRequest.class);
-        verify(httpClientMock).send(requestCaptor.capture(), any(HttpResponse.BodyHandler.class));
+        verify(mockHttpClient).send(requestCaptor.capture(), any(HttpResponse.BodyHandler.class));
 
         var capturedRequest = requestCaptor.getValue();
         assertEquals("http://mock-alma-api-host/123456", capturedRequest.uri().toString());
@@ -104,7 +108,7 @@ class AlmaConnectionTest {
     @SuppressWarnings("unchecked")
     void shouldThrowIoExceptionOnError() throws IOException, InterruptedException {
         var mmsId = "123456";
-        when(httpClientMock.send(any(HttpRequest.class), any(HttpResponse.BodyHandler.class)))
+        when(mockHttpClient.send(any(HttpRequest.class), any(HttpResponse.BodyHandler.class)))
             .thenThrow(new IOException("Mock IOException"));
 
         var exception = assertThrows(IOException.class, () -> almaConnection.sendGet(mmsId));
@@ -117,9 +121,9 @@ class AlmaConnectionTest {
         var mmsId = "123456";
         var xmlBody = "<xml>Updated Content</xml>";
 
-        when(httpResponseMock.statusCode()).thenReturn(500);
-        when(httpClientMock.send(any(HttpRequest.class), any(HttpResponse.BodyHandler.class)))
-            .thenReturn(httpResponseMock);
+        when(mockHttpResponse.statusCode()).thenReturn(500);
+        when(mockHttpClient.send(any(HttpRequest.class), any(HttpResponse.BodyHandler.class)))
+            .thenReturn(mockHttpResponse);
 
         var response = almaConnection.sendPut(mmsId, xmlBody);
 

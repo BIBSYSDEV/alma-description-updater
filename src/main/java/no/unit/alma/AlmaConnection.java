@@ -5,6 +5,7 @@ import java.net.URI;
 import java.net.http.HttpClient;
 import java.net.http.HttpRequest;
 import java.net.http.HttpResponse;
+import no.unit.http.HttpClientFactory;
 
 public final class AlmaConnection {
 
@@ -16,9 +17,9 @@ public final class AlmaConnection {
     private final HttpClient httpClient;
     private final Config config;
 
-    public AlmaConnection(Config config, HttpClient httpClient) {
+    public AlmaConnection(Config config, HttpClientFactory httpClientFactory) {
         this.config = config;
-        this.httpClient = httpClient;
+        this.httpClient = httpClientFactory.create();
     }
 
     /**
