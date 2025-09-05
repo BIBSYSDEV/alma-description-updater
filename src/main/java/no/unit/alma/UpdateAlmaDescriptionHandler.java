@@ -20,6 +20,7 @@ import no.unit.marc.Reference;
 import no.unit.scheduler.SchedulerHelper;
 import no.unit.scheduler.UpdateItem;
 import no.unit.utils.DebugUtils;
+import nva.commons.core.JacocoGenerated;
 import org.w3c.dom.Document;
 import software.amazon.awssdk.http.HttpStatusCode;
 
@@ -33,6 +34,7 @@ public class UpdateAlmaDescriptionHandler implements RequestHandler<SQSEvent, Vo
     private final transient IsbnConverter isbnConverter;
 
     @SuppressWarnings("unused")
+    @JacocoGenerated
     public UpdateAlmaDescriptionHandler() {
         this(new Config(), new AlmaHelper(), new IsbnConverter());
     }

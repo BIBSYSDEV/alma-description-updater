@@ -1,5 +1,6 @@
 package no.unit.alma;
 
+import no.unit.exceptions.ParsingException;
 import org.junit.jupiter.api.Test;
 import org.w3c.dom.Document;
 import org.w3c.dom.Node;
@@ -16,6 +17,7 @@ import static org.hamcrest.Matchers.containsString;
 import static org.hamcrest.Matchers.equalTo;
 import static org.junit.jupiter.api.Assertions.assertEquals;
 import static org.junit.jupiter.api.Assertions.assertNotNull;
+import static org.junit.jupiter.api.Assertions.assertThrows;
 import static org.junit.jupiter.api.Assertions.assertTrue;
 
 public class DocumentXmlParserTest {
@@ -33,7 +35,11 @@ public class DocumentXmlParserTest {
 
     public static final String MOCK_DESCRIPTION = "This is the description";
     public static final String MOCK_URL = "This/is/the/url";
-
+    public static final String SHORT_DESCRIPTION = "Beskrivelse fra forlaget (kort)";
+    public static final String SOME_URL = "http://content.bibsys.no/content/?type=descr_publ_brief&isbn=8210053418";
+    public static final String ERROR_WHEN_CHECK_ALREADY_EXISTS =
+        "Caught an error while checking if the update fields already exists";
+    public static final String ERROR_WHILE_CONVERTING_TO_DOCUMENT = "Caught an error while converting to document";
 
     /**
      * A helper method that returnes a string from a source.
@@ -155,7 +161,9 @@ public class DocumentXmlParserTest {
     public void testCreate856Node() throws Exception {
         String theNode = setup(MOCK_UPDATE_NODE);
         DocumentXmlParser xmlParser = new DocumentXmlParser();
-        Document doc = xmlParser.createNode("Beskrivelse fra forlaget (kort)", "http://innhold.bibsys.no/bilde/forside/?size=mini&id=LITE_150088182.jpg", MARC_TAG_856);
+        Document doc = xmlParser.createNode(SHORT_DESCRIPTION,
+                                            "http://innhold.bibsys.no/bilde/forside/?size=mini&id=LITE_150088182"
+                                               + ".jpg", MARC_TAG_856);
         assertEquals(theNode, xmlParser.convertDocToString(doc));
     }
 
@@ -163,7 +171,9 @@ public class DocumentXmlParserTest {
     public void testDuplicateLinkAndDescription() throws Exception {
         String mockXml = setup(CORRECT_XML_FILE);
         DocumentXmlParser xmlParser = new DocumentXmlParser();
-        assertTrue(xmlParser.alreadyExists("Beskrivelse fra forlaget (kort)", "http://content.bibsys.no/content/?type=descr_publ_brief&isbn=8210053418", mockXml, MARC_TAG_856));
+        assertTrue(xmlParser.alreadyExists(SHORT_DESCRIPTION,
+                                           "http://content.bibsys.no/content/?type=descr_publ_brief&isbn"
+                                              + "=8210053418", mockXml, MARC_TAG_856));
     }
 
     @Test
@@ -180,7 +190,7 @@ public class DocumentXmlParserTest {
         var expected = setup(MOCK_UPDATE_NODE_MARC_956);
         var xmlParser = new DocumentXmlParser();
         var doc = xmlParser
-                      .createNode("Beskrivelse fra forlaget (kort)",
+                      .createNode(SHORT_DESCRIPTION,
                                   "http://innhold.bibsys.no/bilde/forside/?size=mini&id=LITE_150088182.jpg",
                                   MARC_TAG_956);
 
@@ -196,7 +206,7 @@ public class DocumentXmlParserTest {
                            .replace("image/jpeg", "audio/mpeg");
         var xmlParser = new DocumentXmlParser();
         var doc = xmlParser
-                      .createNode("Beskrivelse fra forlaget (kort)",
+                      .createNode(SHORT_DESCRIPTION,
                                   "http://innhold.bibsys.no/bilde/forside/?size=mini&id=LITE_150088182.mp3",
                                   MARC_TAG_956);
 
@@ -215,6 +225,29 @@ public class DocumentXmlParserTest {
         var actual = parser.convertDocToString(doc);
 
         assertThat(actual, containsString("<title>Hobbiten : Smaugs ødemark i bilder</title>"));
+    }
+
+    @Test
+    public void shouldHandleExceptionWhenCheckingAlreadyExistsOnInvalidXml() {
+        var mockXml = "not a xml file";
+        var parser = new DocumentXmlParser();
+
+        var exception = assertThrows(ParsingException.class, () -> parser.alreadyExists(SHORT_DESCRIPTION,
+                                                                                        SOME_URL,
+                                                                                        mockXml,
+                                                                                        MARC_TAG_856));
+
+        assertThat(exception.getMessage(), containsString(ERROR_WHEN_CHECK_ALREADY_EXISTS));
+    }
+
+    @Test
+    public void shouldHandleExceptionWhenConvertingInvalidXmlStringToDocument() {
+        var mockXml = "not a xml file";
+        var parser = new DocumentXmlParser();
+
+        var exception = assertThrows(ParsingException.class, () -> parser.asDocument(mockXml));
+
+        assertThat(exception.getMessage(), containsString(ERROR_WHILE_CONVERTING_TO_DOCUMENT));
     }
 
 }
