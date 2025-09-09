@@ -11,6 +11,9 @@ import java.io.IOException;
 import java.net.http.HttpClient;
 import java.net.http.HttpRequest;
 import java.net.http.HttpResponse;
+import org.mockito.InjectMocks;
+import org.mockito.Mock;
+import org.mockito.MockitoAnnotations;
 
 import static no.unit.alma.Config.ALMA_API_HOST_KEY;
 import static no.unit.alma.Config.ALMA_API_KEY;
@@ -20,32 +23,40 @@ import static org.junit.jupiter.api.Assertions.assertThrows;
 import static org.junit.jupiter.api.Assertions.assertTrue;
 import static org.mockito.ArgumentMatchers.any;
 import static org.mockito.Mockito.doReturn;
-import static org.mockito.Mockito.mock;
 import static org.mockito.Mockito.verify;
 import static org.mockito.Mockito.when;
 
 class AlmaConnectionTest {
 
-    private AlmaConnection almaConnection;
+    @Mock
     private HttpClient mockHttpClient;
+
+    @Mock
     private HttpResponse<String> mockHttpResponse;
 
-    @BeforeEach
-    @SuppressWarnings({"unchecked", "resource"})
-    void setUp() {
-        mockHttpClient = mock(HttpClient.class);
-        mockHttpResponse = mock(HttpResponse.class);
-        var mockEnv = mock(Environment.class);
+    @Mock
+    private HttpClientFactory mockHttpClientFactory;
 
+    @Mock
+    private Environment mockEnv;
+
+    @Mock
+    private Config mockConfig;
+
+    @InjectMocks
+    private AlmaConnection almaConnection;
+
+    @BeforeEach
+    @SuppressWarnings("resource")
+    void setUp() {
+        MockitoAnnotations.openMocks(this);
         doReturn("http://mock-alma-api-host/").when(mockEnv).readEnv(ALMA_API_HOST_KEY);
         doReturn("http://mock-alma-sru-host/").when(mockEnv).readEnv(ALMA_SRU_HOST_KEY);
         doReturn("mock-api-key").when(mockEnv).readEnv(ALMA_API_KEY);
-        var config = new Config(mockEnv);
+        mockConfig = new Config(mockEnv);
+        doReturn(mockHttpClient).when(mockHttpClientFactory).create();
 
-        var httpClientFactory = mock(HttpClientFactory.class);
-        doReturn(mockHttpClient).when(httpClientFactory).create();
-
-        almaConnection = new AlmaConnection(config, httpClientFactory);
+        almaConnection = new AlmaConnection(mockConfig, mockHttpClientFactory);
     }
 
     @Test

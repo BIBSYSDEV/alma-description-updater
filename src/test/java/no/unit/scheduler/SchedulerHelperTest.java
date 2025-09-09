@@ -14,6 +14,9 @@ import java.io.BufferedReader;
 import java.io.InputStream;
 import java.io.InputStreamReader;
 import org.mockito.ArgumentCaptor;
+import org.mockito.InjectMocks;
+import org.mockito.Mock;
+import org.mockito.MockitoAnnotations;
 import software.amazon.awssdk.services.sqs.SqsClient;
 import software.amazon.awssdk.services.sqs.model.SendMessageRequest;
 
@@ -28,7 +31,6 @@ import static org.junit.jupiter.api.Assertions.assertThrows;
 import static org.mockito.ArgumentMatchers.any;
 import static org.mockito.Mockito.doReturn;
 import static org.mockito.Mockito.doThrow;
-import static org.mockito.Mockito.mock;
 import static org.mockito.Mockito.times;
 import static org.mockito.Mockito.verify;
 import static org.mockito.Mockito.when;
@@ -49,10 +51,19 @@ class SchedulerHelperTest {
     public static final String MOCKEVENT_FILE_MISSING_FIELDS = "/mock_event_missing_fields.json";
     public static final String MOCKEVENT_FILE_EQUAL_FIELDS = "/mock_event_equal_fields.json";
 
-    Environment mockEnv;
-    SchedulerHelper mockSchedulerHelper;
-    ObjectMapper objectMapper = new ObjectMapper();
-    SqsClient mockSqsClient;
+    @Mock
+    private Environment mockEnv;
+
+    @Mock
+    private SqsClient mockSqsClient;
+
+    @Mock
+    private SqsClientFactory mockSqsClientFactory;
+
+    private final ObjectMapper objectMapper = new ObjectMapper();
+
+    @InjectMocks
+    private SchedulerHelper schedulerHelper;
 
     public String setup(String file) throws Exception {
         InputStream stream = DocumentXmlParserTest.class.getResourceAsStream(file);
@@ -79,17 +90,15 @@ class SchedulerHelperTest {
     @BeforeEach
     @SuppressWarnings("resource")
     public void init() {
-        mockEnv = mock(Environment.class);
-        var mockSqsClientFactory = mock(SqsClientFactory.class);
-        mockSqsClient = mock(SqsClient.class);
+        MockitoAnnotations.openMocks(this);
         doReturn(mockSqsClient).when(mockSqsClientFactory).create();
         initEnv();
-        mockSchedulerHelper = new SchedulerHelper(mockEnv, mockSqsClientFactory);
+        schedulerHelper = new SchedulerHelper(mockEnv, mockSqsClientFactory);
     }
 
     @Test
     void generateImageLinkTest() {
-        UpdateItem payload = mockSchedulerHelper.createImageLink(IMAGE_SIZE, ISBN);
+        UpdateItem payload = schedulerHelper.createImageLink(IMAGE_SIZE, ISBN);
         String expectedLink = String.format(CONTENT_URL_KEY + FILE_KEY + IMAGE_KEY + IMAGE_SIZE
                 + "/%s/%s/%s.jpg", 7, 4, ISBN);
         assertEquals(expectedLink, payload.getLink());
@@ -97,14 +106,14 @@ class SchedulerHelperTest {
 
     @Test
     void generateContentLinkTest() {
-        UpdateItem payload = mockSchedulerHelper.createContentLink(CONTENT_TYPE, ISBN);
+        UpdateItem payload = schedulerHelper.createContentLink(CONTENT_TYPE, ISBN);
         String expectedLink = String.format(CONTENT_URL_KEY  + "content/" + "?isbn=" + ISBN);
         assertEquals(expectedLink, payload.getLink());
     }
 
     @Test
     void generateAudioLinkTest() {
-        UpdateItem payload = mockSchedulerHelper.createAudioLink(ISBN);
+        UpdateItem payload = schedulerHelper.createAudioLink(ISBN);
         String expectedLink = String.format(CONTENT_URL_KEY + FILE_KEY + AUDIO_MP3_KEY + "/%s/%s/%s.mp3", 7, 4, ISBN);
         assertEquals(expectedLink, payload.getLink());
     }
@@ -117,14 +126,14 @@ class SchedulerHelperTest {
         BibItem oldItem = objectMapper.readValue(oldVersion, BibItem.class);
         BibItem newItem = objectMapper.readValue(newVersion, BibItem.class);
         BibItem returnItem = objectMapper.readValue(returnVersion, BibItem.class);
-        BibItem theItem = mockSchedulerHelper.extractDiffs(newItem, oldItem);
+        BibItem theItem = schedulerHelper.extractDiffs(newItem, oldItem);
         assertEquals(returnItem.toString(), theItem.toString());
     }
 
     @Test
     public void shouldCreateUpdateItemFromModifyEvent() throws Exception {
         var mockEvent = setup(MOCKEVENT_FILE);
-        var payloadList = mockSchedulerHelper.splitEventIntoUpdateItems(mockEvent);
+        var payloadList = schedulerHelper.splitEventIntoUpdateItems(mockEvent);
 
         var expectedList = List.of(
             createUpdateItem("9788210053412",
@@ -157,7 +166,7 @@ class SchedulerHelperTest {
     public void shouldCreateUpdateItemFromNewEvent() throws Exception {
         var mockEvent = setup(MOCKEVENT_FILE);
         mockEvent = mockEvent.replace("MODIFY", "NEW");
-        var payloadList = mockSchedulerHelper.splitEventIntoUpdateItems(mockEvent);
+        var payloadList = schedulerHelper.splitEventIntoUpdateItems(mockEvent);
 
         var expectedList = List.of(
             createUpdateItem("9788210053412",
@@ -189,7 +198,7 @@ class SchedulerHelperTest {
     @Test
     public void shouldIgnoreMissingFieldsFromEvent() throws Exception {
         var mockEvent = setup(MOCKEVENT_FILE_MISSING_FIELDS);
-        var payloadList = mockSchedulerHelper.splitEventIntoUpdateItems(mockEvent);
+        var payloadList = schedulerHelper.splitEventIntoUpdateItems(mockEvent);
 
         assertThat(payloadList, is(empty()));
     }
@@ -197,7 +206,7 @@ class SchedulerHelperTest {
     @Test
     public void shouldIgnoreEqualFieldsFromEvent() throws Exception {
         var mockEvent = setup(MOCKEVENT_FILE_EQUAL_FIELDS);
-        var payloadList = mockSchedulerHelper.splitEventIntoUpdateItems(mockEvent);
+        var payloadList = schedulerHelper.splitEventIntoUpdateItems(mockEvent);
 
         assertThat(payloadList, is(empty()));
     }
@@ -206,7 +215,7 @@ class SchedulerHelperTest {
     public void shouldWriteToDlqWithCorrectContent() throws Exception {
         doReturn("someDlqUrl").when(mockEnv).readEnv(DLQ_QUEUE_URL_KEY);
 
-        mockSchedulerHelper.writeToDLQ("message");
+        schedulerHelper.writeToDLQ("message");
 
         var captor = ArgumentCaptor.forClass(SendMessageRequest.class);
 
@@ -220,7 +229,7 @@ class SchedulerHelperTest {
     public void shouldThrowExceptionWhenWriteToDlqFails() {
         doThrow(UnsupportedOperationException.class).when(mockSqsClient).sendMessage(any(SendMessageRequest.class));
 
-        assertThrows(SchedulerException.class, () -> mockSchedulerHelper.writeToDLQ("message"));
+        assertThrows(SchedulerException.class, () -> schedulerHelper.writeToDLQ("message"));
     }
 
     private UpdateItem createUpdateItem(String isbn, String link, String specifiedMaterial) {
