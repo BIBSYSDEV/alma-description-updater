@@ -17,6 +17,9 @@ import java.io.InputStream;
 import java.io.InputStreamReader;
 import java.util.ArrayList;
 import java.util.List;
+import org.mockito.InjectMocks;
+import org.mockito.Mock;
+import org.mockito.MockitoAnnotations;
 
 import static org.junit.jupiter.api.Assertions.assertEquals;
 import static org.mockito.Mockito.doReturn;
@@ -28,10 +31,26 @@ public class UpdateAlmaDescriptionHandlerTest {
     public static final String CORRECT_XML_FILE = "/Mock_xml.xml";
     public static final String UPDATED_XML_FILE = "/UpdatedGroupXml.xml";
 
-    Config mockConfig;
-    Environment mockEnv;
-    UpdateAlmaDescriptionHandler mockedHandler;
-    AlmaConnection mockConnection;
+
+    @Mock
+    private Environment mockEnv;
+
+    @Mock
+    private HttpClientFactory mockHttpClientFactory;
+
+    @Mock
+    private ConnectionFactory mockConnectionFactory;
+
+    @InjectMocks
+    private Config config;
+
+    @InjectMocks
+    private AlmaConnection mockConnection;
+
+    @InjectMocks
+    private AlmaClient almaClient;
+
+    private UpdateAlmaDescriptionHandler mockedHandler;
 
     private void initEnv() {
         when(mockEnv.readEnv("ALLOWED_ORIGIN")).thenReturn("Allow-origins");
@@ -45,18 +64,13 @@ public class UpdateAlmaDescriptionHandlerTest {
     @BeforeEach
     @SuppressWarnings("resource")
     public void init() {
-        mockEnv = mock(Environment.class);
+        MockitoAnnotations.openMocks(this);
         initEnv();
-        mockConfig = new Config(mockEnv);
-        var httpClientFactory = mock(HttpClientFactory.class);
         var mockHttpClient = mock(HttpClient.class);
-        doReturn(mockHttpClient).when(httpClientFactory).create();
-        mockConnection = new AlmaConnection(mockConfig, httpClientFactory);
-        var connectionFactory = mock(ConnectionFactory.class);
-        doReturn(mockConnection).when(connectionFactory).create();
-        mockedHandler = new UpdateAlmaDescriptionHandler(mockConfig,
-                                                         new AlmaClient(connectionFactory),
-                                                         new IsbnConverter());
+        doReturn(mockHttpClient).when(mockHttpClientFactory).create();
+        doReturn(mockConnection).when(mockConnectionFactory).create();
+
+        mockedHandler = new UpdateAlmaDescriptionHandler(config, almaClient, new IsbnConverter());
     }
 
     /**
