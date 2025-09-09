@@ -1,12 +1,14 @@
 package no.unit.alma;
 
 import static java.net.HttpURLConnection.HTTP_OK;
+import static java.net.HttpURLConnection.HTTP_UNAVAILABLE;
 import static org.hamcrest.MatcherAssert.assertThat;
 import static org.hamcrest.Matchers.equalTo;
 import static org.junit.jupiter.api.Assertions.assertNotNull;
 import static org.mockito.ArgumentMatchers.any;
 import static org.mockito.Mockito.doReturn;
 import static org.mockito.Mockito.doThrow;
+import static org.mockito.Mockito.mock;
 import static org.mockito.Mockito.times;
 import static org.mockito.Mockito.verify;
 import java.io.IOException;
@@ -82,6 +84,50 @@ class AlmaClientTest {
         doThrow(IOException.class)
             .doThrow(InterruptedException.class)
             .doReturn(mockHttpResponse)
+            .when(mockConnection).sendGet(any());
+
+        var response = almaClient.getBibRecordFromAlmaWithRetries(MMS_ID);
+
+        verify(mockConnection, times(3)).sendGet(MMS_ID);
+        assertNotNull(response);
+        assertThat(response.statusCode(), equalTo(200));
+        assertThat(response.body(), equalTo(PAYLOAD));
+    }
+
+    @Test
+    void shouldGetBibRecordFromAlmaEvenWhenFirstAttemptGivesStatusOtherThan200Ok() throws Exception {
+        doReturn(HTTP_UNAVAILABLE).when(mockHttpResponse).statusCode();
+
+        var mockSecondResponse = mock(HttpResponse.class);
+        doReturn(HTTP_OK).when(mockSecondResponse).statusCode();
+        doReturn(PAYLOAD).when(mockSecondResponse).body();
+
+        doReturn(mockHttpResponse)
+            .doReturn(mockSecondResponse)
+            .when(mockConnection).sendGet(any());
+
+        var response = almaClient.getBibRecordFromAlmaWithRetries(MMS_ID);
+
+        verify(mockConnection, times(2)).sendGet(MMS_ID);
+        assertNotNull(response);
+        assertThat(response.statusCode(), equalTo(200));
+        assertThat(response.body(), equalTo(PAYLOAD));
+    }
+
+    @Test
+    void shouldGetBibRecordFromAlmaEvenWhenFirstAndSecondAttemptGivesStatusOtherThan200Ok() throws Exception {
+        doReturn(HTTP_UNAVAILABLE).when(mockHttpResponse).statusCode();
+
+        var mockSecondResponse = mock(HttpResponse.class);
+        doReturn(HTTP_UNAVAILABLE).when(mockSecondResponse).statusCode();
+
+        var mockThirdResponse = mock(HttpResponse.class);
+        doReturn(HTTP_OK).when(mockThirdResponse).statusCode();
+        doReturn(PAYLOAD).when(mockThirdResponse).body();
+
+        doReturn(mockHttpResponse)
+            .doReturn(mockSecondResponse)
+            .doReturn(mockThirdResponse)
             .when(mockConnection).sendGet(any());
 
         var response = almaClient.getBibRecordFromAlmaWithRetries(MMS_ID);
