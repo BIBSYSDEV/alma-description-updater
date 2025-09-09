@@ -208,17 +208,16 @@ class AlmaClientTest {
 
     @Test
     void shouldPutBibRecordInAlmaWithSecondRetryOnStatusCodeOtherThan200() throws Exception {
-        doReturn(HTTP_UNAVAILABLE).when(mockHttpResponse).statusCode();
-
-        var mockSecondResponse = mock(HttpResponse.class);
-        doReturn(HTTP_UNAVAILABLE).when(mockSecondResponse).statusCode();
+        doReturn(HTTP_UNAVAILABLE)
+            .doReturn(HTTP_UNAVAILABLE)
+            .when(mockHttpResponse).statusCode();
 
         var mockThirdResponse = mock(HttpResponse.class);
         doReturn(HTTP_OK).when(mockThirdResponse).statusCode();
         doReturn(PAYLOAD).when(mockThirdResponse).body();
 
         doReturn(mockHttpResponse)
-            .doReturn(mockSecondResponse)
+            .doReturn(mockHttpResponse)
             .doReturn(mockThirdResponse)
             .when(mockConnection).sendPut(any(), any());
 
@@ -248,21 +247,17 @@ class AlmaClientTest {
 
     @Test
     void shouldGiveUpPutInAlmaAndReturnNullWhenThirdRetryGivesStatusOtherThan200() throws Exception {
-        doReturn(HTTP_UNAVAILABLE).when(mockHttpResponse).statusCode();
-
-        var mockSecondResponse = mock(HttpResponse.class);
-        doReturn(HTTP_UNAVAILABLE).when(mockSecondResponse).statusCode();
-
-        var mockThirdResponse = mock(HttpResponse.class);
-        doReturn(HTTP_UNAVAILABLE).when(mockThirdResponse).statusCode();
+        doReturn(HTTP_UNAVAILABLE)
+            .doReturn(HTTP_UNAVAILABLE)
+            .doReturn(HTTP_UNAVAILABLE).when(mockHttpResponse).statusCode();
 
         var mockFourthResponse = mock(HttpResponse.class);
         doReturn(HTTP_OK).when(mockFourthResponse).statusCode();
         doReturn(PAYLOAD).when(mockFourthResponse).body();
 
         doReturn(mockHttpResponse)
-            .doReturn(mockSecondResponse)
-            .doReturn(mockThirdResponse)
+            .doReturn(mockHttpResponse)
+            .doReturn(mockHttpResponse)
             .doReturn(mockFourthResponse)
             .when(mockConnection).sendPut(any(), any());
 
