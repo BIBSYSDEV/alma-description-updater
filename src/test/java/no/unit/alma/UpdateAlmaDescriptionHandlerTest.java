@@ -55,7 +55,7 @@ public class UpdateAlmaDescriptionHandlerTest {
         var connectionFactory = mock(ConnectionFactory.class);
         doReturn(mockConnection).when(connectionFactory).create();
         mockedHandler = new UpdateAlmaDescriptionHandler(mockConfig,
-                                                         new AlmaHelper(connectionFactory),
+                                                         new AlmaClient(connectionFactory),
                                                          new IsbnConverter());
     }
 

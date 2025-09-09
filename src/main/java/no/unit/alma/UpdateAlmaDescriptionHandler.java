@@ -28,7 +28,7 @@ import software.amazon.awssdk.http.HttpStatusCode;
 public class UpdateAlmaDescriptionHandler implements RequestHandler<SQSEvent, Void> {
 
     private final transient Config config;
-    private final transient AlmaHelper almaHelper;
+    private final transient AlmaClient almaClient;
     private final transient SchedulerHelper schedulerHelper = new SchedulerHelper();
     private final transient DocumentXmlParser xmlParser = new DocumentXmlParser();
     private final transient IsbnConverter isbnConverter;
@@ -36,12 +36,12 @@ public class UpdateAlmaDescriptionHandler implements RequestHandler<SQSEvent, Vo
     @SuppressWarnings("unused")
     @JacocoGenerated
     public UpdateAlmaDescriptionHandler() {
-        this(new Config(), new AlmaHelper(), new IsbnConverter());
+        this(new Config(), new AlmaClient(), new IsbnConverter());
     }
 
-    public UpdateAlmaDescriptionHandler(Config config, AlmaHelper almaHelper, IsbnConverter isbnConverter) {
+    public UpdateAlmaDescriptionHandler(Config config, AlmaClient almaClient, IsbnConverter isbnConverter) {
         this.config = config;
-        this.almaHelper = almaHelper;
+        this.almaClient = almaClient;
         this.isbnConverter = isbnConverter;
     }
 
@@ -115,7 +115,7 @@ public class UpdateAlmaDescriptionHandler implements RequestHandler<SQSEvent, Vo
                 String mmsId = reference.getId();
 
                 /* 3.2 Use the MMS_ID to get a BIB-RECORD from the alma-api. */
-                almaResponse = almaHelper.getBibRecordFromAlmaWithRetries(mmsId);
+                almaResponse = almaClient.getBibRecordFromAlmaWithRetries(mmsId);
 
                 if (almaResponse == null || almaResponse.statusCode() != HttpStatusCode.OK) {
                     continue;
@@ -127,7 +127,7 @@ public class UpdateAlmaDescriptionHandler implements RequestHandler<SQSEvent, Vo
                 String updatedRecord = updateBibRecord(updateItems, xmlFromAlma);
 
                 /* 4. Push the updated BIB-RECORD back to the alma through a put-request to the api. */
-                response = almaHelper.putBibRecordInAlmaWithRetries(mmsId, updatedRecord);
+                response = almaClient.putBibRecordInAlmaWithRetries(mmsId, updatedRecord);
 
                 if (response == null || response.statusCode() != HttpStatusCode.OK) {
                     continue;

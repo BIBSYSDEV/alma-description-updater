@@ -3,21 +3,23 @@ package no.unit.alma;
 import no.unit.http.AlmaConnectionFactory;
 import no.unit.http.Connection;
 import no.unit.http.ConnectionFactory;
+import nva.commons.core.JacocoGenerated;
 import software.amazon.awssdk.http.HttpStatusCode;
 
 import java.io.IOException;
 import java.net.http.HttpResponse;
 import java.util.concurrent.TimeUnit;
 
-public class AlmaHelper {
+public class AlmaClient {
 
     private final Connection connection;
 
-    public AlmaHelper() {
+    @JacocoGenerated
+    public AlmaClient() {
         this(new AlmaConnectionFactory());
     }
 
-    public AlmaHelper(ConnectionFactory connectionFactory) {
+    public AlmaClient(ConnectionFactory connectionFactory) {
         this.connection = connectionFactory.create();
     }
 
