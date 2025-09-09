@@ -5,6 +5,7 @@ import static java.net.HttpURLConnection.HTTP_UNAVAILABLE;
 import static org.hamcrest.MatcherAssert.assertThat;
 import static org.hamcrest.Matchers.equalTo;
 import static org.junit.jupiter.api.Assertions.assertNotNull;
+import static org.junit.jupiter.api.Assertions.assertNull;
 import static org.mockito.ArgumentMatchers.any;
 import static org.mockito.Mockito.doReturn;
 import static org.mockito.Mockito.doThrow;
@@ -136,6 +137,139 @@ class AlmaClientTest {
         assertNotNull(response);
         assertThat(response.statusCode(), equalTo(200));
         assertThat(response.body(), equalTo(PAYLOAD));
+    }
+
+    @Test
+    void shouldPutBibRecordInAlma() throws Exception {
+        doReturn(HTTP_OK).when(mockHttpResponse).statusCode();
+        doReturn(PAYLOAD).when(mockHttpResponse).body();
+        doReturn(mockHttpResponse).when(mockConnection).sendPut(any(), any());
+
+        var response = almaClient.putBibRecordInAlmaWithRetries(MMS_ID, PAYLOAD);
+
+        verify(mockConnection, times(1)).sendPut(MMS_ID, PAYLOAD);
+        assertNotNull(response);
+        assertThat(response.statusCode(), equalTo(200));
+        assertThat(response.body(), equalTo(PAYLOAD));
+    }
+
+    @Test
+    void shouldPutBibRecordInAlmaWithRetryOnError() throws Exception {
+        doReturn(HTTP_OK).when(mockHttpResponse).statusCode();
+        doReturn(PAYLOAD).when(mockHttpResponse).body();
+        doThrow(IOException.class)
+            .doReturn(mockHttpResponse)
+            .when(mockConnection).sendPut(any(), any());
+
+        var response = almaClient.putBibRecordInAlmaWithRetries(MMS_ID, PAYLOAD);
+
+        verify(mockConnection, times(2)).sendPut(MMS_ID, PAYLOAD);
+        assertNotNull(response);
+        assertThat(response.statusCode(), equalTo(200));
+        assertThat(response.body(), equalTo(PAYLOAD));
+    }
+
+    @Test
+    void shouldPutBibRecordInAlmaWithRetryOnStatusCodeOtherThan200() throws Exception {
+        doReturn(HTTP_UNAVAILABLE).when(mockHttpResponse).statusCode();
+
+        var mockSecondResponse = mock(HttpResponse.class);
+        doReturn(HTTP_OK).when(mockSecondResponse).statusCode();
+        doReturn(PAYLOAD).when(mockSecondResponse).body();
+
+        doReturn(mockHttpResponse)
+            .doReturn(mockSecondResponse)
+            .when(mockConnection).sendPut(any(), any());
+
+        var response = almaClient.putBibRecordInAlmaWithRetries(MMS_ID, PAYLOAD);
+
+        verify(mockConnection, times(2)).sendPut(MMS_ID, PAYLOAD);
+        assertNotNull(response);
+        assertThat(response.statusCode(), equalTo(200));
+        assertThat(response.body(), equalTo(PAYLOAD));
+    }
+
+    @Test
+    void shouldPutBibRecordInAlmaWithRetryOnSecondError() throws Exception {
+        doReturn(HTTP_OK).when(mockHttpResponse).statusCode();
+        doReturn(PAYLOAD).when(mockHttpResponse).body();
+        doThrow(IOException.class)
+            .doThrow(InterruptedException.class)
+            .doReturn(mockHttpResponse)
+            .when(mockConnection).sendPut(any(), any());
+
+        var response = almaClient.putBibRecordInAlmaWithRetries(MMS_ID, PAYLOAD);
+
+        verify(mockConnection, times(3)).sendPut(MMS_ID, PAYLOAD);
+        assertNotNull(response);
+        assertThat(response.statusCode(), equalTo(200));
+        assertThat(response.body(), equalTo(PAYLOAD));
+    }
+
+    @Test
+    void shouldPutBibRecordInAlmaWithSecondRetryOnStatusCodeOtherThan200() throws Exception {
+        doReturn(HTTP_UNAVAILABLE).when(mockHttpResponse).statusCode();
+
+        var mockSecondResponse = mock(HttpResponse.class);
+        doReturn(HTTP_UNAVAILABLE).when(mockSecondResponse).statusCode();
+
+        var mockThirdResponse = mock(HttpResponse.class);
+        doReturn(HTTP_OK).when(mockThirdResponse).statusCode();
+        doReturn(PAYLOAD).when(mockThirdResponse).body();
+
+        doReturn(mockHttpResponse)
+            .doReturn(mockSecondResponse)
+            .doReturn(mockThirdResponse)
+            .when(mockConnection).sendPut(any(), any());
+
+        var response = almaClient.putBibRecordInAlmaWithRetries(MMS_ID, PAYLOAD);
+
+        verify(mockConnection, times(3)).sendPut(MMS_ID, PAYLOAD);
+        assertNotNull(response);
+        assertThat(response.statusCode(), equalTo(200));
+        assertThat(response.body(), equalTo(PAYLOAD));
+    }
+
+    @Test
+    void shouldGiveUpPutInAlmaAndReturnNullWhenThirdRetryGivesError() throws Exception {
+        doReturn(HTTP_OK).when(mockHttpResponse).statusCode();
+        doReturn(PAYLOAD).when(mockHttpResponse).body();
+        doThrow(IOException.class)
+            .doThrow(InterruptedException.class)
+            .doThrow(IOException.class)
+            .doReturn(mockHttpResponse)
+            .when(mockConnection).sendPut(any(), any());
+
+        var response = almaClient.putBibRecordInAlmaWithRetries(MMS_ID, PAYLOAD);
+
+        verify(mockConnection, times(3)).sendPut(MMS_ID, PAYLOAD);
+        assertNull(response);
+    }
+
+    @Test
+    void shouldGiveUpPutInAlmaAndReturnNullWhenThirdRetryGivesStatusOtherThan200() throws Exception {
+        doReturn(HTTP_UNAVAILABLE).when(mockHttpResponse).statusCode();
+
+        var mockSecondResponse = mock(HttpResponse.class);
+        doReturn(HTTP_UNAVAILABLE).when(mockSecondResponse).statusCode();
+
+        var mockThirdResponse = mock(HttpResponse.class);
+        doReturn(HTTP_UNAVAILABLE).when(mockThirdResponse).statusCode();
+
+        var mockFourthResponse = mock(HttpResponse.class);
+        doReturn(HTTP_OK).when(mockFourthResponse).statusCode();
+        doReturn(PAYLOAD).when(mockFourthResponse).body();
+
+        doReturn(mockHttpResponse)
+            .doReturn(mockSecondResponse)
+            .doReturn(mockThirdResponse)
+            .doReturn(mockFourthResponse)
+            .when(mockConnection).sendPut(any(), any());
+
+        var response = almaClient.putBibRecordInAlmaWithRetries(MMS_ID, PAYLOAD);
+
+        verify(mockConnection, times(3)).sendPut(MMS_ID, PAYLOAD);
+        assertNull(response);
     }
 
 }
