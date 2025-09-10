@@ -24,8 +24,9 @@ import org.mockito.MockitoAnnotations;
 
 class AlmaClientTest {
 
-    public static final String PAYLOAD = "<body>Hello</body>";
-    public static final String MMS_ID = "1234";
+    private static final String PAYLOAD = "<body>Hello</body>";
+    private static final String MMS_ID = "1234";
+    private static final Integer retryIntervalInSeconds = 0;
 
     @Mock
     private Connection mockConnection;
@@ -45,7 +46,7 @@ class AlmaClientTest {
         MockitoAnnotations.openMocks(this);
         doReturn(mockConnection).when(mockConnectionFactory).create();
 
-        almaClient = new AlmaClient(mockConnectionFactory);
+        almaClient = new AlmaClient(mockConnectionFactory, retryIntervalInSeconds);
     }
 
     @Test

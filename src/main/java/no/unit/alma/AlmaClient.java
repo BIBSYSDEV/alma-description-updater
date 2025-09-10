@@ -1,5 +1,6 @@
 package no.unit.alma;
 
+import java.util.Optional;
 import no.unit.http.AlmaConnectionFactory;
 import no.unit.http.Connection;
 import no.unit.http.ConnectionFactory;
@@ -12,15 +13,20 @@ import java.util.concurrent.TimeUnit;
 
 public class AlmaClient {
 
+    public static final int DEFAULT_RETRY_INTERVAL_IN_SECONDS = 3;
+
     private final Connection connection;
+    private final Integer retryIntervalInSeconds;
 
     @JacocoGenerated
     public AlmaClient() {
-        this(new AlmaConnectionFactory());
+        this(new AlmaConnectionFactory(), DEFAULT_RETRY_INTERVAL_IN_SECONDS);
     }
 
-    public AlmaClient(ConnectionFactory connectionFactory) {
+    public AlmaClient(ConnectionFactory connectionFactory, Integer retryIntervalInSeconds) {
         this.connection = connectionFactory.create();
+        this.retryIntervalInSeconds = Optional.ofNullable(retryIntervalInSeconds)
+                                          .orElse(DEFAULT_RETRY_INTERVAL_IN_SECONDS);
     }
 
     /**
@@ -30,10 +36,8 @@ public class AlmaClient {
      * @throws InterruptedException When something goes wrong.
      * @throws IOException When something goes wrong.
      */
-    private HttpResponse<String> getBibRecordFromAlma(String mmsId)
-            throws InterruptedException, IOException {
-        HttpResponse<String> almaResponse = connection.sendGet(mmsId);
-        return almaResponse;
+    private HttpResponse<String> getBibRecordFromAlma(String mmsId) throws InterruptedException, IOException {
+        return connection.sendGet(mmsId);
     }
 
     /**
@@ -45,10 +49,9 @@ public class AlmaClient {
      * @throws IOException When something goes wrong.
      */
     private HttpResponse<String> putBibRecordInAlma(String mmsId, String updatedXml)
-            throws InterruptedException, IOException {
-        HttpResponse<String> almaResponse = connection.sendPut(mmsId,
-            updatedXml);
-        return almaResponse;
+        throws InterruptedException, IOException {
+
+        return connection.sendPut(mmsId, updatedXml);
     }
 
     /**
@@ -72,7 +75,7 @@ public class AlmaClient {
             return almaResponse;
         } else {
 
-            TimeUnit.SECONDS.sleep(3);
+            TimeUnit.SECONDS.sleep(retryIntervalInSeconds);
             try {
                 almaResponse = getBibRecordFromAlma(mmsId);
             } catch (InterruptedException | IOException e) {
@@ -81,7 +84,7 @@ public class AlmaClient {
             if (almaResponse != null && almaResponse.statusCode() == HttpStatusCode.OK) {
                 return almaResponse;
             } else {
-                TimeUnit.SECONDS.sleep(3);
+                TimeUnit.SECONDS.sleep(retryIntervalInSeconds);
                 almaResponse = getBibRecordFromAlma(mmsId);
                 return almaResponse;
             }
@@ -106,7 +109,7 @@ public class AlmaClient {
         if (response != null && response.statusCode() == HttpStatusCode.OK) {
             return response;
         } else {
-            TimeUnit.SECONDS.sleep(3);
+            TimeUnit.SECONDS.sleep(retryIntervalInSeconds);
             try {
                 response = putBibRecordInAlma(mmsId, updatedRecord);
             } catch (InterruptedException | IOException e) {
@@ -115,7 +118,7 @@ public class AlmaClient {
             if (response != null && response.statusCode() == HttpStatusCode.OK) {
                 return response;
             } else {
-                TimeUnit.SECONDS.sleep(3);
+                TimeUnit.SECONDS.sleep(retryIntervalInSeconds);
                 try {
                     response = putBibRecordInAlma(mmsId, updatedRecord);
                 } catch (InterruptedException | IOException e) {
