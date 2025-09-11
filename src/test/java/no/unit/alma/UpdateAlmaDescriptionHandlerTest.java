@@ -22,13 +22,17 @@ import org.mockito.MockitoAnnotations;
 
 import static java.net.HttpURLConnection.HTTP_OK;
 import static java.net.HttpURLConnection.HTTP_UNAVAILABLE;
+import static java.util.Collections.EMPTY_LIST;
 import static org.hamcrest.MatcherAssert.assertThat;
 import static org.hamcrest.Matchers.containsInAnyOrder;
+import static org.hamcrest.Matchers.containsString;
 import static org.hamcrest.Matchers.equalTo;
 import static org.junit.jupiter.api.Assertions.assertEquals;
+import static org.junit.jupiter.api.Assertions.assertThrows;
 import static org.mockito.ArgumentMatchers.any;
 import static org.mockito.Mockito.doNothing;
 import static org.mockito.Mockito.doReturn;
+import static org.mockito.Mockito.doThrow;
 import static org.mockito.Mockito.mock;
 import static org.mockito.Mockito.times;
 import static org.mockito.Mockito.verify;
@@ -149,6 +153,28 @@ public class UpdateAlmaDescriptionHandlerTest {
 
         assertThat(captor.getAllValues(), containsInAnyOrder("9788210053412", "8210053418"));
         verify(mockSchedulerHelper, times(1)).writeToDLQ(any());
+        assertThat(response, equalTo(null));
+    }
+
+    @Test
+    public void shouldHandleErrorWhenCreatingUpdateItemsFails() {
+        doThrow(RuntimeException.class).when(mockSchedulerHelper).splitEventIntoUpdateItems(any());
+
+        var exception = assertThrows(RuntimeException.class, () -> mockedHandler.handleRequest(mockSqsEvent,
+                                                                                               mockContext));
+
+        assertThat(exception.getMessage(), containsString("Error while processing input event."));
+    }
+
+    @Test
+    public void shouldNotUpdateWhenUpdateItemContainsDataWeDoNotWantToUpdate() throws Exception {
+        doReturn(EMPTY_LIST).when(mockSchedulerHelper).splitEventIntoUpdateItems(any());
+
+        final var response = mockedHandler.handleRequest(mockSqsEvent, mockContext);
+
+        verify(mockAlmaSruProxyConnection, times(0)).sendGet(any());
+        verify(mockAlmaClient, times(0)).getBibRecordFromAlmaWithRetries(any());
+        verify(mockAlmaClient, times(0)).putBibRecordInAlmaWithRetries(any(), any());
         assertThat(response, equalTo(null));
     }
 
