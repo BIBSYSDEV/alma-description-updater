@@ -115,9 +115,23 @@ public class UpdateAlmaDescriptionHandlerTest {
     }
 
     @Test
-    public void shouldHandleSqsEventWithoutError() throws Exception {
-        var response = mockedHandler.handleRequest(mockSqsEvent, mockContext);
+    public void shouldFetchFromAndUpdateAlmaWithUpdateItemsFromSqsEventWithoutError() throws Exception {
+        final var getBibRecordCaptor = ArgumentCaptor.forClass(String.class);
+        final var putBibRecordCaptor = ArgumentCaptor.forClass(String.class);
+        final var getFromAlmaProxyCaptor = ArgumentCaptor.forClass(String.class);
+        final var mmsId = "991325803064702201";
 
+        final var response = mockedHandler.handleRequest(mockSqsEvent, mockContext);
+
+        verify(mockAlmaSruProxyConnection, times(2))
+            .sendGet(getFromAlmaProxyCaptor.capture());
+        assertThat(getFromAlmaProxyCaptor.getAllValues(), containsInAnyOrder("9788210053412", "8210053418"));
+        verify(mockAlmaClient, times(2))
+            .getBibRecordFromAlmaWithRetries(getBibRecordCaptor.capture());
+        assertThat(getBibRecordCaptor.getAllValues(), containsInAnyOrder(mmsId, mmsId));
+        verify(mockAlmaClient, times(2))
+            .putBibRecordInAlmaWithRetries(putBibRecordCaptor.capture(), any());
+        assertThat(putBibRecordCaptor.getAllValues(), containsInAnyOrder(mmsId, mmsId));
         verify(mockSchedulerHelper, times(0)).writeToDLQ(any());
         assertThat(response, equalTo(null));
     }
