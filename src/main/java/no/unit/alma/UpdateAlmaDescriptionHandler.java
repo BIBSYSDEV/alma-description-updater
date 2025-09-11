@@ -29,7 +29,7 @@ public class UpdateAlmaDescriptionHandler implements RequestHandler<SQSEvent, Vo
     private final transient SchedulerHelper schedulerHelper;
     private final transient DocumentXmlParser xmlParser;
     private final transient IsbnConverter isbnConverter;
-    private final transient GetConnection almaSruConnection;
+    private final transient GetConnection almaSruProxyConnection;
 
     @SuppressWarnings("unused")
     @JacocoGenerated
@@ -45,12 +45,12 @@ public class UpdateAlmaDescriptionHandler implements RequestHandler<SQSEvent, Vo
                                         SchedulerHelper schedulerHelper,
                                         DocumentXmlParser xmlParser,
                                         IsbnConverter isbnConverter,
-                                        GetConnectionFactory almaSruConnectionFactory) {
+                                        GetConnectionFactory almaSruProxyConnectionFactory) {
         this.almaClient = almaClient;
         this.schedulerHelper = schedulerHelper;
         this.xmlParser = xmlParser;
         this.isbnConverter = isbnConverter;
-        this.almaSruConnection = almaSruConnectionFactory.create();
+        this.almaSruProxyConnection = almaSruProxyConnectionFactory.create();
     }
 
     /**
@@ -218,7 +218,7 @@ public class UpdateAlmaDescriptionHandler implements RequestHandler<SQSEvent, Vo
     }
 
     private HttpResponse<String> fetchFromAlmaSruProxy(String isbn) throws IOException, InterruptedException {
-        return almaSruConnection.sendGet(isbn);
+        return almaSruProxyConnection.sendGet(isbn);
     }
 
     private List<Reference> createReferenceListFromAlmaSruProxyResponse(String response) {

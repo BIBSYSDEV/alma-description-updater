@@ -4,6 +4,7 @@ import com.amazonaws.services.lambda.runtime.Context;
 import com.amazonaws.services.lambda.runtime.events.SQSEvent;
 import com.amazonaws.services.lambda.runtime.events.SQSEvent.SQSMessage;
 import com.google.gson.Gson;
+import java.io.IOException;
 import java.net.http.HttpResponse;
 import java.util.Collections;
 import no.unit.http.GetConnection;
@@ -194,6 +195,16 @@ public class UpdateAlmaDescriptionHandlerTest {
         assertThat(response, equalTo(null));
     }
 
+    @Test
+    public void shouldHandleErrorsThatOccursWhenUpdatingFailsBecauseOfSomeGeneralException() throws Exception {
+        doThrow(IOException.class).when(mockAlmaSruProxyConnection).sendGet(any());
+
+        var exception = assertThrows(RuntimeException.class,
+                                     () -> mockedHandler.handleRequest(mockSqsEvent, mockContext));
+
+        assertThat(exception.getMessage(), containsString("General error:"));
+    }
+
     private SQSEvent createDummySqsEvent() {
         var sqsEvent = new SQSEvent();
         var sqsMessage = new SQSMessage();
@@ -212,6 +223,9 @@ public class UpdateAlmaDescriptionHandlerTest {
      */
     private String setup(String file) throws Exception {
         var stream = DocumentXmlParserTest.class.getResourceAsStream(file);
+        if (stream == null) {
+            throw new RuntimeException("Cannot find resource " + file);
+        }
         var reader = new InputStreamReader(stream);
         var br = new BufferedReader(reader);
         String line;
