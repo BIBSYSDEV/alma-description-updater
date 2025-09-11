@@ -3,19 +3,17 @@ package no.unit.alma;
 import com.amazonaws.services.lambda.runtime.Context;
 import com.amazonaws.services.lambda.runtime.RequestHandler;
 import com.amazonaws.services.lambda.runtime.events.SQSEvent;
-import com.google.gson.Gson;
 import com.google.gson.GsonBuilder;
 import com.google.gson.reflect.TypeToken;
-import java.io.BufferedReader;
 import java.io.IOException;
-import java.io.InputStreamReader;
-import java.lang.reflect.Type;
-import java.net.URL;
 import java.net.http.HttpResponse;
+import java.util.Collections;
 import java.util.List;
-import java.util.stream.Collectors;
 import no.unit.exceptions.ParsingException;
 import no.unit.exceptions.SchedulerException;
+import no.unit.http.AlmaProxyConnectionFactory;
+import no.unit.http.GetConnection;
+import no.unit.http.GetConnectionFactory;
 import no.unit.marc.Reference;
 import no.unit.scheduler.SchedulerHelper;
 import no.unit.scheduler.UpdateItem;
@@ -27,22 +25,32 @@ import software.amazon.awssdk.http.HttpStatusCode;
 
 public class UpdateAlmaDescriptionHandler implements RequestHandler<SQSEvent, Void> {
 
-    private final transient Config config;
     private final transient AlmaClient almaClient;
-    private final transient SchedulerHelper schedulerHelper = new SchedulerHelper();
-    private final transient DocumentXmlParser xmlParser = new DocumentXmlParser();
+    private final transient SchedulerHelper schedulerHelper;
+    private final transient DocumentXmlParser xmlParser;
     private final transient IsbnConverter isbnConverter;
+    private final transient GetConnection almaSruConnection;
 
     @SuppressWarnings("unused")
     @JacocoGenerated
     public UpdateAlmaDescriptionHandler() {
-        this(new Config(), new AlmaClient(), new IsbnConverter());
+        this(new AlmaClient(),
+             new SchedulerHelper(),
+             new DocumentXmlParser(),
+             new IsbnConverter(),
+             new AlmaProxyConnectionFactory());
     }
 
-    public UpdateAlmaDescriptionHandler(Config config, AlmaClient almaClient, IsbnConverter isbnConverter) {
-        this.config = config;
+    public UpdateAlmaDescriptionHandler(AlmaClient almaClient,
+                                        SchedulerHelper schedulerHelper,
+                                        DocumentXmlParser xmlParser,
+                                        IsbnConverter isbnConverter,
+                                        GetConnectionFactory almaSruConnectionFactory) {
         this.almaClient = almaClient;
+        this.schedulerHelper = schedulerHelper;
+        this.xmlParser = xmlParser;
         this.isbnConverter = isbnConverter;
+        this.almaSruConnection = almaSruConnectionFactory.create();
     }
 
     /**
@@ -194,30 +202,30 @@ public class UpdateAlmaDescriptionHandler implements RequestHandler<SQSEvent, Vo
     }
 
     /**
-     * Retrieve a list of referenceobjects based on the isbn you enter.
-     * @param isbn The isbn you wish to retrieve refrenceobjects based on.
+     * Retrieve a list of reference objects based on the isbn you enter.
+     * @param isbn The isbn you wish to retrieve refrence objects based on.
      * @return A list of reference objects matching the isbn, this list will usually contain only one reference object.
      * @throws IOException when something goes wrong
+     * @throws InterruptedException when something goes wrong
      */
-    @SuppressWarnings("PMD.ReturnEmptyCollectionRatherThanNull")
-    private List<Reference> getReferenceListByIsbn(String isbn) throws IOException {
-        URL theURL = new URL(config.getAlmaSruHost() + isbn);
-        try (InputStreamReader streamReader = new InputStreamReader(theURL.openStream())) {
-            String referenceString = new BufferedReader(streamReader)
-                                         .lines()
-                                         .collect(Collectors.joining(System.lineSeparator()));
-            streamReader.close();
-            if (referenceString.isEmpty()) {
-                return null;
-            }
-            List<Reference> referenceList;
-            GsonBuilder gsonBuilder = new GsonBuilder();
-            Gson gson = gsonBuilder.create();
-            Type listOfMyClassObject = new TypeToken<List<Reference>>() {
-            }.getType();
-            referenceList = gson.fromJson(referenceString, listOfMyClassObject);
-            return referenceList;
+    private List<Reference> getReferenceListByIsbn(String isbn) throws IOException, InterruptedException {
+        var almaSruResponse = fetchFromAlmaSruProxy(isbn);
+        if (almaSruResponse.statusCode() != HttpStatusCode.OK) {
+            return Collections.emptyList();
         }
+
+        return createReferenceListFromAlmaSruProxyResponse(almaSruResponse.body());
+    }
+
+    private HttpResponse<String> fetchFromAlmaSruProxy(String isbn) throws IOException, InterruptedException {
+        return almaSruConnection.sendGet(isbn);
+    }
+
+    private List<Reference> createReferenceListFromAlmaSruProxyResponse(String response) {
+        var gsonBuilder = new GsonBuilder();
+        var gson = gsonBuilder.create();
+        var listOfMyClassObject = new TypeToken<List<Reference>>() {}.getType();
+        return gson.fromJson(response, listOfMyClassObject);
     }
 
 }

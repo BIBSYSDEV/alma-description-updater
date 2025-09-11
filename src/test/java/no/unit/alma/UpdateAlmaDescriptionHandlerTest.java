@@ -1,111 +1,211 @@
 package no.unit.alma;
 
-
+import com.amazonaws.services.lambda.runtime.Context;
+import com.amazonaws.services.lambda.runtime.events.SQSEvent;
+import com.amazonaws.services.lambda.runtime.events.SQSEvent.SQSMessage;
 import com.google.gson.Gson;
-import java.net.http.HttpClient;
-import no.unit.http.AlmaConnection;
-import no.unit.http.ConnectionFactory;
-import no.unit.http.HttpClientFactory;
+import java.net.http.HttpResponse;
+import no.unit.http.GetConnection;
+import no.unit.http.GetConnectionFactory;
+import no.unit.scheduler.SchedulerHelper;
 import no.unit.scheduler.UpdateItem;
-import nva.commons.core.Environment;
 import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.Test;
 
-
 import java.io.BufferedReader;
-import java.io.InputStream;
 import java.io.InputStreamReader;
 import java.util.ArrayList;
 import java.util.List;
-import org.mockito.InjectMocks;
+import org.mockito.ArgumentCaptor;
 import org.mockito.Mock;
 import org.mockito.MockitoAnnotations;
 
+import static java.net.HttpURLConnection.HTTP_OK;
+import static java.net.HttpURLConnection.HTTP_UNAVAILABLE;
+import static org.hamcrest.MatcherAssert.assertThat;
+import static org.hamcrest.Matchers.containsInAnyOrder;
+import static org.hamcrest.Matchers.equalTo;
 import static org.junit.jupiter.api.Assertions.assertEquals;
+import static org.mockito.ArgumentMatchers.any;
+import static org.mockito.Mockito.doNothing;
 import static org.mockito.Mockito.doReturn;
 import static org.mockito.Mockito.mock;
-import static org.mockito.Mockito.when;
+import static org.mockito.Mockito.times;
+import static org.mockito.Mockito.verify;
 
 public class UpdateAlmaDescriptionHandlerTest {
 
-    public static final String CORRECT_XML_FILE = "/Mock_xml.xml";
-    public static final String UPDATED_XML_FILE = "/UpdatedGroupXml.xml";
-
-
-    @Mock
-    private Environment mockEnv;
+    private static final String CORRECT_XML_FILE = "/Mock_xml.xml";
+    private static final String UPDATED_XML_FILE = "/UpdatedGroupXml.xml";
+    public static final String ALMA_SRU_PROXY_RESPONSE_JSON = "/alma_sru_proxy_response.json";
+    public static final String ALMA_RESPONSE_MMS_ID_JSON = "/alma_response_mms_id.xml";
 
     @Mock
-    private HttpClientFactory mockHttpClientFactory;
+    private Context mockContext;
 
     @Mock
-    private ConnectionFactory mockConnectionFactory;
+    private SchedulerHelper mockSchedulerHelper;
 
-    @InjectMocks
-    private Config config;
+    @Mock
+    private GetConnection mockAlmaSruProxyConnection;
 
-    @InjectMocks
-    private AlmaConnection mockConnection;
+    @Mock
+    private GetConnectionFactory mockAlmaSruProxyFactory;
 
-    @InjectMocks
-    private AlmaClient almaClient;
+    @Mock
+    private AlmaClient mockAlmaClient;
 
     private UpdateAlmaDescriptionHandler mockedHandler;
 
-    private void initEnv() {
-        when(mockEnv.readEnv("ALLOWED_ORIGIN")).thenReturn("Allow-origins");
-        when(mockEnv.readEnv("ALMA_SRU_HOST")).thenReturn("Alma-sru-dot-com");
-        when(mockEnv.readEnv("ALMA_API_HOST")).thenReturn("Alma-api-dpot-com");
-    }
+    private SQSEvent mockSqsEvent;
 
     /**
      * Sets up a mock environment for use when testing.
      */
     @BeforeEach
     @SuppressWarnings("resource")
-    public void init() {
+    public void init() throws Exception {
         MockitoAnnotations.openMocks(this);
-        initEnv();
-        var mockHttpClient = mock(HttpClient.class);
-        doReturn(mockHttpClient).when(mockHttpClientFactory).create();
-        doReturn(mockConnection).when(mockConnectionFactory).create();
 
-        mockedHandler = new UpdateAlmaDescriptionHandler(config, almaClient, new IsbnConverter());
+        mockSqsEvent = createDummySqsEvent();
+
+        doNothing().when(mockSchedulerHelper).writeToDLQ(any());
+        var updateItems = createUpdateItemList();
+        doReturn(updateItems).when(mockSchedulerHelper).splitEventIntoUpdateItems(any());
+
+        var almaSruProxyResponsePayload = setup(ALMA_SRU_PROXY_RESPONSE_JSON);
+        var mockAlmaSruProxyHttpResponse = mock(HttpResponse.class);
+        doReturn(almaSruProxyResponsePayload).when(mockAlmaSruProxyHttpResponse).body();
+        doReturn(HTTP_OK).when(mockAlmaSruProxyHttpResponse).statusCode();
+        doReturn(mockAlmaSruProxyHttpResponse).when(mockAlmaSruProxyConnection).sendGet(any());
+        doReturn(mockAlmaSruProxyConnection).when(mockAlmaSruProxyFactory).create();
+
+        var almaResponsePayload = setup(ALMA_RESPONSE_MMS_ID_JSON);
+        var mockAlmaHttpResponse = mock(HttpResponse.class);
+        doReturn(almaResponsePayload).when(mockAlmaHttpResponse).body();
+        doReturn(HTTP_OK).when(mockAlmaHttpResponse).statusCode();
+        doReturn(mockAlmaHttpResponse).when(mockAlmaClient).getBibRecordFromAlmaWithRetries(any());
+
+        doReturn(mockAlmaHttpResponse).when(mockAlmaClient).putBibRecordInAlmaWithRetries(any(), any());
+
+        mockedHandler = new UpdateAlmaDescriptionHandler(mockAlmaClient,
+                                                         mockSchedulerHelper,
+                                                         new DocumentXmlParser(),
+                                                         new IsbnConverter(),
+                                                         mockAlmaSruProxyFactory);
+    }
+
+    @Test
+    public void shouldUpdateBibRecordAndSkipTheUpdatesThatAreEqual() throws Exception {
+        var gson = new Gson();
+        var mockXml = setup(CORRECT_XML_FILE);
+        var item1String = "{isbn: 1234, link: 1234_small_1234.jpg, specifiedMaterial: Small_coverFoto}";
+        var item2String = "{isbn: 1234, link: 1234_large_1234.jpg, specifiedMaterial: Large_coverFoto}";
+        var item1 = gson.fromJson(item1String, UpdateItem.class);
+        var item2 = gson.fromJson(item2String, UpdateItem.class);
+        var updateItemList = new ArrayList<UpdateItem>();
+        updateItemList.add(item1);
+        updateItemList.add(item1);
+        updateItemList.add(item2);
+        var mockUpdatedXml = setup(UPDATED_XML_FILE);
+
+        var updatedXml = mockedHandler.updateBibRecord(updateItemList, mockXml);
+
+        assertEquals(mockUpdatedXml, updatedXml);
+    }
+
+    @Test
+    public void shouldHandleSqsEventWithoutError() throws Exception {
+        var response = mockedHandler.handleRequest(mockSqsEvent, mockContext);
+
+        verify(mockSchedulerHelper, times(0)).writeToDLQ(any());
+        assertThat(response, equalTo(null));
+    }
+
+    @Test
+    public void shouldReturnNullAndWriteToDlqWhenFetchFromAlmaSruProxyFailsHavingTriedBothIsbn13AndIsbn10()
+        throws Exception {
+
+        var failedHttpResponse = mock(HttpResponse.class);
+        doReturn(HTTP_UNAVAILABLE).when(failedHttpResponse).statusCode();
+        var captor = ArgumentCaptor.forClass(String.class);
+        doReturn(failedHttpResponse).when(mockAlmaSruProxyConnection).sendGet(captor.capture());
+
+        var response = mockedHandler.handleRequest(mockSqsEvent, mockContext);
+
+        assertThat(captor.getAllValues(), containsInAnyOrder("9788210053412", "8210053418"));
+        verify(mockSchedulerHelper, times(1)).writeToDLQ(any());
+        assertThat(response, equalTo(null));
+    }
+
+    private SQSEvent createDummySqsEvent() {
+        var sqsEvent = new SQSEvent();
+        var sqsMessage = new SQSMessage();
+        sqsMessage.setMessageId("sqsMessageId");
+        sqsMessage.setBody("sqsBody");
+        sqsEvent.setRecords(List.of(sqsMessage));
+
+        return sqsEvent;
     }
 
     /**
-     * A helper method that returnes a string from a source.
+     * A helper method that returns a string from a source.
      * @param file The file/source you want to retrieve the string from.
      * @return A string-value representing the content of the source.
      * @throws Exception when something goes wrong.
      */
-    public String setup(String file) throws Exception {
-        InputStream stream = DocumentXmlParserTest.class.getResourceAsStream(file);
-        InputStreamReader reader = new InputStreamReader(stream);
-        BufferedReader br = new BufferedReader(reader);
+    private String setup(String file) throws Exception {
+        var stream = DocumentXmlParserTest.class.getResourceAsStream(file);
+        var reader = new InputStreamReader(stream);
+        var br = new BufferedReader(reader);
         String line;
-        StringBuilder sb = new StringBuilder();
+        var sb = new StringBuilder();
         while ((line = br.readLine()) != null) {
             sb.append(line.trim());
         }
         return sb.toString();
     }
 
-    @Test
-    public void updateBibRecordTest() throws Exception {
-        Gson g = new Gson();
-        String mockXml = setup(CORRECT_XML_FILE);
-        String mockUpdatedXml = setup(UPDATED_XML_FILE);
-        String item1String = "{isbn: 1234, link: 1234_small_1234.jpg, specifiedMaterial: Small_coverFoto}";
-        String item2String = "{isbn: 1234, link: 1234_large_1234.jpg, specifiedMaterial: Large_coverFoto}";
-        UpdateItem item1 = g.fromJson(item1String, UpdateItem.class);
-        UpdateItem item2 = g.fromJson(item2String, UpdateItem.class);
-        List<UpdateItem> updateItemList = new ArrayList<>();
-        updateItemList.add(item1);
-        updateItemList.add(item2);
-        String updatedXml = mockedHandler.updateBibRecord(updateItemList, mockXml);
-        assertEquals(mockUpdatedXml, updatedXml);
-    }
+    private List<UpdateItem> createUpdateItemList() {
+        var updateItems = new ArrayList<UpdateItem>();
 
+        updateItems.add(
+            new UpdateItem("9788210053412",
+                           "content-url-com/content/?isbn=9788210053412",
+                           "Forlagets beskrivelse (kort)")
+        );
+        updateItems.add(
+            new UpdateItem("9788210053412",
+                           "content-url-com/content/?isbn=9788210053412",
+                           "Forlagets beskrivelse (lang)")
+        );
+        updateItems.add(
+            new UpdateItem("9788210053412",
+                           "content-url-com/content/?isbn=9788210053412",
+                           "Innholdsfortegnelse")
+        );
+        updateItems.add(
+            new UpdateItem("9788210053412",
+                           "content-url-com/files/images/small/2/1/9788210053412.jpg",
+                           "Miniatyrbilde")
+        );
+        updateItems.add(
+            new UpdateItem("9788210053412",
+                           "content-url-com/files/images/large/2/1/9788210053412.jpg",
+                           "Omslagsbilde")
+        );
+        updateItems.add(
+            new UpdateItem("9788210053412",
+                            "content-url-com/files/images/original/2/1/9788210053412.jpg",
+                            "Originalt bilde")
+        );
+        updateItems.add(
+            new UpdateItem("9788210053412",
+                           "content-url-com/files/audio/mp3/2/1/9788210053412.mp3",
+                           "Lydfil")
+        );
+
+        return updateItems;
+    }
 
 }

@@ -1,6 +1,5 @@
 package no.unit.scheduler;
 
-
 import com.fasterxml.jackson.databind.ObjectMapper;
 import java.util.List;
 import no.unit.alma.DocumentXmlParserTest;
@@ -100,14 +99,14 @@ class SchedulerHelperTest {
     void generateImageLinkTest() {
         UpdateItem payload = schedulerHelper.createImageLink(IMAGE_SIZE, ISBN);
         String expectedLink = String.format(CONTENT_URL_KEY + FILE_KEY + IMAGE_KEY + IMAGE_SIZE
-                + "/%s/%s/%s.jpg", 7, 4, ISBN);
+                                            + "/%s/%s/%s.jpg", 7, 4, ISBN);
         assertEquals(expectedLink, payload.getLink());
     }
 
     @Test
     void generateContentLinkTest() {
         UpdateItem payload = schedulerHelper.createContentLink(CONTENT_TYPE, ISBN);
-        String expectedLink = String.format(CONTENT_URL_KEY  + "content/" + "?isbn=" + ISBN);
+        String expectedLink = String.format(CONTENT_URL_KEY + "content/" + "?isbn=" + ISBN);
         assertEquals(expectedLink, payload.getLink());
     }
 
@@ -136,27 +135,27 @@ class SchedulerHelperTest {
         var payloadList = schedulerHelper.splitEventIntoUpdateItems(mockEvent);
 
         var expectedList = List.of(
-            createUpdateItem("9788210053412",
-                             "content-url-com/content/?isbn=9788210053412",
-                             "Forlagets beskrivelse (kort)"),
-            createUpdateItem("9788210053412",
-                             "content-url-com/content/?isbn=9788210053412",
-                             "Forlagets beskrivelse (lang)"),
-            createUpdateItem("9788210053412",
-                             "content-url-com/content/?isbn=9788210053412",
-                             "Innholdsfortegnelse"),
-            createUpdateItem("9788210053412",
-                             "content-url-com/files/images/small/2/1/9788210053412.jpg",
-                             "Miniatyrbilde"),
-            createUpdateItem("9788210053412",
-                             "content-url-com/files/images/large/2/1/9788210053412.jpg",
-                             "Omslagsbilde"),
-            createUpdateItem("9788210053412",
-                             "content-url-com/files/images/original/2/1/9788210053412.jpg",
-                             "Originalt bilde"),
-            createUpdateItem("9788210053412",
-                             "content-url-com/files/audio/mp3/2/1/9788210053412.mp3",
-                             "Lydfil")
+            new UpdateItem("9788210053412",
+                           "content-url-com/content/?isbn=9788210053412",
+                           "Forlagets beskrivelse (kort)"),
+            new UpdateItem("9788210053412",
+                           "content-url-com/content/?isbn=9788210053412",
+                           "Forlagets beskrivelse (lang)"),
+            new UpdateItem("9788210053412",
+                           "content-url-com/content/?isbn=9788210053412",
+                           "Innholdsfortegnelse"),
+            new UpdateItem("9788210053412",
+                           "content-url-com/files/images/small/2/1/9788210053412.jpg",
+                           "Miniatyrbilde"),
+            new UpdateItem("9788210053412",
+                           "content-url-com/files/images/large/2/1/9788210053412.jpg",
+                           "Omslagsbilde"),
+            new UpdateItem("9788210053412",
+                           "content-url-com/files/images/original/2/1/9788210053412.jpg",
+                           "Originalt bilde"),
+            new UpdateItem("9788210053412",
+                           "content-url-com/files/audio/mp3/2/1/9788210053412.mp3",
+                           "Lydfil")
         );
 
         assertThat(payloadList, containsInAnyOrder(expectedList.toArray()));
@@ -169,27 +168,27 @@ class SchedulerHelperTest {
         var payloadList = schedulerHelper.splitEventIntoUpdateItems(mockEvent);
 
         var expectedList = List.of(
-            createUpdateItem("9788210053412",
-                             "content-url-com/content/?isbn=9788210053412",
-                             "Forlagets beskrivelse (kort)"),
-            createUpdateItem("9788210053412",
-                             "content-url-com/content/?isbn=9788210053412",
-                             "Forlagets beskrivelse (lang)"),
-            createUpdateItem("9788210053412",
-                             "content-url-com/content/?isbn=9788210053412",
-                             "Innholdsfortegnelse"),
-            createUpdateItem("9788210053412",
-                             "content-url-com/files/images/small/2/1/9788210053412.jpg",
-                             "Miniatyrbilde"),
-            createUpdateItem("9788210053412",
-                             "content-url-com/files/images/large/2/1/9788210053412.jpg",
-                             "Omslagsbilde"),
-            createUpdateItem("9788210053412",
-                             "content-url-com/files/images/original/2/1/9788210053412.jpg",
-                             "Originalt bilde"),
-            createUpdateItem("9788210053412",
-                             "content-url-com/files/audio/mp3/2/1/9788210053412.mp3",
-                             "Lydfil")
+            new UpdateItem("9788210053412",
+                           "content-url-com/content/?isbn=9788210053412",
+                           "Forlagets beskrivelse (kort)"),
+            new UpdateItem("9788210053412",
+                           "content-url-com/content/?isbn=9788210053412",
+                           "Forlagets beskrivelse (lang)"),
+            new UpdateItem("9788210053412",
+                           "content-url-com/content/?isbn=9788210053412",
+                           "Innholdsfortegnelse"),
+            new UpdateItem("9788210053412",
+                           "content-url-com/files/images/small/2/1/9788210053412.jpg",
+                           "Miniatyrbilde"),
+            new UpdateItem("9788210053412",
+                           "content-url-com/files/images/large/2/1/9788210053412.jpg",
+                           "Omslagsbilde"),
+            new UpdateItem("9788210053412",
+                           "content-url-com/files/images/original/2/1/9788210053412.jpg",
+                           "Originalt bilde"),
+            new UpdateItem("9788210053412",
+                           "content-url-com/files/audio/mp3/2/1/9788210053412.mp3",
+                           "Lydfil")
         );
 
         assertThat(payloadList, containsInAnyOrder(expectedList.toArray()));
@@ -231,14 +230,4 @@ class SchedulerHelperTest {
 
         assertThrows(SchedulerException.class, () -> schedulerHelper.writeToDLQ("message"));
     }
-
-    private UpdateItem createUpdateItem(String isbn, String link, String specifiedMaterial) {
-        var  updateItem = new UpdateItem();
-        updateItem.setIsbn(isbn);
-        updateItem.setLink(link);
-        updateItem.setSpecifiedMaterial(specifiedMaterial);
-
-        return updateItem;
-    }
-
 }

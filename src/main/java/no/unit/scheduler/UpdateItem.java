@@ -10,6 +10,16 @@ public class UpdateItem {
     private String link;
     private String specifiedMaterial;
 
+    public UpdateItem() {
+
+    }
+
+    public UpdateItem(String isbn, String link, String specifiedMaterial) {
+        this.isbn = isbn;
+        this.link = link;
+        this.specifiedMaterial = specifiedMaterial;
+    }
+
     @JacocoGenerated
     public String getIsbn() {
         return isbn;

@@ -29,6 +29,7 @@ class IsbnConverterTest {
         assertEquals("1292101768", isbnConverter.convertIsbn("9781292101767"));
         assertEquals("074754624X", isbnConverter.convertIsbn("9780747546245"));
         assertEquals("0345391810", isbnConverter.convertIsbn("9780345391810"));
+        assertEquals("8210053418", isbnConverter.convertIsbn("9788210053412"));
     }
 
     @Test
