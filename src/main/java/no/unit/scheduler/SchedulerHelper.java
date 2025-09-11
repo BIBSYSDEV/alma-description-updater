@@ -6,6 +6,7 @@ import no.unit.aws.DefaultSqsClientFactory;
 import no.unit.aws.SqsClientFactory;
 import no.unit.exceptions.SchedulerException;
 import nva.commons.core.Environment;
+import nva.commons.core.JacocoGenerated;
 import software.amazon.awssdk.services.sqs.SqsClient;
 import software.amazon.awssdk.services.sqs.model.SendMessageRequest;
 
@@ -39,14 +40,14 @@ public class SchedulerHelper {
     private final transient Environment envHandler;
     private final transient SqsClient sqsClient;
 
+    @JacocoGenerated
+    public SchedulerHelper() {
+        this(new Environment(), new DefaultSqsClientFactory());
+    }
 
     public SchedulerHelper(Environment envHandler, SqsClientFactory sqsClientFactory) {
         this.envHandler = envHandler;
         this.sqsClient = sqsClientFactory.create();
-    }
-
-    public SchedulerHelper() {
-        this(new Environment(), new DefaultSqsClientFactory());
     }
 
 

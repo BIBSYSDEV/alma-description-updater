@@ -11,7 +11,7 @@ public class DefaultSqsClientFactoryTest {
     public void shouldCreateSqsClientFromFactory() {
         SqsClientFactory factory = new DefaultSqsClientFactory();
 
-        assertThat(factory.createSqsClient(), instanceOf(SqsClient.class));
+        assertThat(factory.create(), instanceOf(SqsClient.class));
     }
 
 }

@@ -1,7 +1,6 @@
-package no.unit.alma;
+package no.unit.http;
 
-import no.unit.http.AlmaConnection;
-import no.unit.http.HttpClientFactory;
+import no.unit.alma.Config;
 import nva.commons.core.Environment;
 import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.Test;
