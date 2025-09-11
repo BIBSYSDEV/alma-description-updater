@@ -5,6 +5,7 @@ import com.amazonaws.services.lambda.runtime.events.SQSEvent;
 import com.amazonaws.services.lambda.runtime.events.SQSEvent.SQSMessage;
 import com.google.gson.Gson;
 import java.net.http.HttpResponse;
+import java.util.Collections;
 import no.unit.http.GetConnection;
 import no.unit.http.GetConnectionFactory;
 import no.unit.scheduler.SchedulerHelper;
@@ -22,7 +23,6 @@ import org.mockito.MockitoAnnotations;
 
 import static java.net.HttpURLConnection.HTTP_OK;
 import static java.net.HttpURLConnection.HTTP_UNAVAILABLE;
-import static java.util.Collections.EMPTY_LIST;
 import static org.hamcrest.MatcherAssert.assertThat;
 import static org.hamcrest.Matchers.containsInAnyOrder;
 import static org.hamcrest.Matchers.containsString;
@@ -157,6 +157,22 @@ public class UpdateAlmaDescriptionHandlerTest {
     }
 
     @Test
+    public void shouldSkipUsingConvertedIsbnWhenFetchConvertedIsbnFromSruProxyFails()
+        throws Exception {
+
+        var failedHttpResponse = mock(HttpResponse.class);
+        doReturn(HTTP_UNAVAILABLE).when(failedHttpResponse).statusCode();
+        doReturn(failedHttpResponse).when(mockAlmaSruProxyConnection).sendGet("8210053418");
+
+        final var response = mockedHandler.handleRequest(mockSqsEvent, mockContext);
+
+        verify(mockSchedulerHelper, times(0)).writeToDLQ(any());
+        verify(mockAlmaClient, times(1)).getBibRecordFromAlmaWithRetries(any());
+        verify(mockAlmaClient, times(1)).putBibRecordInAlmaWithRetries(any(), any());
+        assertThat(response, equalTo(null));
+    }
+
+    @Test
     public void shouldHandleErrorWhenCreatingUpdateItemsFails() {
         doThrow(RuntimeException.class).when(mockSchedulerHelper).splitEventIntoUpdateItems(any());
 
@@ -168,7 +184,7 @@ public class UpdateAlmaDescriptionHandlerTest {
 
     @Test
     public void shouldNotUpdateWhenUpdateItemContainsDataWeDoNotWantToUpdate() throws Exception {
-        doReturn(EMPTY_LIST).when(mockSchedulerHelper).splitEventIntoUpdateItems(any());
+        doReturn(Collections.emptyList()).when(mockSchedulerHelper).splitEventIntoUpdateItems(any());
 
         final var response = mockedHandler.handleRequest(mockSqsEvent, mockContext);
 

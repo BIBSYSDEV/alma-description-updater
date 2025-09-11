@@ -225,6 +225,7 @@ public class UpdateAlmaDescriptionHandler implements RequestHandler<SQSEvent, Vo
         var gsonBuilder = new GsonBuilder();
         var gson = gsonBuilder.create();
         var listOfMyClassObject = new TypeToken<List<Reference>>() {}.getType();
+
         return gson.fromJson(response, listOfMyClassObject);
     }
 
