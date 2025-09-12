@@ -12,8 +12,8 @@ import java.util.List;
 import no.unit.exceptions.ParsingException;
 import no.unit.exceptions.SchedulerException;
 import no.unit.http.AlmaProxyConnectionFactory;
-import no.unit.http.GetConnection;
-import no.unit.http.GetConnectionFactory;
+import no.unit.http.ReadConnection;
+import no.unit.http.ReadConnectionFactory;
 import no.unit.marc.Reference;
 import no.unit.scheduler.SchedulerHelper;
 import no.unit.scheduler.UpdateItem;
@@ -29,7 +29,7 @@ public class UpdateAlmaDescriptionHandler implements RequestHandler<SQSEvent, Vo
     private final transient SchedulerHelper schedulerHelper;
     private final transient DocumentXmlParser xmlParser;
     private final transient IsbnConverter isbnConverter;
-    private final transient GetConnection almaSruProxyConnection;
+    private final transient ReadConnection almaProxyConnection;
 
     @SuppressWarnings("unused")
     @JacocoGenerated
@@ -45,12 +45,12 @@ public class UpdateAlmaDescriptionHandler implements RequestHandler<SQSEvent, Vo
                                         SchedulerHelper schedulerHelper,
                                         DocumentXmlParser xmlParser,
                                         IsbnConverter isbnConverter,
-                                        GetConnectionFactory almaSruProxyConnectionFactory) {
+                                        ReadConnectionFactory almaProxyConnectionFactory) {
         this.almaClient = almaClient;
         this.schedulerHelper = schedulerHelper;
         this.xmlParser = xmlParser;
         this.isbnConverter = isbnConverter;
-        this.almaSruProxyConnection = almaSruProxyConnectionFactory.create();
+        this.almaProxyConnection = almaProxyConnectionFactory.create();
     }
 
     /**
@@ -218,7 +218,7 @@ public class UpdateAlmaDescriptionHandler implements RequestHandler<SQSEvent, Vo
     }
 
     private HttpResponse<String> fetchFromAlmaSruProxy(String isbn) throws IOException, InterruptedException {
-        return almaSruProxyConnection.sendGet(isbn);
+        return almaProxyConnection.sendGet(isbn);
     }
 
     private List<Reference> createReferenceListFromAlmaSruProxyResponse(String response) {

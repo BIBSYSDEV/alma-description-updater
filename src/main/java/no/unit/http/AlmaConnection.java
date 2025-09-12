@@ -7,7 +7,7 @@ import java.net.http.HttpRequest;
 import java.net.http.HttpResponse;
 import no.unit.alma.Config;
 
-public final class AlmaConnection implements Connection {
+public final class AlmaConnection implements ReadUpdateConnection {
 
     private static final String AUTHORIZATION = "Authorization";
     private static final String AUTHORIZATION_KEY = "apikey ";

@@ -7,8 +7,8 @@ import com.google.gson.Gson;
 import java.io.IOException;
 import java.net.http.HttpResponse;
 import java.util.Collections;
-import no.unit.http.GetConnection;
-import no.unit.http.GetConnectionFactory;
+import no.unit.http.ReadConnection;
+import no.unit.http.ReadConnectionFactory;
 import no.unit.scheduler.SchedulerHelper;
 import no.unit.scheduler.UpdateItem;
 import org.junit.jupiter.api.BeforeEach;
@@ -52,10 +52,10 @@ public class UpdateAlmaDescriptionHandlerTest {
     private SchedulerHelper mockSchedulerHelper;
 
     @Mock
-    private GetConnection mockAlmaSruProxyConnection;
+    private ReadConnection mockAlmaSruProxyConnection;
 
     @Mock
-    private GetConnectionFactory mockAlmaSruProxyFactory;
+    private ReadConnectionFactory mockAlmaSruProxyFactory;
 
     @Mock
     private AlmaClient mockAlmaClient;

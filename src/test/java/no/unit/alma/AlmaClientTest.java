@@ -14,8 +14,8 @@ import static org.mockito.Mockito.times;
 import static org.mockito.Mockito.verify;
 import java.io.IOException;
 import java.net.http.HttpResponse;
-import no.unit.http.Connection;
-import no.unit.http.ConnectionFactory;
+import no.unit.http.ReadUpdateConnection;
+import no.unit.http.ReadUpdateConnectionFactory;
 import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.Test;
 import org.mockito.InjectMocks;
@@ -29,13 +29,13 @@ class AlmaClientTest {
     private static final Integer retryIntervalInSeconds = 0;
 
     @Mock
-    private Connection mockConnection;
+    private ReadUpdateConnection mockConnection;
 
     @Mock
     private HttpResponse<String> mockHttpResponse;
 
     @Mock
-    private ConnectionFactory mockConnectionFactory;
+    private ReadUpdateConnectionFactory mockConnectionFactory;
 
     @InjectMocks
     private AlmaClient almaClient;

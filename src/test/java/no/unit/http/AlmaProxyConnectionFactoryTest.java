@@ -18,7 +18,7 @@ class AlmaProxyConnectionFactoryTest {
     @Mock
     private HttpClientFactory mockHttpClientFactory;
 
-    private GetConnectionFactory almaProxyConnectionFactory;
+    private ReadConnectionFactory almaProxyConnectionFactory;
 
     @BeforeEach
     @SuppressWarnings("resource")

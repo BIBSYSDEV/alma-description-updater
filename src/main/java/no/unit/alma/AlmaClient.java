@@ -2,8 +2,8 @@ package no.unit.alma;
 
 import java.util.Optional;
 import no.unit.http.AlmaConnectionFactory;
-import no.unit.http.Connection;
-import no.unit.http.ConnectionFactory;
+import no.unit.http.ReadUpdateConnection;
+import no.unit.http.ReadUpdateConnectionFactory;
 import nva.commons.core.JacocoGenerated;
 import software.amazon.awssdk.http.HttpStatusCode;
 
@@ -15,7 +15,7 @@ public class AlmaClient {
 
     public static final int DEFAULT_RETRY_INTERVAL_IN_SECONDS = 3;
 
-    private final Connection connection;
+    private final ReadUpdateConnection connection;
     private final Integer retryIntervalInSeconds;
 
     @JacocoGenerated
@@ -23,8 +23,8 @@ public class AlmaClient {
         this(new AlmaConnectionFactory(), DEFAULT_RETRY_INTERVAL_IN_SECONDS);
     }
 
-    public AlmaClient(ConnectionFactory connectionFactory, Integer retryIntervalInSeconds) {
-        this.connection = connectionFactory.create();
+    public AlmaClient(ReadUpdateConnectionFactory readUpdateConnectionFactory, Integer retryIntervalInSeconds) {
+        this.connection = readUpdateConnectionFactory.create();
         this.retryIntervalInSeconds = Optional.ofNullable(retryIntervalInSeconds)
                                           .orElse(DEFAULT_RETRY_INTERVAL_IN_SECONDS);
     }

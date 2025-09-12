@@ -3,7 +3,7 @@ package no.unit.http;
 import no.unit.alma.Config;
 import nva.commons.core.JacocoGenerated;
 
-public class AlmaProxyConnectionFactory extends GetConnectionFactory {
+public class AlmaProxyConnectionFactory extends ReadConnectionFactory {
 
     private final Config config;
     private final HttpClientFactory httpClientFactory;
@@ -20,7 +20,7 @@ public class AlmaProxyConnectionFactory extends GetConnectionFactory {
     }
 
     @Override
-    protected GetConnection createGetConnection() {
+    protected ReadConnection createConnection() {
         return new AlmaProxyConnection(config, httpClientFactory);
     }
 

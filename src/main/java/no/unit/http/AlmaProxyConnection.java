@@ -8,7 +8,7 @@ import java.net.http.HttpResponse;
 import no.unit.alma.Config;
 import nva.commons.core.JacocoGenerated;
 
-public class AlmaProxyConnection implements GetConnection {
+public class AlmaProxyConnection implements ReadConnection {
 
     private final HttpClient httpClient;
     private final Config config;
