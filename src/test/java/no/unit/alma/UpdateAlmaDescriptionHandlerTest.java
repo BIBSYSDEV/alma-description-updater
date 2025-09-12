@@ -28,6 +28,7 @@ import static org.hamcrest.MatcherAssert.assertThat;
 import static org.hamcrest.Matchers.containsInAnyOrder;
 import static org.hamcrest.Matchers.containsString;
 import static org.hamcrest.Matchers.equalTo;
+import static org.hamcrest.Matchers.not;
 import static org.junit.jupiter.api.Assertions.assertEquals;
 import static org.junit.jupiter.api.Assertions.assertThrows;
 import static org.mockito.ArgumentMatchers.any;
@@ -44,6 +45,7 @@ public class UpdateAlmaDescriptionHandlerTest {
     private static final String UPDATED_XML_FILE = "/UpdatedGroupXml.xml";
     public static final String ALMA_SRU_PROXY_RESPONSE_JSON = "/alma_sru_proxy_response.json";
     public static final String ALMA_RESPONSE_MMS_ID_JSON = "/alma_response_mms_id.xml";
+    private static final String XML_TITLE = "<title>Hobbiten : Smaugs ødemark i bilder</title>";
 
     @Mock
     private Context mockContext;
@@ -203,6 +205,63 @@ public class UpdateAlmaDescriptionHandlerTest {
                                      () -> mockedHandler.handleRequest(mockSqsEvent, mockContext));
 
         assertThat(exception.getMessage(), containsString("General error:"));
+    }
+
+    @Test
+    public void shouldThrowExceptionWhenAllFetchFromAlmaReturnsStatusOtherThanOk() throws Exception {
+        var httpResponse = mock(HttpResponse.class);
+        doReturn(HTTP_UNAVAILABLE).when(httpResponse).statusCode();
+        doReturn(httpResponse)
+            .doReturn(httpResponse)
+            .when(mockAlmaClient).getBibRecordFromAlmaWithRetries(any());
+
+        var response = assertThrows(RuntimeException.class,
+                                    () -> mockedHandler.handleRequest(mockSqsEvent, mockContext));
+
+        assertThat(response.getMessage(), containsString("1 or more mms_id's did not go through with mms_id: "));
+        assertThat(response.getMessage(), containsString("Get failed"));
+    }
+
+    @Test
+    public void shouldThrowExceptionWhenAllUpdateInAlmaReturnsStatusOtherThanOk() throws Exception {
+        var httpResponse = mock(HttpResponse.class);
+        doReturn(HTTP_UNAVAILABLE).when(httpResponse).statusCode();
+        doReturn(httpResponse)
+            .doReturn(httpResponse)
+            .when(mockAlmaClient).putBibRecordInAlmaWithRetries(any(), any());
+
+        var response = assertThrows(RuntimeException.class,
+                                    () -> mockedHandler.handleRequest(mockSqsEvent, mockContext));
+
+        assertThat(response.getMessage(), containsString("1 or more mms_id's did not go through with mms_id: "));
+        assertThat(response.getMessage(), containsString("Get response"));
+        assertThat(response.getMessage(), containsString(XML_TITLE));
+        assertThat(response.getMessage(), not(containsString("Put response")));
+    }
+
+    @Test
+    public void shouldThrowExceptionWhenNotAllFetchAndUpdateSucceeds() throws Exception {
+        var httpResponseUnavailable = mock(HttpResponse.class);
+
+        var almaResponsePayload = setup(ALMA_RESPONSE_MMS_ID_JSON);
+        var almaOkHttpResponse = mock(HttpResponse.class);
+        doReturn(almaResponsePayload).when(almaOkHttpResponse).body();
+        doReturn(HTTP_OK).when(almaOkHttpResponse).statusCode();
+
+        doReturn(almaOkHttpResponse).when(mockAlmaClient).putBibRecordInAlmaWithRetries(any(), any());
+
+        doReturn(HTTP_UNAVAILABLE).when(httpResponseUnavailable).statusCode();
+        doReturn(httpResponseUnavailable)
+            .doReturn(almaOkHttpResponse)
+            .when(mockAlmaClient).getBibRecordFromAlmaWithRetries(any());
+
+        var response = assertThrows(RuntimeException.class,
+                                    () -> mockedHandler.handleRequest(mockSqsEvent, mockContext));
+
+        assertThat(response.getMessage(), containsString("1 or more mms_id's did not go through with mms_id: "));
+        assertThat(response.getMessage(), containsString("Get response"));
+        assertThat(response.getMessage(), containsString("Put response"));
+        assertThat(response.getMessage(), containsString(XML_TITLE));
     }
 
     private SQSEvent createDummySqsEvent() {

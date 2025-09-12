@@ -143,13 +143,16 @@ public class UpdateAlmaDescriptionHandler implements RequestHandler<SQSEvent, Vo
                 System.out.println("Completed the update in Alma for post with mms_id: " + mmsId);
                 sucessCounter++;
             }
+            // TODO: Potential bug here in that this condition only examines the last value of almaResponse and
+            //  response. If earlier iteration of for loop has data in these fields they will not be kept when this
+            //  condition is evaluated
             if (sucessCounter < referenceList.size()) {
-                if (almaResponse == null) {
+                if (almaResponse == null || almaResponse.statusCode() != HttpStatusCode.OK) {
                     throw new RuntimeException("1 or more mms_id's did not go through with mms_id: "
                             + updateItems.getFirst().getIsbn()
                             + System.lineSeparator() + "Get failed");
                 }
-                if (response == null) {
+                if (response == null || response.statusCode() != HttpStatusCode.OK) {
                     throw new RuntimeException("1 or more mms_id's did not go through with mms_id: "
                             + updateItems.getFirst().getIsbn()
                             + System.lineSeparator() + "Get response " + almaResponse.body());
