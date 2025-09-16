@@ -5,6 +5,8 @@ import no.unit.http.AlmaConnectionFactory;
 import no.unit.http.ReadUpdateConnection;
 import no.unit.http.ReadUpdateConnectionFactory;
 import nva.commons.core.JacocoGenerated;
+import org.slf4j.Logger;
+import org.slf4j.LoggerFactory;
 import software.amazon.awssdk.http.HttpStatusCode;
 
 import java.io.IOException;
@@ -12,6 +14,8 @@ import java.net.http.HttpResponse;
 import java.util.concurrent.TimeUnit;
 
 public class AlmaClient {
+
+    private static final Logger logger = LoggerFactory.getLogger(AlmaClient.class);
 
     public static final int DEFAULT_RETRY_INTERVAL_IN_SECONDS = 3;
 
@@ -68,7 +72,7 @@ public class AlmaClient {
             almaResponse = getBibRecordFromAlma(mmsId);
         } catch (InterruptedException | IOException e) {
             almaResponse = null; //NOPMD
-            System.err.println(e.getMessage());
+            logger.error(e.getMessage());
         }
 
         if (almaResponse != null && almaResponse.statusCode() == HttpStatusCode.OK) {
