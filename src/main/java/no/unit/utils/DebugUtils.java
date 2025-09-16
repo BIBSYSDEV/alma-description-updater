@@ -1,14 +1,16 @@
 package no.unit.utils;
 
-import nva.commons.core.JacocoGenerated;
-
 import java.io.PrintWriter;
 import java.io.StringWriter;
 
-public class DebugUtils {
+public final class DebugUtils {
 
     public static final String NEWLINE = "\n";
     public static final String CARRIAGE_RETURN = "\r";
+
+    private DebugUtils() {
+
+    }
 
     /**
      * Writes a stackTrace into a string.
@@ -23,7 +25,6 @@ public class DebugUtils {
      * From org.apache.commons.lang3.exception.ExceptionUtils.getStackTrace.
      * in org.apache.commons:commons-lang3:3.9
      */
-    @JacocoGenerated
     public static String getStackTrace(final Throwable throwable) {
         final StringWriter sw = new StringWriter();
         final PrintWriter pw = new PrintWriter(sw, true);

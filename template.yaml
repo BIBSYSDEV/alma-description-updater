@@ -160,6 +160,7 @@ Resources:
           ALMA_SRU_HOST: !Ref AlmaSruLambda
           STANDARD_CONTENT_URL: '{{resolve:ssm:contentsUrlStart:2}}'
           DLQ_QUEUE_URL: !Ref AlmaUpdateDLQ
+          ALMA_APIKEY: '{{resolve:secretsmanager:ALMA_APIKEY:SecretString:ALMA_APIKEY}}'
       Events:
         SQSQueueEvent:
           Type: SQS
