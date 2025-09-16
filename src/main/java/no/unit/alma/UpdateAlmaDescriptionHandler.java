@@ -19,11 +19,27 @@ import no.unit.scheduler.SchedulerHelper;
 import no.unit.scheduler.UpdateItem;
 import no.unit.utils.DebugUtils;
 import nva.commons.core.JacocoGenerated;
+import org.slf4j.Logger;
+import org.slf4j.LoggerFactory;
 import org.w3c.dom.Document;
 import software.amazon.awssdk.http.HttpStatusCode;
 
 
 public class UpdateAlmaDescriptionHandler implements RequestHandler<SQSEvent, Void> {
+
+    private static final Logger logger = LoggerFactory.getLogger(UpdateAlmaDescriptionHandler.class);
+
+    private static final String NO_ANSWER_FROM_SRU = "No answer from SRU for isbn: {}";
+    private static final String WRITING_TO_DLQ = "No answer from SRU for isbn: {} . Writing to DLQ";
+    private static final String FOUND_DIFFERENT_POSTS_FOR_THE_ISBN = "Found {} different posts for the isbn: {}";
+    private static final String ALMA_UPDATE_COMPLETE_FOR_MMS_ID =
+        "Completed the update in Alma for post with mms_id: {}";
+    public static final String ONE_ORE_MORE_MMS_IDS_FAILED = "1 or more mms_id's did not go through with mms_id: ";
+    public static final String GENERAL_ERROR = "General error: ";
+    public static final String GET_RESPONSE = "Get response ";
+    public static final String PUT_RESPONSE = "Put response: ";
+    public static final String GET_FAILED = "Get failed";
+    public static final String ERROR_PROCESSING_INPUT_EVENT = "Error while processing input event. ";
 
     private final transient AlmaClient almaClient;
     private final transient SchedulerHelper schedulerHelper;
@@ -79,7 +95,7 @@ public class UpdateAlmaDescriptionHandler implements RequestHandler<SQSEvent, Vo
         try {
             updateItems = schedulerHelper.splitEventIntoUpdateItems(event.getRecords().getFirst().getBody());
         } catch (Exception e) {
-            throw new RuntimeException("Error while processing input event. " + e.getMessage());
+            throw new RuntimeException(ERROR_PROCESSING_INPUT_EVENT + e.getMessage());
         }
 
         if (updateItems.isEmpty()) {
@@ -92,21 +108,18 @@ public class UpdateAlmaDescriptionHandler implements RequestHandler<SQSEvent, Vo
             /* Step 2. Get a REFERENCE LIST from alma-sru through a lambda. */
             List<Reference> referenceList = getReferenceListByIsbn(updateItems.getFirst().getIsbn());
             if (referenceList == null || referenceList.isEmpty()) {
-                System.out.println("No answer from SRU for isbn: " + updateItems.getFirst().getIsbn());
-                referenceList = getReferenceListByIsbn(isbnConverter.convertIsbn(updateItems.getFirst().getIsbn()));
+                logNoAnswerFromSru(updateItems);
+                referenceList = getReferenceListByIsbn(convertIsbnFromFirstElement(updateItems));
                 if (referenceList == null || referenceList.isEmpty()) {
-                    System.out.println("No answer from SRU for isbn: "
-                                       + isbnConverter.convertIsbn(updateItems.getFirst().getIsbn())
-                                       + ". Writing to DLQ");
+                    logger.info(WRITING_TO_DLQ, convertIsbnFromFirstElement(updateItems));
                     schedulerHelper.writeToDLQ(event.getRecords().getFirst().getBody());
                     return null;
                 }
             } else {
                 List<Reference> convertedIsbnList =
-                    getReferenceListByIsbn(isbnConverter.convertIsbn(updateItems.getFirst().getIsbn()));
+                    getReferenceListByIsbn(convertIsbnFromFirstElement(updateItems));
                 if (convertedIsbnList == null || convertedIsbnList.isEmpty()) {
-                    System.out.println("No answer from SRU for isbn: "
-                            + isbnConverter.convertIsbn(updateItems.getFirst().getIsbn()));
+                    logNoAnswerFromSru(updateItems);
                 } else {
                     referenceList.addAll(convertedIsbnList);
                 }
@@ -116,8 +129,7 @@ public class UpdateAlmaDescriptionHandler implements RequestHandler<SQSEvent, Vo
             HttpResponse<String> response = null;
             int sucessCounter = 0;
             /* 3. Loop through the LIST. */
-            System.out.println("Found " + referenceList.size() + " different posts for the isbn: "
-                    + updateItems.getFirst().getIsbn());
+            logger.info(FOUND_DIFFERENT_POSTS_FOR_THE_ISBN, referenceList.size(), updateItems.getFirst().getIsbn());
             for (Reference reference : referenceList) {
                 /* 3.1 Get the MMS_ID from the REFERENCE OBJECT. */
                 String mmsId = reference.getId();
@@ -140,7 +152,7 @@ public class UpdateAlmaDescriptionHandler implements RequestHandler<SQSEvent, Vo
                 if (response == null || response.statusCode() != HttpStatusCode.OK) {
                     continue;
                 }
-                System.out.println("Completed the update in Alma for post with mms_id: " + mmsId);
+                logger.info(ALMA_UPDATE_COMPLETE_FOR_MMS_ID, mmsId);
                 sucessCounter++;
             }
             // TODO: Potential bug here in that this condition only examines the last value of almaResponse and
@@ -148,26 +160,34 @@ public class UpdateAlmaDescriptionHandler implements RequestHandler<SQSEvent, Vo
             //  condition is evaluated
             if (sucessCounter < referenceList.size()) {
                 if (almaResponse == null || almaResponse.statusCode() != HttpStatusCode.OK) {
-                    throw new RuntimeException("1 or more mms_id's did not go through with mms_id: "
-                            + updateItems.getFirst().getIsbn()
-                            + System.lineSeparator() + "Get failed");
+                    throw new RuntimeException(ONE_ORE_MORE_MMS_IDS_FAILED
+                                               + updateItems.getFirst().getIsbn()
+                                               + System.lineSeparator() + GET_FAILED);
                 }
                 if (response == null || response.statusCode() != HttpStatusCode.OK) {
-                    throw new RuntimeException("1 or more mms_id's did not go through with mms_id: "
-                            + updateItems.getFirst().getIsbn()
-                            + System.lineSeparator() + "Get response " + almaResponse.body());
+                    throw new RuntimeException(ONE_ORE_MORE_MMS_IDS_FAILED
+                                               + updateItems.getFirst().getIsbn()
+                                               + System.lineSeparator() + GET_RESPONSE + almaResponse.body());
                 }
-                throw new RuntimeException("1 or more mms_id's did not go through with mms_id: "
-                        + updateItems.getFirst().getIsbn()
-                        + System.lineSeparator() + "Get response " + almaResponse.body()
-                        + "Put response: " + response.body());
+                throw new RuntimeException(ONE_ORE_MORE_MMS_IDS_FAILED
+                                           + updateItems.getFirst().getIsbn()
+                                           + System.lineSeparator() + GET_RESPONSE + almaResponse.body()
+                                           + PUT_RESPONSE + response.body());
             }
         } catch (ParsingException | IOException | IllegalArgumentException
                 | InterruptedException | SecurityException | SchedulerException e) {
             DebugUtils.dumpException(e);
-            throw new RuntimeException("General error: " + e.getMessage());
+            throw new RuntimeException(GENERAL_ERROR + e.getMessage());
         }
         return null;
+    }
+
+    private void logNoAnswerFromSru(List<UpdateItem> updateItems) {
+        logger.info(NO_ANSWER_FROM_SRU, convertIsbnFromFirstElement(updateItems));
+    }
+
+    private String convertIsbnFromFirstElement(List<UpdateItem> updateItems) {
+        return isbnConverter.convertIsbn(updateItems.getFirst().getIsbn());
     }
 
     /**
