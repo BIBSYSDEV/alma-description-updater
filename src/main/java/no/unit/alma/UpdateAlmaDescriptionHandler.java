@@ -106,20 +106,21 @@ public class UpdateAlmaDescriptionHandler implements RequestHandler<SQSEvent, Vo
 
         try {
             /* Step 2. Get a REFERENCE LIST from alma-sru through a lambda. */
-            List<Reference> referenceList = getReferenceListByIsbn(updateItems.getFirst().getIsbn());
+            var isbn = firstElementIsbn(updateItems);
+            var convertedIsbn = isbnConverter.convertIsbn(isbn);
+            List<Reference> referenceList = getReferenceListByIsbn(isbn);
             if (referenceList == null || referenceList.isEmpty()) {
-                logNoAnswerFromSru(updateItems);
-                referenceList = getReferenceListByIsbn(convertIsbnFromFirstElement(updateItems));
+                logNoAnswerFromSru(isbn);
+                referenceList = getReferenceListByIsbn(convertedIsbn);
                 if (referenceList == null || referenceList.isEmpty()) {
-                    logger.info(WRITING_TO_DLQ, convertIsbnFromFirstElement(updateItems));
+                    logger.info(WRITING_TO_DLQ, convertedIsbn);
                     schedulerHelper.writeToDLQ(event.getRecords().getFirst().getBody());
                     return null;
                 }
             } else {
-                List<Reference> convertedIsbnList =
-                    getReferenceListByIsbn(convertIsbnFromFirstElement(updateItems));
+                List<Reference> convertedIsbnList = getReferenceListByIsbn(convertedIsbn);
                 if (convertedIsbnList == null || convertedIsbnList.isEmpty()) {
-                    logNoAnswerFromSru(updateItems);
+                    logNoAnswerFromSru(convertedIsbn);
                 } else {
                     referenceList.addAll(convertedIsbnList);
                 }
@@ -129,7 +130,7 @@ public class UpdateAlmaDescriptionHandler implements RequestHandler<SQSEvent, Vo
             HttpResponse<String> response = null;
             int sucessCounter = 0;
             /* 3. Loop through the LIST. */
-            logger.info(FOUND_DIFFERENT_POSTS_FOR_THE_ISBN, referenceList.size(), updateItems.getFirst().getIsbn());
+            logger.info(FOUND_DIFFERENT_POSTS_FOR_THE_ISBN, referenceList.size(), isbn);
             for (Reference reference : referenceList) {
                 /* 3.1 Get the MMS_ID from the REFERENCE OBJECT. */
                 String mmsId = reference.getId();
@@ -161,16 +162,16 @@ public class UpdateAlmaDescriptionHandler implements RequestHandler<SQSEvent, Vo
             if (sucessCounter < referenceList.size()) {
                 if (almaResponse == null || almaResponse.statusCode() != HttpStatusCode.OK) {
                     throw new RuntimeException(ONE_ORE_MORE_MMS_IDS_FAILED
-                                               + updateItems.getFirst().getIsbn()
+                                               + isbn
                                                + System.lineSeparator() + GET_FAILED);
                 }
                 if (response == null || response.statusCode() != HttpStatusCode.OK) {
                     throw new RuntimeException(ONE_ORE_MORE_MMS_IDS_FAILED
-                                               + updateItems.getFirst().getIsbn()
+                                               + isbn
                                                + System.lineSeparator() + GET_RESPONSE + almaResponse.body());
                 }
                 throw new RuntimeException(ONE_ORE_MORE_MMS_IDS_FAILED
-                                           + updateItems.getFirst().getIsbn()
+                                           + isbn
                                            + System.lineSeparator() + GET_RESPONSE + almaResponse.body()
                                            + PUT_RESPONSE + response.body());
             }
@@ -182,12 +183,12 @@ public class UpdateAlmaDescriptionHandler implements RequestHandler<SQSEvent, Vo
         return null;
     }
 
-    private void logNoAnswerFromSru(List<UpdateItem> updateItems) {
-        logger.info(NO_ANSWER_FROM_SRU, convertIsbnFromFirstElement(updateItems));
+    private String firstElementIsbn(List<UpdateItem> updateItems) {
+        return updateItems.getFirst().getIsbn();
     }
 
-    private String convertIsbnFromFirstElement(List<UpdateItem> updateItems) {
-        return isbnConverter.convertIsbn(updateItems.getFirst().getIsbn());
+    private void logNoAnswerFromSru(String isbn) {
+        logger.info(NO_ANSWER_FROM_SRU, isbn);
     }
 
     /**
