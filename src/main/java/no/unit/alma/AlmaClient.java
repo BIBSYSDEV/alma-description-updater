@@ -40,32 +40,21 @@ public class AlmaClient {
     }
 
     /**
-     * Method to retry GET-calls to ALMA, sleeps for 3 seconds before retrying.
+     * Method to do GET-calls to ALMA with retries, sleeps for (n) seconds before retrying.
      * @param mmsId For identifying the record in ALMA.
      * @return HttpResponse with the ALMA response or null if failing.
+     * @throws InterruptedException when the sleep is interrupted.
      */
     public HttpResponse<String> getBibRecordFromAlmaWithRetries(String mmsId) throws InterruptedException {
-        for (int attempt = 1; attempt <= MAX_ATTEMPTS; attempt++) {
-            addDelayOnNewAttempts(attempt);
-            try {
-                var almaResponse = connection.sendGet(mmsId);
-
-                if (isSuccessful(almaResponse)) {
-                    logger.info(RETRIEVED_BIB_RECORD, mmsId);
-                    return almaResponse;
-                } else  {
-                    logger.error(ATTEMPT_FAILED_WITH_STATUS_CODE, attempt, almaResponse.statusCode());
-                }
-            } catch (InterruptedException | IOException e) {
-                logger.error(ATTEMPT_FAILED, attempt, e.getMessage());
-            }
-        }
-
-        return null;
+        return executeWithRetries(
+            () -> connection.sendGet(mmsId),
+            RETRIEVED_BIB_RECORD,
+            mmsId
+        );
     }
 
     /**
-     * Method to retry Put-calls to ALMA, sleeps for 3 seconds before retrying.
+     * Method to do PUT-calls to ALMA with retries, sleeps for (n) seconds before retrying.
      * @param mmsId For identifying the record in ALMA.
      * @return HttpResponse with the ALMA response or null if failing.
      * @throws InterruptedException when the sleep is interrupted.
@@ -73,18 +62,29 @@ public class AlmaClient {
     public HttpResponse<String> putBibRecordInAlmaWithRetries(String mmsId, String updatedRecord)
         throws InterruptedException {
 
+        return executeWithRetries(
+            () -> connection.sendPut(mmsId, updatedRecord),
+            UPDATED_BIB_RECORD,
+            mmsId
+        );
+    }
+
+    private HttpResponse<String> executeWithRetries(AlmaOperation operation, String successLogMessage, String mmsId)
+        throws InterruptedException {
+
         for (int attempt = 1; attempt <= MAX_ATTEMPTS; attempt++) {
             addDelayOnNewAttempts(attempt);
-            try {
-                var almaResponse = connection.sendPut(mmsId, updatedRecord);
 
-                if (isSuccessful(almaResponse)) {
-                    logger.info(UPDATED_BIB_RECORD, mmsId);
-                    return almaResponse;
-                } else  {
-                    logger.error(ATTEMPT_FAILED_WITH_STATUS_CODE, attempt, almaResponse.statusCode());
+            try {
+                var response = operation.execute();
+
+                if (isSuccessful(response)) {
+                    logger.info(successLogMessage, mmsId);
+                    return response;
+                } else {
+                    logger.error(ATTEMPT_FAILED_WITH_STATUS_CODE, attempt, response.statusCode());
                 }
-            } catch (InterruptedException | IOException e) {
+            } catch (IOException | InterruptedException e) {
                 logger.error(ATTEMPT_FAILED, attempt, e.getMessage());
             }
         }
