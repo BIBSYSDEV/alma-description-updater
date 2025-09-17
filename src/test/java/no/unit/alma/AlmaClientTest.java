@@ -268,4 +268,35 @@ class AlmaClientTest {
         assertNull(response);
     }
 
+    @Test
+    void shouldGiveUpGetFromAlmaAndReturnNullWhenThirdRetryGivesStatusOtherThan200() throws Exception {
+        doReturn(HTTP_UNAVAILABLE)
+            .doReturn(HTTP_UNAVAILABLE)
+            .doReturn(HTTP_UNAVAILABLE).when(mockHttpResponse).statusCode();
+
+        doReturn(mockHttpResponse)
+            .doReturn(mockHttpResponse)
+            .doReturn(mockHttpResponse)
+            .when(mockConnection).sendGet(any());
+
+        var response = almaClient.getBibRecordFromAlmaWithRetries(MMS_ID);
+
+        verify(mockConnection, times(3)).sendGet(MMS_ID);
+        assertNull(response);
+    }
+
+    @Test
+    void shouldGiveUpGetFromAlmaAndReturnNullWhenThirdRetryGivesError() throws Exception {
+        doThrow(IOException.class)
+            .doThrow(InterruptedException.class)
+            .doThrow(IOException.class)
+            .doReturn(mockHttpResponse)
+            .when(mockConnection).sendGet(any());
+
+        var response = almaClient.getBibRecordFromAlmaWithRetries(MMS_ID);
+
+        verify(mockConnection, times(3)).sendGet(MMS_ID);
+        assertNull(response);
+    }
+
 }

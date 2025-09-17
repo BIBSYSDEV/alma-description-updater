@@ -17,7 +17,11 @@ public class AlmaClient {
 
     private static final Logger logger = LoggerFactory.getLogger(AlmaClient.class);
 
-    public static final int DEFAULT_RETRY_INTERVAL_IN_SECONDS = 3;
+    private static final int DEFAULT_RETRY_INTERVAL_IN_SECONDS = 3;
+    private static final int MAX_RETRIES = 3;
+    private static final String RETRIEVED_BIB_RECORD = "Successfully retrieved Bib record with mms_id {} from Alma";
+    private static final String ATTEMPT_FAILED_WITH_STATUS_CODE = "Attempt {} failed with status code: {}";
+    private static final String ATTEMPT_FAILED = "Attempt {} failed: {}";
 
     private final ReadUpdateConnection connection;
     private final Integer retryIntervalInSeconds;
@@ -62,36 +66,34 @@ public class AlmaClient {
      * Method to retry GET-calls to ALMA, sleeps for 3 seconds before retrying.
      * @param mmsId For identifying the record in ALMA.
      * @return HttpResponse with the ALMA response or null if failing.
-     * @throws InterruptedException when the sleep is interrupted.
      */
-    public HttpResponse<String> getBibRecordFromAlmaWithRetries(String mmsId)
-            throws InterruptedException, IOException {
-        HttpResponse<String> almaResponse;
-        try {
+    public HttpResponse<String> getBibRecordFromAlmaWithRetries(String mmsId) throws InterruptedException {
+        for (int attempt = 1; attempt <= MAX_RETRIES; attempt++) {
+            addDelayOnNewAttempts(attempt);
+            try {
+                var almaResponse = getBibRecordFromAlma(mmsId);
 
-            almaResponse = getBibRecordFromAlma(mmsId);
-        } catch (InterruptedException | IOException e) {
-            almaResponse = null; //NOPMD
-            logger.error(e.getMessage());
+                if (isSuccessful(almaResponse)) {
+                    logger.info(RETRIEVED_BIB_RECORD, mmsId);
+                    return almaResponse;
+                } else  {
+                    logger.error(ATTEMPT_FAILED_WITH_STATUS_CODE, attempt, almaResponse.statusCode());
+                }
+            } catch (InterruptedException | IOException e) {
+                logger.error(ATTEMPT_FAILED, attempt, e.getMessage());
+            }
         }
 
-        if (almaResponse != null && almaResponse.statusCode() == HttpStatusCode.OK) {
-            return almaResponse;
-        } else {
+        return null;
+    }
 
+    private boolean isSuccessful(HttpResponse<String> almaResponse) {
+        return almaResponse != null && almaResponse.statusCode() == HttpStatusCode.OK;
+    }
+
+    private void addDelayOnNewAttempts(int attempt) throws InterruptedException {
+        if (attempt > 0) {
             TimeUnit.SECONDS.sleep(retryIntervalInSeconds);
-            try {
-                almaResponse = getBibRecordFromAlma(mmsId);
-            } catch (InterruptedException | IOException e) {
-                almaResponse = null; //NOPMD
-            }
-            if (almaResponse != null && almaResponse.statusCode() == HttpStatusCode.OK) {
-                return almaResponse;
-            } else {
-                TimeUnit.SECONDS.sleep(retryIntervalInSeconds);
-                almaResponse = getBibRecordFromAlma(mmsId);
-                return almaResponse;
-            }
         }
     }
 
