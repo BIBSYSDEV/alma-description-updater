@@ -20,6 +20,7 @@ public class AlmaClient {
     private static final int DEFAULT_RETRY_INTERVAL_IN_SECONDS = 3;
     private static final int MAX_RETRIES = 3;
     private static final String RETRIEVED_BIB_RECORD = "Successfully retrieved Bib record with mms_id {} from Alma";
+    private static final String UPDATED_BIB_RECORD = "Successfully updated Bib record with mms_id {} in Alma";
     private static final String ATTEMPT_FAILED_WITH_STATUS_CODE = "Attempt {} failed with status code: {}";
     private static final String ATTEMPT_FAILED = "Attempt {} failed: {}";
 
@@ -87,8 +88,32 @@ public class AlmaClient {
         return null;
     }
 
-    private boolean isSuccessful(HttpResponse<String> almaResponse) {
-        return almaResponse != null && almaResponse.statusCode() == HttpStatusCode.OK;
+    /**
+     * Method to retry Put-calls to ALMA, sleeps for 3 seconds before retrying.
+     * @param mmsId For identifying the record in ALMA.
+     * @return HttpResponse with the ALMA response or null if failing.
+     * @throws InterruptedException when the sleep is interrupted.
+     */
+    public HttpResponse<String> putBibRecordInAlmaWithRetries(String mmsId, String updatedRecord)
+        throws InterruptedException {
+
+        for (int attempt = 1; attempt <= MAX_RETRIES; attempt++) {
+            addDelayOnNewAttempts(attempt);
+            try {
+                var almaResponse = putBibRecordInAlma(mmsId, updatedRecord);
+
+                if (isSuccessful(almaResponse)) {
+                    logger.info(UPDATED_BIB_RECORD, mmsId);
+                    return almaResponse;
+                } else  {
+                    logger.error(ATTEMPT_FAILED_WITH_STATUS_CODE, attempt, almaResponse.statusCode());
+                }
+            } catch (InterruptedException | IOException e) {
+                logger.error(ATTEMPT_FAILED, attempt, e.getMessage());
+            }
+        }
+
+        return null;
     }
 
     private void addDelayOnNewAttempts(int attempt) throws InterruptedException {
@@ -97,46 +122,8 @@ public class AlmaClient {
         }
     }
 
-    /**
-     * Method to retry Put-calls to ALMA, sleeps for 3 seconds before retrying.
-     * @param mmsId For identifying the record in ALMA.
-     * @return HttpResponse with the ALMA response or null if failing.
-     * @throws InterruptedException when the sleep is interrupted.
-     */
-    @SuppressWarnings("PMD.CognitiveComplexity")
-    public HttpResponse<String> putBibRecordInAlmaWithRetries(String mmsId, String updatedRecord)
-            throws InterruptedException {
-        HttpResponse<String> response;
-        try {
-            response = putBibRecordInAlma(mmsId, updatedRecord);
-        } catch (InterruptedException | IOException e) {
-            response = null; //NOPMD
-        }
-        if (response != null && response.statusCode() == HttpStatusCode.OK) {
-            return response;
-        } else {
-            TimeUnit.SECONDS.sleep(retryIntervalInSeconds);
-            try {
-                response = putBibRecordInAlma(mmsId, updatedRecord);
-            } catch (InterruptedException | IOException e) {
-                response = null; //NOPMD
-            }
-            if (response != null && response.statusCode() == HttpStatusCode.OK) {
-                return response;
-            } else {
-                TimeUnit.SECONDS.sleep(retryIntervalInSeconds);
-                try {
-                    response = putBibRecordInAlma(mmsId, updatedRecord);
-                } catch (InterruptedException | IOException e) {
-                    response = null; //NOPMD
-                }
-                if (response != null && response.statusCode() == HttpStatusCode.OK) {
-                    return response;
-                } else {
-                    return null;
-                }
-            }
-        }
+    private boolean isSuccessful(HttpResponse<String> almaResponse) {
+        return almaResponse != null && almaResponse.statusCode() == HttpStatusCode.OK;
     }
 
 }
