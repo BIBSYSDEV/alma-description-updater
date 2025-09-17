@@ -34,7 +34,7 @@ public class UpdateAlmaDescriptionHandler implements RequestHandler<SQSEvent, Vo
     private static final String FOUND_DIFFERENT_POSTS_FOR_THE_ISBN = "Found {} different posts for the isbn: {}";
     private static final String ALMA_UPDATE_COMPLETE_FOR_MMS_ID =
         "Completed the update in Alma for post with mms_id: {}";
-    public static final String ONE_ORE_MORE_MMS_IDS_FAILED = "1 or more mms_id's did not go through with mms_id: ";
+    public static final String ONE_OR_MORE_MMS_IDS_FAILED = "1 or more mms_id's did not go through with mms_id: ";
     public static final String GENERAL_ERROR = "General error: ";
     public static final String GET_RESPONSE = "Get response ";
     public static final String PUT_RESPONSE = "Put response: ";
@@ -161,16 +161,16 @@ public class UpdateAlmaDescriptionHandler implements RequestHandler<SQSEvent, Vo
             //  condition is evaluated
             if (sucessCounter < referenceList.size()) {
                 if (almaResponse == null || almaResponse.statusCode() != HttpStatusCode.OK) {
-                    throw new RuntimeException(ONE_ORE_MORE_MMS_IDS_FAILED
+                    throw new RuntimeException(ONE_OR_MORE_MMS_IDS_FAILED
                                                + isbn
                                                + System.lineSeparator() + GET_FAILED);
                 }
                 if (response == null || response.statusCode() != HttpStatusCode.OK) {
-                    throw new RuntimeException(ONE_ORE_MORE_MMS_IDS_FAILED
+                    throw new RuntimeException(ONE_OR_MORE_MMS_IDS_FAILED
                                                + isbn
                                                + System.lineSeparator() + GET_RESPONSE + almaResponse.body());
                 }
-                throw new RuntimeException(ONE_ORE_MORE_MMS_IDS_FAILED
+                throw new RuntimeException(ONE_OR_MORE_MMS_IDS_FAILED
                                            + isbn
                                            + System.lineSeparator() + GET_RESPONSE + almaResponse.body()
                                            + PUT_RESPONSE + response.body());

@@ -28,7 +28,7 @@ import static no.unit.alma.UpdateAlmaDescriptionHandler.ERROR_PROCESSING_INPUT_E
 import static no.unit.alma.UpdateAlmaDescriptionHandler.GENERAL_ERROR;
 import static no.unit.alma.UpdateAlmaDescriptionHandler.GET_FAILED;
 import static no.unit.alma.UpdateAlmaDescriptionHandler.GET_RESPONSE;
-import static no.unit.alma.UpdateAlmaDescriptionHandler.ONE_ORE_MORE_MMS_IDS_FAILED;
+import static no.unit.alma.UpdateAlmaDescriptionHandler.ONE_OR_MORE_MMS_IDS_FAILED;
 import static no.unit.alma.UpdateAlmaDescriptionHandler.PUT_RESPONSE;
 import static org.hamcrest.MatcherAssert.assertThat;
 import static org.hamcrest.Matchers.containsInAnyOrder;
@@ -224,7 +224,7 @@ public class UpdateAlmaDescriptionHandlerTest {
         var response = assertThrows(RuntimeException.class,
                                     () -> mockedHandler.handleRequest(mockSqsEvent, mockContext));
 
-        assertThat(response.getMessage(), containsString(ONE_ORE_MORE_MMS_IDS_FAILED));
+        assertThat(response.getMessage(), containsString(ONE_OR_MORE_MMS_IDS_FAILED));
         assertThat(response.getMessage(), containsString(GET_FAILED));
     }
 
@@ -239,7 +239,7 @@ public class UpdateAlmaDescriptionHandlerTest {
         var response = assertThrows(RuntimeException.class,
                                     () -> mockedHandler.handleRequest(mockSqsEvent, mockContext));
 
-        assertThat(response.getMessage(), containsString(ONE_ORE_MORE_MMS_IDS_FAILED));
+        assertThat(response.getMessage(), containsString(ONE_OR_MORE_MMS_IDS_FAILED));
         assertThat(response.getMessage(), containsString(GET_RESPONSE));
         assertThat(response.getMessage(), containsString(XML_TITLE));
         assertThat(response.getMessage(), not(containsString(PUT_RESPONSE)));
@@ -264,7 +264,7 @@ public class UpdateAlmaDescriptionHandlerTest {
         var response = assertThrows(RuntimeException.class,
                                     () -> mockedHandler.handleRequest(mockSqsEvent, mockContext));
 
-        assertThat(response.getMessage(), containsString(ONE_ORE_MORE_MMS_IDS_FAILED));
+        assertThat(response.getMessage(), containsString(ONE_OR_MORE_MMS_IDS_FAILED));
         assertThat(response.getMessage(), containsString(GET_RESPONSE));
         assertThat(response.getMessage(), containsString(PUT_RESPONSE));
         assertThat(response.getMessage(), containsString(XML_TITLE));
