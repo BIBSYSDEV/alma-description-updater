@@ -46,11 +46,7 @@ public class AlmaClient {
      * @throws InterruptedException when the sleep is interrupted.
      */
     public HttpResponse<String> getBibRecordFromAlmaWithRetries(String mmsId) throws InterruptedException {
-        return executeWithRetries(
-            () -> connection.sendGet(mmsId),
-            RETRIEVED_BIB_RECORD,
-            mmsId
-        );
+        return executeWithRetries(() -> connection.sendGet(mmsId), RETRIEVED_BIB_RECORD, mmsId);
     }
 
     /**
@@ -62,21 +58,17 @@ public class AlmaClient {
     public HttpResponse<String> putBibRecordInAlmaWithRetries(String mmsId, String updatedRecord)
         throws InterruptedException {
 
-        return executeWithRetries(
-            () -> connection.sendPut(mmsId, updatedRecord),
-            UPDATED_BIB_RECORD,
-            mmsId
-        );
+        return executeWithRetries(() -> connection.sendPut(mmsId, updatedRecord), UPDATED_BIB_RECORD, mmsId);
     }
 
-    private HttpResponse<String> executeWithRetries(AlmaOperation operation, String successLogMessage, String mmsId)
+    private HttpResponse<String> executeWithRetries(AlmaOperation almaOperation, String successLogMessage, String mmsId)
         throws InterruptedException {
 
         for (int attempt = 1; attempt <= MAX_ATTEMPTS; attempt++) {
             addDelayOnNewAttempts(attempt);
 
             try {
-                var response = operation.execute();
+                var response = almaOperation.execute();
 
                 if (isSuccessful(response)) {
                     logger.info(successLogMessage, mmsId);
