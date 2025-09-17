@@ -7,7 +7,7 @@ import java.net.http.HttpRequest;
 import java.net.http.HttpResponse;
 import no.unit.alma.Config;
 
-public final class AlmaConnection implements ReadUpdateConnection {
+public final class AlmaConnection extends ReadUpdateConnection {
 
     private static final String AUTHORIZATION = "Authorization";
     private static final String AUTHORIZATION_KEY = "apikey ";
@@ -18,6 +18,7 @@ public final class AlmaConnection implements ReadUpdateConnection {
     private final Config config;
 
     public AlmaConnection(Config config, HttpClientFactory httpClientFactory) {
+        super();
         this.config = config;
         this.httpClient = httpClientFactory.create();
     }

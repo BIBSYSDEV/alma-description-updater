@@ -4,6 +4,7 @@ import java.util.Optional;
 import no.unit.http.AlmaConnectionFactory;
 import no.unit.http.ReadUpdateConnection;
 import no.unit.http.ReadUpdateConnectionFactory;
+import no.unit.http.HttpOperation;
 import nva.commons.core.JacocoGenerated;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
@@ -33,8 +34,8 @@ public class AlmaClient {
         this(new AlmaConnectionFactory(), DEFAULT_RETRY_INTERVAL_IN_SECONDS);
     }
 
-    public AlmaClient(ReadUpdateConnectionFactory readUpdateConnectionFactory, Integer retryIntervalInSeconds) {
-        this.connection = readUpdateConnectionFactory.create();
+    public AlmaClient(ReadUpdateConnectionFactory connectionFactory, Integer retryIntervalInSeconds) {
+        this.connection = connectionFactory.create();
         this.retryIntervalInSeconds = Optional.ofNullable(retryIntervalInSeconds)
                                           .orElse(DEFAULT_RETRY_INTERVAL_IN_SECONDS);
     }
@@ -61,7 +62,7 @@ public class AlmaClient {
         return executeWithRetries(() -> connection.sendPut(mmsId, updatedRecord), UPDATED_BIB_RECORD, mmsId);
     }
 
-    private HttpResponse<String> executeWithRetries(AlmaOperation almaOperation, String successLogMessage, String mmsId)
+    private HttpResponse<String> executeWithRetries(HttpOperation almaOperation, String successLogMessage, String mmsId)
         throws InterruptedException {
 
         for (int attempt = 1; attempt <= MAX_ATTEMPTS; attempt++) {
