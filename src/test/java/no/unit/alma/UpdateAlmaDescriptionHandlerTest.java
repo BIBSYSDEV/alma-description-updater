@@ -3,7 +3,6 @@ package no.unit.alma;
 import com.amazonaws.services.lambda.runtime.Context;
 import com.amazonaws.services.lambda.runtime.events.SQSEvent;
 import com.amazonaws.services.lambda.runtime.events.SQSEvent.SQSMessage;
-import com.google.gson.Gson;
 import java.io.IOException;
 import java.net.http.HttpResponse;
 import java.util.Collections;
@@ -14,8 +13,6 @@ import no.unit.scheduler.UpdateItem;
 import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.Test;
 
-import java.io.BufferedReader;
-import java.io.InputStreamReader;
 import java.util.ArrayList;
 import java.util.List;
 import org.mockito.ArgumentCaptor;
@@ -30,12 +27,12 @@ import static no.unit.alma.UpdateAlmaDescriptionHandler.GET_FAILED;
 import static no.unit.alma.UpdateAlmaDescriptionHandler.GET_RESPONSE;
 import static no.unit.alma.UpdateAlmaDescriptionHandler.ONE_OR_MORE_MMS_IDS_FAILED;
 import static no.unit.alma.UpdateAlmaDescriptionHandler.PUT_RESPONSE;
+import static no.unit.utils.FileUtils.setup;
 import static org.hamcrest.MatcherAssert.assertThat;
 import static org.hamcrest.Matchers.containsInAnyOrder;
 import static org.hamcrest.Matchers.containsString;
 import static org.hamcrest.Matchers.equalTo;
 import static org.hamcrest.Matchers.not;
-import static org.junit.jupiter.api.Assertions.assertEquals;
 import static org.junit.jupiter.api.Assertions.assertThrows;
 import static org.mockito.ArgumentMatchers.any;
 import static org.mockito.Mockito.doNothing;
@@ -47,8 +44,6 @@ import static org.mockito.Mockito.verify;
 
 public class UpdateAlmaDescriptionHandlerTest {
 
-    private static final String CORRECT_XML_FILE = "/Mock_xml.xml";
-    private static final String UPDATED_XML_FILE = "/UpdatedGroupXml.xml";
     public static final String ALMA_SRU_PROXY_RESPONSE_JSON = "/alma_sru_proxy_response.json";
     public static final String ALMA_RESPONSE_MMS_ID_JSON = "/alma_response_mms_id.xml";
     private static final String XML_TITLE = "<title>Hobbiten : Smaugs ødemark i bilder</title>";
@@ -103,28 +98,9 @@ public class UpdateAlmaDescriptionHandlerTest {
 
         mockedHandler = new UpdateAlmaDescriptionHandler(mockAlmaClient,
                                                          mockSchedulerHelper,
-                                                         new DocumentXmlParser(),
+                                                         new BibRecordEnricher(new DocumentXmlParser()),
                                                          new IsbnConverter(),
                                                          mockAlmaSruProxyFactory);
-    }
-
-    @Test
-    public void shouldUpdateBibRecordAndSkipTheUpdatesThatAreEqual() throws Exception {
-        var gson = new Gson();
-        var mockXml = setup(CORRECT_XML_FILE);
-        var item1String = "{isbn: 1234, link: 1234_small_1234.jpg, specifiedMaterial: Small_coverFoto}";
-        var item2String = "{isbn: 1234, link: 1234_large_1234.jpg, specifiedMaterial: Large_coverFoto}";
-        var item1 = gson.fromJson(item1String, UpdateItem.class);
-        var item2 = gson.fromJson(item2String, UpdateItem.class);
-        var updateItemList = new ArrayList<UpdateItem>();
-        updateItemList.add(item1);
-        updateItemList.add(item1);
-        updateItemList.add(item2);
-        var mockUpdatedXml = setup(UPDATED_XML_FILE);
-
-        var updatedXml = mockedHandler.updateBibRecord(updateItemList, mockXml);
-
-        assertEquals(mockUpdatedXml, updatedXml);
     }
 
     @Test
@@ -278,27 +254,6 @@ public class UpdateAlmaDescriptionHandlerTest {
         sqsEvent.setRecords(List.of(sqsMessage));
 
         return sqsEvent;
-    }
-
-    /**
-     * A helper method that returns a string from a source.
-     * @param file The file/source you want to retrieve the string from.
-     * @return A string-value representing the content of the source.
-     * @throws Exception when something goes wrong.
-     */
-    private String setup(String file) throws Exception {
-        var stream = DocumentXmlParserTest.class.getResourceAsStream(file);
-        if (stream == null) {
-            throw new RuntimeException("Cannot find resource " + file);
-        }
-        var reader = new InputStreamReader(stream);
-        var br = new BufferedReader(reader);
-        String line;
-        var sb = new StringBuilder();
-        while ((line = br.readLine()) != null) {
-            sb.append(line.trim());
-        }
-        return sb.toString();
     }
 
     private List<UpdateItem> createUpdateItemList() {

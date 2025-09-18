@@ -21,7 +21,6 @@ import no.unit.utils.DebugUtils;
 import nva.commons.core.JacocoGenerated;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
-import org.w3c.dom.Document;
 import software.amazon.awssdk.http.HttpStatusCode;
 
 
@@ -43,7 +42,7 @@ public class UpdateAlmaDescriptionHandler implements RequestHandler<SQSEvent, Vo
 
     private final transient AlmaClient almaClient;
     private final transient SchedulerHelper schedulerHelper;
-    private final transient DocumentXmlParser xmlParser;
+    private final transient BibRecordEnricher bibRecordEnricher;
     private final transient IsbnConverter isbnConverter;
     private final transient ReadConnection almaProxyConnection;
 
@@ -52,19 +51,19 @@ public class UpdateAlmaDescriptionHandler implements RequestHandler<SQSEvent, Vo
     public UpdateAlmaDescriptionHandler() {
         this(new AlmaClient(),
              new SchedulerHelper(),
-             new DocumentXmlParser(),
+             new BibRecordEnricher(new DocumentXmlParser()),
              new IsbnConverter(),
              new AlmaProxyConnectionFactory());
     }
 
     public UpdateAlmaDescriptionHandler(AlmaClient almaClient,
                                         SchedulerHelper schedulerHelper,
-                                        DocumentXmlParser xmlParser,
+                                        BibRecordEnricher bibRecordEnricher,
                                         IsbnConverter isbnConverter,
                                         ReadConnectionFactory almaProxyConnectionFactory) {
         this.almaClient = almaClient;
         this.schedulerHelper = schedulerHelper;
-        this.xmlParser = xmlParser;
+        this.bibRecordEnricher = bibRecordEnricher;
         this.isbnConverter = isbnConverter;
         this.almaProxyConnection = almaProxyConnectionFactory.create();
     }
@@ -145,7 +144,7 @@ public class UpdateAlmaDescriptionHandler implements RequestHandler<SQSEvent, Vo
                 String xmlFromAlma = almaResponse.body();
 
                 /* 3.3 Create an XML(String) by updating the existing ALMA xml with all the updateItems. */
-                String updatedRecord = updateBibRecord(updateItems, xmlFromAlma);
+                String updatedRecord = bibRecordEnricher.enrich(updateItems, xmlFromAlma);
 
                 /* 4. Push the updated BIB-RECORD back to the alma through a put-request to the api. */
                 response = almaClient.putBibRecordInAlmaWithRetries(mmsId, updatedRecord);
@@ -189,40 +188,6 @@ public class UpdateAlmaDescriptionHandler implements RequestHandler<SQSEvent, Vo
 
     private void logNoAnswerFromSru(String isbn) {
         logger.info(NO_ANSWER_FROM_SRU, isbn);
-    }
-
-    /**
-     * Create an XML(String) by updating the existing ALMA xml with all the UpdateItems.
-     * @param updateItems A list of UpdateItems.
-     * @param xmlFromAlma A String in the shape of an XML the data is retrieved from ALMA.
-     * @return The same XML data that was entered now with added fields (either 856 or 956).
-     * @throws ParsingException When something goes wrong.
-     */
-    public String updateBibRecord(List<UpdateItem> updateItems, String xmlFromAlma) throws ParsingException {
-        String xmlBuilderString = xmlFromAlma;
-        /* 3.3.1 Loop through every UpdateItem in the UpdateItem LIST. */
-        for (UpdateItem item : updateItems) {
-            /* 3.3.2 Determine whether the post is electronic or print. */
-            int marcTag = xmlParser.determineElectronicOrPrint(xmlBuilderString);
-
-            /* 3.3.3 Check if the update already exists. */
-            Boolean alreadyExists = xmlParser.alreadyExists(item.getSpecifiedMaterial(),
-                    item.getLink(), xmlBuilderString, marcTag);
-            if (alreadyExists) {
-                continue;
-            }
-
-            /* 3.3.4 Create a node from the UpdateItem. */
-            Document updateNode = xmlParser.createNode(item.getSpecifiedMaterial(),
-                    item.getLink(), marcTag);
-
-            /* 3.3.5 Insert update node into the record retrieved from ALMA. */
-            Document updatedDocument = xmlParser.insertUpdatedIntoRecord(xmlBuilderString,
-                    updateNode, marcTag);
-            xmlBuilderString = xmlParser.convertDocToString(updatedDocument);
-
-        }
-        return xmlBuilderString;
     }
 
     /**

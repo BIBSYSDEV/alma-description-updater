@@ -2,16 +2,12 @@ package no.unit.scheduler;
 
 import com.fasterxml.jackson.databind.ObjectMapper;
 import java.util.List;
-import no.unit.alma.DocumentXmlParserTest;
 import no.unit.aws.SqsClientFactory;
 import no.unit.exceptions.SchedulerException;
 import nva.commons.core.Environment;
 import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.Test;
 
-import java.io.BufferedReader;
-import java.io.InputStream;
-import java.io.InputStreamReader;
 import org.mockito.ArgumentCaptor;
 import org.mockito.InjectMocks;
 import org.mockito.Mock;
@@ -19,8 +15,8 @@ import org.mockito.MockitoAnnotations;
 import software.amazon.awssdk.services.sqs.SqsClient;
 import software.amazon.awssdk.services.sqs.model.SendMessageRequest;
 
-import static java.util.Objects.isNull;
 import static no.unit.scheduler.SchedulerHelper.DLQ_QUEUE_URL_KEY;
+import static no.unit.utils.FileUtils.setup;
 import static org.hamcrest.MatcherAssert.assertThat;
 import static org.hamcrest.Matchers.containsInAnyOrder;
 import static org.hamcrest.Matchers.empty;
@@ -63,21 +59,6 @@ class SchedulerHelperTest {
 
     @InjectMocks
     private SchedulerHelper schedulerHelper;
-
-    public String setup(String file) throws Exception {
-        InputStream stream = DocumentXmlParserTest.class.getResourceAsStream(file);
-        if (isNull(stream)) {
-            throw new RuntimeException("Could not load xml file " + file);
-        }
-        InputStreamReader reader = new InputStreamReader(stream);
-        BufferedReader br = new BufferedReader(reader);
-        String line;
-        StringBuilder sb = new StringBuilder();
-        while ((line = br.readLine()) != null) {
-            sb.append(line.trim());
-        }
-        return sb.toString();
-    }
 
     private void initEnv() {
         when(mockEnv.readEnv("STANDARD_CONTENT_URL")).thenReturn(CONTENT_URL_KEY);
