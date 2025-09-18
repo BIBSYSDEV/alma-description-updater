@@ -6,6 +6,7 @@ import com.amazonaws.services.lambda.runtime.events.SQSEvent.SQSMessage;
 import java.io.IOException;
 import java.net.http.HttpResponse;
 import java.util.Collections;
+import no.unit.exceptions.HttpOperationFailedException;
 import no.unit.http.ReadConnection;
 import no.unit.http.ReadConnectionFactory;
 import no.unit.scheduler.SchedulerHelper;
@@ -23,16 +24,12 @@ import static java.net.HttpURLConnection.HTTP_OK;
 import static java.net.HttpURLConnection.HTTP_UNAVAILABLE;
 import static no.unit.alma.UpdateAlmaDescriptionHandler.ERROR_PROCESSING_INPUT_EVENT;
 import static no.unit.alma.UpdateAlmaDescriptionHandler.GENERAL_ERROR;
-import static no.unit.alma.UpdateAlmaDescriptionHandler.GET_FAILED;
-import static no.unit.alma.UpdateAlmaDescriptionHandler.GET_RESPONSE;
-import static no.unit.alma.UpdateAlmaDescriptionHandler.ONE_OR_MORE_MMS_IDS_FAILED;
-import static no.unit.alma.UpdateAlmaDescriptionHandler.PUT_RESPONSE;
+import static no.unit.alma.UpdateAlmaDescriptionHandler.ONE_OR_MORE_MMS_IDS_FROM_ISBN_FAILED;
 import static no.unit.utils.FileUtils.setup;
 import static org.hamcrest.MatcherAssert.assertThat;
 import static org.hamcrest.Matchers.containsInAnyOrder;
 import static org.hamcrest.Matchers.containsString;
 import static org.hamcrest.Matchers.equalTo;
-import static org.hamcrest.Matchers.not;
 import static org.junit.jupiter.api.Assertions.assertThrows;
 import static org.mockito.ArgumentMatchers.any;
 import static org.mockito.Mockito.doNothing;
@@ -46,7 +43,7 @@ public class UpdateAlmaDescriptionHandlerTest {
 
     public static final String ALMA_SRU_PROXY_RESPONSE_JSON = "/alma_sru_proxy_response.json";
     public static final String ALMA_RESPONSE_MMS_ID_JSON = "/alma_response_mms_id.xml";
-    private static final String XML_TITLE = "<title>Hobbiten : Smaugs ødemark i bilder</title>";
+    private static final String SOME_ISBN = "9788210053412";
 
     @Mock
     private Context mockContext;
@@ -96,11 +93,12 @@ public class UpdateAlmaDescriptionHandlerTest {
 
         doReturn(mockAlmaHttpResponse).when(mockAlmaClient).putBibRecordInAlmaWithRetries(any(), any());
 
-        mockedHandler = new UpdateAlmaDescriptionHandler(mockAlmaClient,
-                                                         mockSchedulerHelper,
-                                                         new BibRecordEnricher(new DocumentXmlParser()),
-                                                         new IsbnConverter(),
-                                                         mockAlmaSruProxyFactory);
+        mockedHandler = new UpdateAlmaDescriptionHandler(
+            new AlmaUpdater(mockAlmaClient, new BibRecordEnricher(new DocumentXmlParser())),
+            mockSchedulerHelper,
+            new IsbnConverter(),
+            new AlmaProxyClient(mockAlmaSruProxyFactory)
+        );
     }
 
     @Test
@@ -195,13 +193,13 @@ public class UpdateAlmaDescriptionHandlerTest {
         doReturn(HTTP_UNAVAILABLE).when(httpResponse).statusCode();
         doReturn(httpResponse)
             .doReturn(httpResponse)
+            .doReturn(httpResponse)
             .when(mockAlmaClient).getBibRecordFromAlmaWithRetries(any());
 
-        var response = assertThrows(RuntimeException.class,
+        var response = assertThrows(HttpOperationFailedException.class,
                                     () -> mockedHandler.handleRequest(mockSqsEvent, mockContext));
 
-        assertThat(response.getMessage(), containsString(ONE_OR_MORE_MMS_IDS_FAILED));
-        assertThat(response.getMessage(), containsString(GET_FAILED));
+        assertThat(response.getMessage(), containsString(ONE_OR_MORE_MMS_IDS_FROM_ISBN_FAILED));
     }
 
     @Test
@@ -215,10 +213,7 @@ public class UpdateAlmaDescriptionHandlerTest {
         var response = assertThrows(RuntimeException.class,
                                     () -> mockedHandler.handleRequest(mockSqsEvent, mockContext));
 
-        assertThat(response.getMessage(), containsString(ONE_OR_MORE_MMS_IDS_FAILED));
-        assertThat(response.getMessage(), containsString(GET_RESPONSE));
-        assertThat(response.getMessage(), containsString(XML_TITLE));
-        assertThat(response.getMessage(), not(containsString(PUT_RESPONSE)));
+        assertThat(response.getMessage(), containsString(ONE_OR_MORE_MMS_IDS_FROM_ISBN_FAILED + SOME_ISBN));
     }
 
     @Test
@@ -237,13 +232,10 @@ public class UpdateAlmaDescriptionHandlerTest {
             .doReturn(almaOkHttpResponse)
             .when(mockAlmaClient).getBibRecordFromAlmaWithRetries(any());
 
-        var response = assertThrows(RuntimeException.class,
+        var response = assertThrows(HttpOperationFailedException.class,
                                     () -> mockedHandler.handleRequest(mockSqsEvent, mockContext));
 
-        assertThat(response.getMessage(), containsString(ONE_OR_MORE_MMS_IDS_FAILED));
-        assertThat(response.getMessage(), containsString(GET_RESPONSE));
-        assertThat(response.getMessage(), containsString(PUT_RESPONSE));
-        assertThat(response.getMessage(), containsString(XML_TITLE));
+        assertThat(response.getMessage(), containsString(ONE_OR_MORE_MMS_IDS_FROM_ISBN_FAILED + SOME_ISBN));
     }
 
     private SQSEvent createDummySqsEvent() {

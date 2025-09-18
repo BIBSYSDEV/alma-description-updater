@@ -28,19 +28,23 @@ public class BibRecordEnricher {
             int marcTag = xmlParser.determineElectronicOrPrint(xmlBuilderString);
 
             /* 3.3.3 Check if the update already exists. */
-            Boolean alreadyExists = xmlParser.alreadyExists(item.getSpecifiedMaterial(),
-                                                            item.getLink(), xmlBuilderString, marcTag);
+            boolean alreadyExists = xmlParser.alreadyExists(item.getSpecifiedMaterial(),
+                                                            item.getLink(),
+                                                            xmlBuilderString,
+                                                            marcTag);
             if (alreadyExists) {
                 continue;
             }
 
             /* 3.3.4 Create a node from the UpdateItem. */
             Document updateNode = xmlParser.createNode(item.getSpecifiedMaterial(),
-                                                       item.getLink(), marcTag);
+                                                       item.getLink(),
+                                                       marcTag);
 
             /* 3.3.5 Insert update node into the record retrieved from ALMA. */
             Document updatedDocument = xmlParser.insertUpdatedIntoRecord(xmlBuilderString,
-                                                                         updateNode, marcTag);
+                                                                         updateNode,
+                                                                         marcTag);
             xmlBuilderString = xmlParser.convertDocToString(updatedDocument);
 
         }

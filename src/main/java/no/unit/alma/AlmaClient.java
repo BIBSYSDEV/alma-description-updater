@@ -1,5 +1,6 @@
 package no.unit.alma;
 
+import static no.unit.utils.HttpUtils.isSuccessful;
 import java.util.Optional;
 import no.unit.http.AlmaConnectionFactory;
 import no.unit.http.ReadUpdateConnection;
@@ -8,7 +9,6 @@ import no.unit.http.HttpOperation;
 import nva.commons.core.JacocoGenerated;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
-import software.amazon.awssdk.http.HttpStatusCode;
 
 import java.io.IOException;
 import java.net.http.HttpResponse;
@@ -25,6 +25,7 @@ public class AlmaClient {
     private static final String UPDATED_BIB_RECORD = "Successfully updated Bib record with mms_id {} in Alma";
     private static final String ATTEMPT_FAILED_WITH_STATUS_CODE = "Attempt {} failed with status code: {}";
     private static final String ATTEMPT_FAILED = "Attempt {} failed: {}";
+    private static final String ALL_ATTEMPTS_FAILED = "All attempts failed with response body: {}";
 
     private final ReadUpdateConnection connection;
     private final Integer retryIntervalInSeconds;
@@ -75,7 +76,10 @@ public class AlmaClient {
                     logger.info(successLogMessage, mmsId);
                     return response;
                 } else {
-                    logger.error(ATTEMPT_FAILED_WITH_STATUS_CODE, attempt, response.statusCode());
+                    logger.warn(ATTEMPT_FAILED_WITH_STATUS_CODE, attempt, response.statusCode());
+                }
+                if (attempt == MAX_ATTEMPTS) {
+                    logger.error(ALL_ATTEMPTS_FAILED, response.body());
                 }
             } catch (IOException | InterruptedException e) {
                 logger.error(ATTEMPT_FAILED, attempt, e.getMessage());
@@ -89,10 +93,6 @@ public class AlmaClient {
         if (attempt > FIRST_ATTEMPT) {
             TimeUnit.SECONDS.sleep(retryIntervalInSeconds);
         }
-    }
-
-    private boolean isSuccessful(HttpResponse<String> almaResponse) {
-        return almaResponse != null && almaResponse.statusCode() == HttpStatusCode.OK;
     }
 
 }

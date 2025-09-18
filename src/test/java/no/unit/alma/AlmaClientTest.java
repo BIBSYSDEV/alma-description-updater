@@ -27,6 +27,7 @@ class AlmaClientTest {
     private static final String PAYLOAD = "<body>Hello</body>";
     private static final String MMS_ID = "1234";
     private static final Integer retryIntervalInSeconds = 0;
+    private static final String ERROR_MESSAGE_BODY = "Service Unavailable";
 
     @Mock
     private ReadUpdateConnection mockConnection;
@@ -252,6 +253,10 @@ class AlmaClientTest {
             .doReturn(HTTP_UNAVAILABLE)
             .doReturn(HTTP_UNAVAILABLE).when(mockHttpResponse).statusCode();
 
+        doReturn(ERROR_MESSAGE_BODY)
+            .doReturn(ERROR_MESSAGE_BODY)
+            .doReturn(ERROR_MESSAGE_BODY).when(mockHttpResponse).body();
+
         var mockFourthResponse = mock(HttpResponse.class);
         doReturn(HTTP_OK).when(mockFourthResponse).statusCode();
         doReturn(PAYLOAD).when(mockFourthResponse).body();
@@ -273,6 +278,10 @@ class AlmaClientTest {
         doReturn(HTTP_UNAVAILABLE)
             .doReturn(HTTP_UNAVAILABLE)
             .doReturn(HTTP_UNAVAILABLE).when(mockHttpResponse).statusCode();
+
+        doReturn(ERROR_MESSAGE_BODY)
+            .doReturn(ERROR_MESSAGE_BODY)
+            .doReturn(ERROR_MESSAGE_BODY).when(mockHttpResponse).body();
 
         doReturn(mockHttpResponse)
             .doReturn(mockHttpResponse)
