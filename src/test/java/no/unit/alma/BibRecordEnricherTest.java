@@ -6,7 +6,7 @@ import static org.hamcrest.Matchers.equalTo;
 import com.google.gson.Gson;
 import java.util.ArrayList;
 import no.unit.scheduler.UpdateItem;
-import org.junit.jupiter.api.BeforeEach;
+import org.junit.jupiter.api.BeforeAll;
 import org.junit.jupiter.api.Test;
 
 class BibRecordEnricherTest {
@@ -14,11 +14,11 @@ class BibRecordEnricherTest {
     private static final String CORRECT_XML_FILE = "/Mock_xml.xml";
     private static final String UPDATED_XML_FILE = "/UpdatedGroupXml.xml";
 
-    private BibRecordEnricher bibRecordEnricher;
+    private static BibRecordEnricher bibRecordEnricher;
 
-    @BeforeEach
-    void setUp() {
-        bibRecordEnricher = new BibRecordEnricher(new DocumentXmlParser());
+    @BeforeAll
+    static void setUp() {
+        bibRecordEnricher = new BibRecordEnricher();
     }
 
     @Test

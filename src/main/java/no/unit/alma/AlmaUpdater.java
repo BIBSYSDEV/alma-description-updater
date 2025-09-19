@@ -23,7 +23,7 @@ public class AlmaUpdater {
 
     @JacocoGenerated
     public AlmaUpdater() {
-        this(new AlmaClient(), new BibRecordEnricher(new DocumentXmlParser()));
+        this(new AlmaClient(), new BibRecordEnricher());
     }
 
     public AlmaUpdater(AlmaClient almaClient, BibRecordEnricher bibRecordEnricher) {

@@ -3,11 +3,17 @@ package no.unit.alma;
 import java.util.List;
 import no.unit.exceptions.ParsingException;
 import no.unit.scheduler.UpdateItem;
+import nva.commons.core.JacocoGenerated;
 import org.w3c.dom.Document;
 
 public class BibRecordEnricher {
 
     private final DocumentXmlParser xmlParser;
+
+    @JacocoGenerated
+    public BibRecordEnricher() {
+        this(new DocumentXmlParser());
+    }
 
     public BibRecordEnricher(DocumentXmlParser xmlParser) {
         this.xmlParser = xmlParser;

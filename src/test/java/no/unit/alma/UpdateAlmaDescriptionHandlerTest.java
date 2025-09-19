@@ -97,7 +97,7 @@ public class UpdateAlmaDescriptionHandlerTest {
             new IsbnConverter(),
             new AlmaProxyClient(mockAlmaSruProxyFactory),
             mockSchedulerHelper,
-            new AlmaUpdater(mockAlmaClient, new BibRecordEnricher(new DocumentXmlParser()))
+            new AlmaUpdater(mockAlmaClient, new BibRecordEnricher())
         );
     }
 
