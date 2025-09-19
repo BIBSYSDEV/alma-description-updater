@@ -4,7 +4,6 @@ import static no.unit.utils.HttpUtils.nonSuccessful;
 import com.google.gson.GsonBuilder;
 import com.google.gson.reflect.TypeToken;
 import java.io.IOException;
-import java.net.http.HttpResponse;
 import java.util.Collections;
 import java.util.List;
 import no.unit.http.AlmaProxyConnectionFactory;
@@ -22,7 +21,7 @@ public class AlmaProxyClient {
     private static final String NON_SUCCESSFUL_ANSWER =
         "Non successful answer from SRU for isbn: {} with status code {}";
 
-    private final ReadConnection connection;
+    private final ReadConnection proxyConnection;
 
     @JacocoGenerated
     public AlmaProxyClient() {
@@ -30,7 +29,7 @@ public class AlmaProxyClient {
     }
 
     public AlmaProxyClient(ReadConnectionFactory connectionFactory) {
-        this.connection = connectionFactory.create();
+        this.proxyConnection = connectionFactory.create();
     }
 
     /**
@@ -41,18 +40,13 @@ public class AlmaProxyClient {
      * @throws InterruptedException when something goes wrong
      */
     public List<Reference> getReferenceListByIsbn(String isbn) throws IOException, InterruptedException {
-        var almaSruResponse = fetchFromAlmaSruProxy(isbn);
+        var almaSruResponse = proxyConnection.sendGet(isbn);
         if (nonSuccessful(almaSruResponse)) {
             logger.warn(NON_SUCCESSFUL_ANSWER, isbn, almaSruResponse.statusCode());
             return Collections.emptyList();
         }
 
         return createReferenceList(almaSruResponse.body());
-    }
-
-    // TODO: Remove
-    private HttpResponse<String> fetchFromAlmaSruProxy(String isbn) throws IOException, InterruptedException {
-        return connection.sendGet(isbn);
     }
 
     private List<Reference> createReferenceList(String response) {
