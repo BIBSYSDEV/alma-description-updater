@@ -28,6 +28,7 @@ public class UpdateAlmaDescriptionHandler implements RequestHandler<SQSEvent, Vo
         "1 or more mms_id's did not go through with isbn: ";
     public static final String GENERAL_ERROR = "General error: ";
     public static final String ERROR_PROCESSING_INPUT_EVENT = "Error while processing input event. ";
+    private static final String ALMA_PARTIAL_SUCCESS = "Alma succeeded only {} of {} times";
 
     private final transient AlmaUpdater almaUpdater;
     private final transient SchedulerHelper schedulerHelper;
@@ -108,9 +109,7 @@ public class UpdateAlmaDescriptionHandler implements RequestHandler<SQSEvent, Vo
             almaUpdater.update(updateItems, referenceList);
 
             if (almaUpdater.getSuccessCounter() < referenceList.size()) {
-                logger.error("Alma succeeded only {} of {} times",
-                             almaUpdater.getSuccessCounter(),
-                             referenceList.size());
+                logger.error(ALMA_PARTIAL_SUCCESS, almaUpdater.getSuccessCounter(), referenceList.size());
                 throw new HttpOperationFailedException(ONE_OR_MORE_MMS_IDS_FROM_ISBN_FAILED + isbn);
             }
         } catch (ParsingException | IOException | IllegalArgumentException
