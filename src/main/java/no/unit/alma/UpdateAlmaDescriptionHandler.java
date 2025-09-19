@@ -22,7 +22,8 @@ public class UpdateAlmaDescriptionHandler implements RequestHandler<SQSEvent, Vo
 
     private static final Logger logger = LoggerFactory.getLogger(UpdateAlmaDescriptionHandler.class);
 
-    private static final String WRITING_TO_DLQ = "No answer from SRU for isbn: {} . Writing to DLQ";
+    private static final String WRITING_TO_DLQ =
+        "No answer from SRU for isbn: {} or converted isbn: {}. Writing to DLQ";
     private static final String FOUND_POSTS_FOR_THE_ISBN = "Found {} different posts for the isbn: {}";
     public static final String ONE_OR_MORE_MMS_IDS_FROM_ISBN_FAILED =
         "1 or more mms_id's did not go through with isbn: ";
@@ -30,28 +31,28 @@ public class UpdateAlmaDescriptionHandler implements RequestHandler<SQSEvent, Vo
     public static final String ERROR_PROCESSING_INPUT_EVENT = "Error while processing input event. ";
     private static final String ALMA_PARTIAL_SUCCESS = "Alma succeeded only {} of {} times";
 
-    private final transient ReferenceListCreator referenceListCreator;
-    private final transient AlmaUpdater almaUpdater;
-    private final transient SchedulerHelper schedulerHelper;
     private final transient IsbnConverter isbnConverter;
+    private final transient AlmaProxyClient almaProxyClient;
+    private final transient SchedulerHelper schedulerHelper;
+    private final transient AlmaUpdater almaUpdater;
 
     @SuppressWarnings("unused")
     @JacocoGenerated
     public UpdateAlmaDescriptionHandler() {
-        this(new ReferenceListCreator(),
-             new AlmaUpdater(),
+        this(new IsbnConverter(),
+             new AlmaProxyClient(),
              new SchedulerHelper(),
-             new IsbnConverter());
+             new AlmaUpdater());
     }
 
-    public UpdateAlmaDescriptionHandler(ReferenceListCreator referenceListCreator,
-                                        AlmaUpdater almaUpdater,
+    public UpdateAlmaDescriptionHandler(IsbnConverter isbnConverter,
+                                        AlmaProxyClient almaProxyClient,
                                         SchedulerHelper schedulerHelper,
-                                        IsbnConverter isbnConverter) {
-        this.referenceListCreator = referenceListCreator;
-        this.almaUpdater = almaUpdater;
-        this.schedulerHelper = schedulerHelper;
+                                        AlmaUpdater almaUpdater) {
         this.isbnConverter = isbnConverter;
+        this.almaProxyClient = almaProxyClient;
+        this.schedulerHelper = schedulerHelper;
+        this.almaUpdater = almaUpdater;
     }
 
     /**
@@ -87,11 +88,11 @@ public class UpdateAlmaDescriptionHandler implements RequestHandler<SQSEvent, Vo
             var convertedIsbn = isbnConverter.convertIsbn(isbn);
 
             var referenceList = new ArrayList<Reference>();
-            referenceList.addAll(referenceListCreator.create(isbn));
-            referenceList.addAll(referenceListCreator.create(convertedIsbn));
+            referenceList.addAll(almaProxyClient.getReferenceListByIsbn(isbn));
+            referenceList.addAll(almaProxyClient.getReferenceListByIsbn(convertedIsbn));
 
             if (referenceList.isEmpty()) {
-                logger.info(WRITING_TO_DLQ, convertedIsbn);
+                logger.info(WRITING_TO_DLQ, isbn, convertedIsbn);
                 schedulerHelper.writeToDLQ(event.getRecords().getFirst().getBody());
                 return null;
             }

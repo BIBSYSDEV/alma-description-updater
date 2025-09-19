@@ -94,10 +94,10 @@ public class UpdateAlmaDescriptionHandlerTest {
         doReturn(mockAlmaHttpResponse).when(mockAlmaClient).putBibRecordInAlmaWithRetries(any(), any());
 
         mockedHandler = new UpdateAlmaDescriptionHandler(
-            new ReferenceListCreator(new AlmaProxyClient(mockAlmaSruProxyFactory)),
-            new AlmaUpdater(mockAlmaClient, new BibRecordEnricher(new DocumentXmlParser())),
+            new IsbnConverter(),
+            new AlmaProxyClient(mockAlmaSruProxyFactory),
             mockSchedulerHelper,
-            new IsbnConverter()
+            new AlmaUpdater(mockAlmaClient, new BibRecordEnricher(new DocumentXmlParser()))
         );
     }
 

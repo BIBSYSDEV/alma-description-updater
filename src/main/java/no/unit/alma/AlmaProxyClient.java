@@ -12,8 +12,15 @@ import no.unit.http.ReadConnection;
 import no.unit.http.ReadConnectionFactory;
 import no.unit.marc.Reference;
 import nva.commons.core.JacocoGenerated;
+import org.slf4j.Logger;
+import org.slf4j.LoggerFactory;
 
 public class AlmaProxyClient {
+
+    private static final Logger logger = LoggerFactory.getLogger(AlmaProxyClient.class);
+
+    private static final String NON_SUCCESSFUL_ANSWER =
+        "Non successful answer from SRU for isbn: {} with status code {}";
 
     private final ReadConnection connection;
 
@@ -36,12 +43,14 @@ public class AlmaProxyClient {
     public List<Reference> getReferenceListByIsbn(String isbn) throws IOException, InterruptedException {
         var almaSruResponse = fetchFromAlmaSruProxy(isbn);
         if (nonSuccessful(almaSruResponse)) {
+            logger.warn(NON_SUCCESSFUL_ANSWER, isbn, almaSruResponse.statusCode());
             return Collections.emptyList();
         }
 
         return createReferenceList(almaSruResponse.body());
     }
 
+    // TODO: Remove
     private HttpResponse<String> fetchFromAlmaSruProxy(String isbn) throws IOException, InterruptedException {
         return connection.sendGet(isbn);
     }
