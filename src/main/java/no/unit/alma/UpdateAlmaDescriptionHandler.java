@@ -4,6 +4,7 @@ import com.amazonaws.services.lambda.runtime.Context;
 import com.amazonaws.services.lambda.runtime.RequestHandler;
 import com.amazonaws.services.lambda.runtime.events.SQSEvent;
 import java.io.IOException;
+import java.util.ArrayList;
 import java.util.List;
 import no.unit.exceptions.HttpOperationFailedException;
 import no.unit.exceptions.ParsingException;
@@ -21,7 +22,6 @@ public class UpdateAlmaDescriptionHandler implements RequestHandler<SQSEvent, Vo
 
     private static final Logger logger = LoggerFactory.getLogger(UpdateAlmaDescriptionHandler.class);
 
-    private static final String NO_ANSWER_FROM_SRU = "No answer from SRU for isbn: {}";
     private static final String WRITING_TO_DLQ = "No answer from SRU for isbn: {} . Writing to DLQ";
     private static final String FOUND_POSTS_FOR_THE_ISBN = "Found {} different posts for the isbn: {}";
     public static final String ONE_OR_MORE_MMS_IDS_FROM_ISBN_FAILED =
@@ -30,28 +30,28 @@ public class UpdateAlmaDescriptionHandler implements RequestHandler<SQSEvent, Vo
     public static final String ERROR_PROCESSING_INPUT_EVENT = "Error while processing input event. ";
     private static final String ALMA_PARTIAL_SUCCESS = "Alma succeeded only {} of {} times";
 
+    private final transient ReferenceListCreator referenceListCreator;
     private final transient AlmaUpdater almaUpdater;
     private final transient SchedulerHelper schedulerHelper;
     private final transient IsbnConverter isbnConverter;
-    private final transient AlmaProxyClient almaProxyClient;
 
     @SuppressWarnings("unused")
     @JacocoGenerated
     public UpdateAlmaDescriptionHandler() {
-        this(new AlmaUpdater(),
+        this(new ReferenceListCreator(),
+             new AlmaUpdater(),
              new SchedulerHelper(),
-             new IsbnConverter(),
-             new AlmaProxyClient());
+             new IsbnConverter());
     }
 
-    public UpdateAlmaDescriptionHandler(AlmaUpdater almaUpdater,
+    public UpdateAlmaDescriptionHandler(ReferenceListCreator referenceListCreator,
+                                        AlmaUpdater almaUpdater,
                                         SchedulerHelper schedulerHelper,
-                                        IsbnConverter isbnConverter,
-                                        AlmaProxyClient almaProxyClient) {
+                                        IsbnConverter isbnConverter) {
+        this.referenceListCreator = referenceListCreator;
         this.almaUpdater = almaUpdater;
         this.schedulerHelper = schedulerHelper;
         this.isbnConverter = isbnConverter;
-        this.almaProxyClient = almaProxyClient;
     }
 
     /**
@@ -85,22 +85,15 @@ public class UpdateAlmaDescriptionHandler implements RequestHandler<SQSEvent, Vo
             /* Step 2. Get a REFERENCE LIST from alma-sru through a lambda. */
             var isbn = firstElementIsbn(updateItems);
             var convertedIsbn = isbnConverter.convertIsbn(isbn);
-            var referenceList = almaProxyClient.getReferenceListByIsbn(isbn);
-            if (nullOrEmpty(referenceList)) {
-                logNoAnswerFromSru(isbn);
-                referenceList = almaProxyClient.getReferenceListByIsbn(convertedIsbn);
-                if (nullOrEmpty(referenceList)) {
-                    logger.info(WRITING_TO_DLQ, convertedIsbn);
-                    schedulerHelper.writeToDLQ(event.getRecords().getFirst().getBody());
-                    return null;
-                }
-            } else {
-                var convertedIsbnList = almaProxyClient.getReferenceListByIsbn(convertedIsbn);
-                if (nullOrEmpty(convertedIsbnList)) {
-                    logNoAnswerFromSru(convertedIsbn);
-                } else {
-                    referenceList.addAll(convertedIsbnList);
-                }
+
+            var referenceList = new ArrayList<Reference>();
+            referenceList.addAll(referenceListCreator.create(isbn));
+            referenceList.addAll(referenceListCreator.create(convertedIsbn));
+
+            if (referenceList.isEmpty()) {
+                logger.info(WRITING_TO_DLQ, convertedIsbn);
+                schedulerHelper.writeToDLQ(event.getRecords().getFirst().getBody());
+                return null;
             }
 
             logger.info(FOUND_POSTS_FOR_THE_ISBN, referenceList.size(), isbn);
@@ -121,10 +114,6 @@ public class UpdateAlmaDescriptionHandler implements RequestHandler<SQSEvent, Vo
         return null;
     }
 
-    private boolean nullOrEmpty(List<Reference> referenceList) {
-        return referenceList == null || referenceList.isEmpty();
-    }
-
     private List<UpdateItem> getUpdateItems(SQSEvent event) {
         try {
             return schedulerHelper.splitEventIntoUpdateItems(event.getRecords().getFirst().getBody());
@@ -135,10 +124,6 @@ public class UpdateAlmaDescriptionHandler implements RequestHandler<SQSEvent, Vo
 
     private String firstElementIsbn(List<UpdateItem> updateItems) {
         return updateItems.getFirst().getIsbn();
-    }
-
-    private void logNoAnswerFromSru(String isbn) {
-        logger.info(NO_ANSWER_FROM_SRU, isbn);
     }
 
 }
