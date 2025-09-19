@@ -16,7 +16,7 @@ public class AlmaProxyConnection implements ReadConnection {
     @SuppressWarnings("unused")
     @JacocoGenerated
     public AlmaProxyConnection() {
-        this(new Config(), new DefaultHttpClientFactory());
+        this(new Config(), new SingularHttpClientFactory());
     }
 
     public AlmaProxyConnection(Config config, HttpClientFactory httpClientFactory) {

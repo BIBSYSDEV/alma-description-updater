@@ -10,7 +10,7 @@ public class AlmaProxyConnectionFactory extends ReadConnectionFactory {
 
     @JacocoGenerated
     public AlmaProxyConnectionFactory() {
-        this(new Config(), new DefaultHttpClientFactory());
+        this(new Config(), new SingularHttpClientFactory());
     }
 
     public AlmaProxyConnectionFactory(Config config, HttpClientFactory httpClientFactory) {
