@@ -2,6 +2,7 @@ package no.unit.scheduler;
 
 import com.google.gson.JsonObject;
 import com.google.gson.JsonParser;
+import java.util.function.Consumer;
 import no.unit.aws.DefaultSqsClientFactory;
 import no.unit.aws.SqsClientFactory;
 import no.unit.exceptions.SchedulerException;
@@ -219,39 +220,32 @@ public class SchedulerHelper {
      * @param oldVersion BibItem containing the old version of the db-record.
      * @return A BibItem with only the field of interest filed.
      */
-    @SuppressWarnings("PMD.NPathComplexity")
-    public BibItem extractDiffs(BibItem newVersion, BibItem oldVersion) {
-        BibItem returnVersion = new BibItem();
+    protected BibItem extractDiffs(BibItem newVersion, BibItem oldVersion) {
+        var returnVersion = new BibItem();
         returnVersion.setIsbn(newVersion.getIsbn());
-        if (newVersion.getDescriptionShort() != null && !newVersion.getDescriptionShort()
-                .equals(oldVersion.getDescriptionShort())) {
-            returnVersion.setDescriptionShort(newVersion.getDescriptionShort());
-        }
-        if (newVersion.getDescriptionLong() != null && !newVersion.getDescriptionLong()
-                .equals(oldVersion.getDescriptionLong())) {
-            returnVersion.setDescriptionLong(newVersion.getDescriptionLong());
-        }
-        if (newVersion.getTableOfContents() != null && !newVersion.getTableOfContents()
-                .equals(oldVersion.getTableOfContents())) {
-            returnVersion.setTableOfContents(newVersion.getTableOfContents());
-        }
-        if (newVersion.getImageSmall() != null && !newVersion.getImageSmall()
-                .equals(oldVersion.getImageSmall())) {
-            returnVersion.setImageSmall(newVersion.getImageSmall());
-        }
-        if (newVersion.getImageOriginal() != null && !newVersion.getImageOriginal()
-                .equals(oldVersion.getImageOriginal())) {
-            returnVersion.setImageOriginal(newVersion.getImageOriginal());
-        }
-        if (newVersion.getImageLarge() != null && !newVersion.getImageLarge()
-                .equals(oldVersion.getImageLarge())) {
-            returnVersion.setImageLarge(newVersion.getImageLarge());
-        }
-        if (newVersion.getAudioFile() != null && !newVersion.getAudioFile()
-                .equals(oldVersion.getAudioFile())) {
-            returnVersion.setAudioFile(newVersion.getAudioFile());
-        }
+
+        copyIfChanged(newVersion.getDescriptionShort(), oldVersion.getDescriptionShort(),
+                      returnVersion::setDescriptionShort);
+        copyIfChanged(newVersion.getDescriptionLong(), oldVersion.getDescriptionLong(),
+                      returnVersion::setDescriptionLong);
+        copyIfChanged(newVersion.getTableOfContents(), oldVersion.getTableOfContents(),
+                      returnVersion::setTableOfContents);
+        copyIfChanged(newVersion.getImageSmall(), oldVersion.getImageSmall(),
+                      returnVersion::setImageSmall);
+        copyIfChanged(newVersion.getImageOriginal(), oldVersion.getImageOriginal(),
+                      returnVersion::setImageOriginal);
+        copyIfChanged(newVersion.getImageLarge(), oldVersion.getImageLarge(),
+                      returnVersion::setImageLarge);
+        copyIfChanged(newVersion.getAudioFile(), oldVersion.getAudioFile(),
+                      returnVersion::setAudioFile);
+
         return returnVersion;
+    }
+
+    private <T> void copyIfChanged(T newValue, T oldValue, Consumer<T> setter) {
+        if (newValue != null && !newValue.equals(oldValue)) {
+            setter.accept(newValue);
+        }
     }
 
     /**
