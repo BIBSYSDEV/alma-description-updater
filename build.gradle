@@ -3,16 +3,16 @@ plugins {
     id 'checkstyle'
     id 'pmd'
     id 'jacoco'
-    id 'com.github.johnrengelman.shadow' version '6.1.0'
-    id 'org.owasp.dependencycheck' version '7.3.0'
-    id 'nebula.lint' version '17.7.0'
+    id 'nebula.lint' version '20.6.2'
 }
 
 group 'no.unit.alma'
 version '1.0-SNAPSHOT'
 
-sourceCompatibility = JavaVersion.VERSION_11  // source-code version and must be <= targetCompatibility
-targetCompatibility = JavaVersion.VERSION_11 // bytecode target version
+java {
+    sourceCompatibility = JavaVersion.VERSION_21  // source-code version and must be <= targetCompatibility
+    targetCompatibility = JavaVersion.VERSION_21 // bytecode target version
+}
 
 repositories {
     mavenCentral()
@@ -21,79 +21,87 @@ repositories {
 
 wrapper {
     distributionType = Wrapper.DistributionType.ALL
-    gradleVersion = "7.3.1"
+    gradleVersion = "8.14.3"
 }
 
 dependencies {
-    implementation group: 'org.marc4j', name: 'marc4j', version: '2.9.2'
-    implementation group: 'com.google.code.gson', name: 'gson', version: '2.9.1'
-    implementation group: 'javax.ws.rs', name: 'javax.ws.rs-api', version: '2.1.1'
-    implementation group: 'com.amazonaws', name: 'aws-lambda-java-events', version: '3.11.0'
-    implementation group: 'software.amazon.awssdk', name: 'secretsmanager', version: '2.18.10'
-    implementation group: 'software.amazon.awssdk', name: 'dynamodb', version: '2.18.11'
-    implementation group: 'software.amazon.awssdk', name: 'sqs', version: '2.18.11'
-    implementation group: 'com.amazonaws', name: 'aws-lambda-java-core', version: '1.2.1'
+    implementation group: 'com.google.code.gson', name: 'gson', version: '2.13.2'
+    implementation group: 'com.amazonaws', name: 'aws-lambda-java-events', version: '3.16.1'
+    implementation group: 'software.amazon.awssdk', name: 'sqs', version: '2.33.9'
+    implementation group: 'com.amazonaws', name: 'aws-lambda-java-core', version: '1.4.0'
     implementation group: 'com.github.BIBSYSDEV', name: 'marc21-xml-parser', version: '2.11.5'
-    implementation group: 'com.github.bibsysdev', name: 'core', version: '1.25.17'
+    implementation group: 'com.github.bibsysdev', name: 'core', version: '2.3.15'
+    implementation group: 'software.amazon.awssdk', name: 'aws-core', version: '2.33.9'
+    implementation group: 'software.amazon.awssdk', name: 'regions', version: '2.33.9'
     
-    testImplementation group: 'com.fasterxml.jackson.core', name: 'jackson-databind', version: '2.13.4.2'
-    testImplementation group: 'org.junit.jupiter', name: 'junit-jupiter', version: '5.9.1'
-    testImplementation group: 'org.mockito', name: 'mockito-core', version: '4.8.0'
+    testImplementation group: 'com.fasterxml.jackson.core', name: 'jackson-databind', version: '2.20.0'
+    testImplementation group: 'org.mockito', name: 'mockito-core', version: '5.19.0'
+    testImplementation group: 'org.hamcrest', name: 'hamcrest', version: '3.0'
+    testImplementation group: 'org.junit.jupiter', name: 'junit-jupiter-api', version: '6.0.2'
+    testRuntimeOnly group: 'org.junit.jupiter', name: 'junit-jupiter', version: '6.0.2'
+    testRuntimeOnly group: 'org.junit.platform', name: 'junit-platform-launcher', version: '6.0.2'
 
-    shadowJar {
-        archiveClassifier.set('')
-        zip64 true
-    }
+    implementation group: 'org.slf4j', name: 'slf4j-api', version: '2.0.16'
+    runtimeOnly group: 'com.amazonaws', name: 'aws-lambda-java-log4j2', version: '1.6.0'
+    runtimeOnly group: 'org.apache.logging.log4j', name: 'log4j-core', version: '2.25.1'
+    runtimeOnly group: 'org.apache.logging.log4j', name: 'log4j-api', version: '2.25.1'
+    runtimeOnly group: 'org.apache.logging.log4j', name: 'log4j-slf4j2-impl', version: '2.25.1'
 }
 
-test {
+gradleLint {
+    rules = ['all-dependency']
+    reportFormat = 'html'
+    reportOnlyFixableViolations = true
+}
+
+tasks.named('test', Test) {
     useJUnitPlatform()
     failFast = true
     finalizedBy jacocoTestReport
+    testLogging {
+        events 'skipped', 'failed'
+    }
 }
 
-// We don't want a jar, just a fatJar
-jar.enabled = false
-project.tasks.build.dependsOn project.tasks.shadowJar
-
 pmd {
+    toolVersion = '7.16.0'
     ruleSetConfig = rootProject.resources.text.fromFile('config/pmd/ruleset.xml')
     ruleSets = []
     ignoreFailures = false
 }
 
 checkstyle {
+    toolVersion = '10.26.0'
     configFile = rootProject.resources.text.fromFile('config/checkstyle/checkstyle.xml').asFile()
     showViolations = true
 }
 
-tasks.withType(Checkstyle) {
+tasks.withType(Checkstyle).configureEach {
     reports {
-        xml.enabled false
-        html.enabled true
-        html.stylesheet rootProject.resources.text.fromFile('config/checkstyle/checkstyle-simple.xsl')
+        html.required
+        html.stylesheet = rootProject.resources.text.fromFile('config/checkstyle/checkstyle-simple.xsl')
     }
 }
 
 jacocoTestReport {
     reports {
-        xml.enabled false
-        csv.enabled false
-        html.destination file("${buildDir}/reports/jacoco")
+        html.outputLocation.set(layout.buildDirectory.dir("reports/jacoco"))
     }
 }
 
+tasks.named('check').configure {
+    dependsOn tasks.named('jacocoTestCoverageVerification')
+}
 
-check.dependsOn jacocoTestCoverageVerification
-jacocoTestCoverageVerification.dependsOn(jacocoTestReport)
+tasks.named('jacocoTestCoverageVerification').configure {
+    dependsOn tasks.named('jacocoTestReport')
 
-jacocoTestCoverageVerification {
     violationRules {
         rule {
             limit {
                 counter = 'METHOD'
                 value = 'COVEREDRATIO'
-                minimum = 0.6
+                minimum = 1.0
             }
         }
 
@@ -101,7 +109,7 @@ jacocoTestCoverageVerification {
             limit {
                 counter = 'CLASS'
                 value = 'COVEREDRATIO'
-                minimum = 0.6
+                minimum = 1.0
             }
         }
     }

@@ -3,40 +3,70 @@ package no.unit.alma;
 import com.amazonaws.services.lambda.runtime.Context;
 import com.amazonaws.services.lambda.runtime.RequestHandler;
 import com.amazonaws.services.lambda.runtime.events.SQSEvent;
-import com.google.gson.Gson;
 import com.google.gson.GsonBuilder;
 import com.google.gson.reflect.TypeToken;
-import java.io.BufferedReader;
 import java.io.IOException;
-import java.io.InputStreamReader;
-import java.lang.reflect.Type;
-import java.net.URL;
 import java.net.http.HttpResponse;
+import java.util.Collections;
 import java.util.List;
-import java.util.stream.Collectors;
 import no.unit.exceptions.ParsingException;
 import no.unit.exceptions.SchedulerException;
+import no.unit.http.AlmaProxyConnectionFactory;
+import no.unit.http.ReadConnection;
+import no.unit.http.ReadConnectionFactory;
 import no.unit.marc.Reference;
 import no.unit.scheduler.SchedulerHelper;
 import no.unit.scheduler.UpdateItem;
 import no.unit.utils.DebugUtils;
+import nva.commons.core.JacocoGenerated;
+import org.slf4j.Logger;
+import org.slf4j.LoggerFactory;
 import org.w3c.dom.Document;
 import software.amazon.awssdk.http.HttpStatusCode;
 
 
 public class UpdateAlmaDescriptionHandler implements RequestHandler<SQSEvent, Void> {
 
-    private final transient Config config;
-    private final transient AlmaHelper almaHelper = new AlmaHelper();
-    private final transient SchedulerHelper schedulerHelper = new SchedulerHelper();
-    private final transient DocumentXmlParser xmlParser = new DocumentXmlParser();
+    private static final Logger logger = LoggerFactory.getLogger(UpdateAlmaDescriptionHandler.class);
 
-    public UpdateAlmaDescriptionHandler(Config config) {
-        this.config = config;
+    private static final String NO_ANSWER_FROM_SRU = "No answer from SRU for isbn: {}";
+    private static final String WRITING_TO_DLQ = "No answer from SRU for isbn: {} . Writing to DLQ";
+    private static final String FOUND_DIFFERENT_POSTS_FOR_THE_ISBN = "Found {} different posts for the isbn: {}";
+    private static final String ALMA_UPDATE_COMPLETE_FOR_MMS_ID =
+        "Completed the update in Alma for post with mms_id: {}";
+    public static final String ONE_OR_MORE_MMS_IDS_FAILED = "1 or more mms_id's did not go through with mms_id: ";
+    public static final String GENERAL_ERROR = "General error: ";
+    public static final String GET_RESPONSE = "Get response ";
+    public static final String PUT_RESPONSE = "Put response: ";
+    public static final String GET_FAILED = "Get failed";
+    public static final String ERROR_PROCESSING_INPUT_EVENT = "Error while processing input event. ";
+
+    private final transient AlmaClient almaClient;
+    private final transient SchedulerHelper schedulerHelper;
+    private final transient DocumentXmlParser xmlParser;
+    private final transient IsbnConverter isbnConverter;
+    private final transient ReadConnection almaProxyConnection;
+
+    @SuppressWarnings("unused")
+    @JacocoGenerated
+    public UpdateAlmaDescriptionHandler() {
+        this(new AlmaClient(),
+             new SchedulerHelper(),
+             new DocumentXmlParser(),
+             new IsbnConverter(),
+             new AlmaProxyConnectionFactory());
     }
 
-    public UpdateAlmaDescriptionHandler() {
-        config = new Config();
+    public UpdateAlmaDescriptionHandler(AlmaClient almaClient,
+                                        SchedulerHelper schedulerHelper,
+                                        DocumentXmlParser xmlParser,
+                                        IsbnConverter isbnConverter,
+                                        ReadConnectionFactory almaProxyConnectionFactory) {
+        this.almaClient = almaClient;
+        this.schedulerHelper = schedulerHelper;
+        this.xmlParser = xmlParser;
+        this.isbnConverter = isbnConverter;
+        this.almaProxyConnection = almaProxyConnectionFactory.create();
     }
 
     /**
@@ -58,14 +88,14 @@ public class UpdateAlmaDescriptionHandler implements RequestHandler<SQSEvent, Vo
      * @return a GatewayResponse
      */
     @Override
-    @SuppressWarnings({"unchecked", "PMD.NPathComplexity"})
+    @SuppressWarnings("PMD.CognitiveComplexity")
     public Void handleRequest(final SQSEvent event, Context context) {
         /* 1. Create an UpdateItem LIST from the input. */
         List<UpdateItem> updateItems;
         try {
-            updateItems = schedulerHelper.splitEventIntoUpdateItems(event.getRecords().get(0).getBody());
+            updateItems = schedulerHelper.splitEventIntoUpdateItems(event.getRecords().getFirst().getBody());
         } catch (Exception e) {
-            throw new RuntimeException("Error while processing input event. " + e.getMessage());
+            throw new RuntimeException(ERROR_PROCESSING_INPUT_EVENT + e.getMessage());
         }
 
         if (updateItems.isEmpty()) {
@@ -76,22 +106,21 @@ public class UpdateAlmaDescriptionHandler implements RequestHandler<SQSEvent, Vo
 
         try {
             /* Step 2. Get a REFERENCE LIST from alma-sru through a lambda. */
-            List<Reference> referenceList = getReferenceListByIsbn(updateItems.get(0).getIsbn());
+            var isbn = firstElementIsbn(updateItems);
+            var convertedIsbn = isbnConverter.convertIsbn(isbn);
+            List<Reference> referenceList = getReferenceListByIsbn(isbn);
             if (referenceList == null || referenceList.isEmpty()) {
-                System.out.println("No answer from SRU for isbn: " + updateItems.get(0).getIsbn());
-                referenceList = getReferenceListByIsbn(almaHelper.convertIsbn(updateItems.get(0).getIsbn()));
+                logNoAnswerFromSru(isbn);
+                referenceList = getReferenceListByIsbn(convertedIsbn);
                 if (referenceList == null || referenceList.isEmpty()) {
-                    System.out.println("No answer from SRU for isbn: "
-                            + almaHelper.convertIsbn(updateItems.get(0).getIsbn()) + ". Writing to DLQ");
-                    schedulerHelper.writeToDLQ(event.getRecords().get(0).getBody());
+                    logger.info(WRITING_TO_DLQ, convertedIsbn);
+                    schedulerHelper.writeToDLQ(event.getRecords().getFirst().getBody());
                     return null;
                 }
             } else {
-                List<Reference> convertedIsbnList = getReferenceListByIsbn(almaHelper.convertIsbn(updateItems.get(0)
-                        .getIsbn()));
+                List<Reference> convertedIsbnList = getReferenceListByIsbn(convertedIsbn);
                 if (convertedIsbnList == null || convertedIsbnList.isEmpty()) {
-                    System.out.println("No answer from SRU for isbn: "
-                            + almaHelper.convertIsbn(updateItems.get(0).getIsbn()));
+                    logNoAnswerFromSru(convertedIsbn);
                 } else {
                     referenceList.addAll(convertedIsbnList);
                 }
@@ -101,14 +130,13 @@ public class UpdateAlmaDescriptionHandler implements RequestHandler<SQSEvent, Vo
             HttpResponse<String> response = null;
             int sucessCounter = 0;
             /* 3. Loop through the LIST. */
-            System.out.println("Found " + referenceList.size() + " different posts for the isbn: "
-                    + updateItems.get(0).getIsbn());
+            logger.info(FOUND_DIFFERENT_POSTS_FOR_THE_ISBN, referenceList.size(), isbn);
             for (Reference reference : referenceList) {
                 /* 3.1 Get the MMS_ID from the REFERENCE OBJECT. */
                 String mmsId = reference.getId();
 
                 /* 3.2 Use the MMS_ID to get a BIB-RECORD from the alma-api. */
-                almaResponse = almaHelper.getBibRecordFromAlmaWithRetries(mmsId);
+                almaResponse = almaClient.getBibRecordFromAlmaWithRetries(mmsId);
 
                 if (almaResponse == null || almaResponse.statusCode() != HttpStatusCode.OK) {
                     continue;
@@ -120,36 +148,47 @@ public class UpdateAlmaDescriptionHandler implements RequestHandler<SQSEvent, Vo
                 String updatedRecord = updateBibRecord(updateItems, xmlFromAlma);
 
                 /* 4. Push the updated BIB-RECORD back to the alma through a put-request to the api. */
-                response = almaHelper.putBibRecordInAlmaWithRetries(mmsId, updatedRecord);
+                response = almaClient.putBibRecordInAlmaWithRetries(mmsId, updatedRecord);
 
                 if (response == null || response.statusCode() != HttpStatusCode.OK) {
                     continue;
                 }
-                System.out.println("Completed the update in Alma for post with mms_id: " + mmsId);
+                logger.info(ALMA_UPDATE_COMPLETE_FOR_MMS_ID, mmsId);
                 sucessCounter++;
             }
+            // TODO: Potential bug here in that this condition only examines the last value of almaResponse and
+            //  response. If earlier iteration of for loop has data in these fields they will not be kept when this
+            //  condition is evaluated
             if (sucessCounter < referenceList.size()) {
-                if (almaResponse == null) {
-                    throw new RuntimeException("1 or more mms_id's did not go through with mms_id: "
-                            + updateItems.get(0).getIsbn()
-                            + System.lineSeparator() + "Get failed");
+                if (almaResponse == null || almaResponse.statusCode() != HttpStatusCode.OK) {
+                    throw new RuntimeException(ONE_OR_MORE_MMS_IDS_FAILED
+                                               + isbn
+                                               + System.lineSeparator() + GET_FAILED);
                 }
-                if (response == null) {
-                    throw new RuntimeException("1 or more mms_id's did not go through with mms_id: "
-                            + updateItems.get(0).getIsbn()
-                            + System.lineSeparator() + "Get response " + almaResponse.body());
+                if (response == null || response.statusCode() != HttpStatusCode.OK) {
+                    throw new RuntimeException(ONE_OR_MORE_MMS_IDS_FAILED
+                                               + isbn
+                                               + System.lineSeparator() + GET_RESPONSE + almaResponse.body());
                 }
-                throw new RuntimeException("1 or more mms_id's did not go through with mms_id: "
-                        + updateItems.get(0).getIsbn()
-                        + System.lineSeparator() + "Get response " + almaResponse.body()
-                        + "Put response: " + response.body());
+                throw new RuntimeException(ONE_OR_MORE_MMS_IDS_FAILED
+                                           + isbn
+                                           + System.lineSeparator() + GET_RESPONSE + almaResponse.body()
+                                           + PUT_RESPONSE + response.body());
             }
         } catch (ParsingException | IOException | IllegalArgumentException
                 | InterruptedException | SecurityException | SchedulerException e) {
             DebugUtils.dumpException(e);
-            throw new RuntimeException("General error: " + e.getMessage());
+            throw new RuntimeException(GENERAL_ERROR + e.getMessage());
         }
         return null;
+    }
+
+    private String firstElementIsbn(List<UpdateItem> updateItems) {
+        return updateItems.getFirst().getIsbn();
+    }
+
+    private void logNoAnswerFromSru(String isbn) {
+        logger.info(NO_ANSWER_FROM_SRU, isbn);
     }
 
     /**
@@ -187,31 +226,31 @@ public class UpdateAlmaDescriptionHandler implements RequestHandler<SQSEvent, Vo
     }
 
     /**
-     * Retrieve a list of referenceobjects based on the isbn you enter.
-     * @param isbn The isbn you wish to retrieve refrenceobjects based on.
+     * Retrieve a list of reference objects based on the isbn you enter.
+     * @param isbn The isbn you wish to retrieve refrence objects based on.
      * @return A list of reference objects matching the isbn, this list will usually contain only one reference object.
      * @throws IOException when something goes wrong
+     * @throws InterruptedException when something goes wrong
      */
-    private List<Reference> getReferenceListByIsbn(String isbn) throws IOException {
-        URL theURL = new URL(config.almaSruHost + isbn);
-        InputStreamReader streamReader = new InputStreamReader(theURL.openStream());
-        try {
-            String referenceString = new BufferedReader(streamReader)
-                    .lines()
-                    .collect(Collectors.joining(System.lineSeparator()));
-            streamReader.close();
-            if (referenceString.isEmpty()) {
-                return null;
-            }
-            List<Reference> referenceList;
-            GsonBuilder gsonBuilder = new GsonBuilder();
-            Gson gson = gsonBuilder.create();
-            Type listOfMyClassObject = new TypeToken<List<Reference>>() {}.getType();
-            referenceList = gson.fromJson(referenceString, listOfMyClassObject);
-            return referenceList;
-        } finally {
-            streamReader.close();
+    private List<Reference> getReferenceListByIsbn(String isbn) throws IOException, InterruptedException {
+        var almaSruResponse = fetchFromAlmaSruProxy(isbn);
+        if (almaSruResponse.statusCode() != HttpStatusCode.OK) {
+            return Collections.emptyList();
         }
+
+        return createReferenceListFromAlmaSruProxyResponse(almaSruResponse.body());
+    }
+
+    private HttpResponse<String> fetchFromAlmaSruProxy(String isbn) throws IOException, InterruptedException {
+        return almaProxyConnection.sendGet(isbn);
+    }
+
+    private List<Reference> createReferenceListFromAlmaSruProxyResponse(String response) {
+        var gsonBuilder = new GsonBuilder();
+        var gson = gsonBuilder.create();
+        var listOfMyClassObject = new TypeToken<List<Reference>>() {}.getType();
+
+        return gson.fromJson(response, listOfMyClassObject);
     }
 
 }

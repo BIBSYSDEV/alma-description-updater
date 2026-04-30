@@ -12,18 +12,6 @@
       }
     },
     "NewImage": {
-      "image_small": {
-        "S": "small/2/1/9788210053412.jpg"
-      },
-      "image_large": {
-        "S": "small/2/1/9788210053412.jpg"
-      },
-      "description_short": {
-        "S": "Short description v8"
-      },
-      "image_original": {
-        "S": "original/2/1/9788210053412.jpg"
-      },
       "author": {
         "S": "Calvert, Christine"
       },
@@ -36,9 +24,6 @@
       "date_of_publication": {
         "S": "2018"
       },
-      "description_long": {
-        "S": "Long description v8"
-      },
       "modified": {
         "S": "2021-04-19T07:48:32.769721Z"
       },
@@ -47,17 +32,14 @@
       },
       "title": {
         "S": "Smaug"
-      },
-      "table_of_contents": {
-        "S": "Table of contents v8"
-      },
-      "audio_file": {
-        "S": "mp3/2/1/9788210053412.mp3"
       }
     },
     "OldImage": {
       "description_short": {
         "S": "Short description v7"
+      },
+      "image_originalll": {
+        "S": "original/2/1/9788210053412.jpg"
       },
       "author": {
         "S": "Calvert, Christine"
