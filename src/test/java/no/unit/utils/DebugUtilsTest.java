@@ -1,6 +1,5 @@
 package no.unit.utils;
 
-import no.unit.utils.DebugUtils;
 import org.junit.jupiter.api.Test;
 
 import static org.junit.jupiter.api.Assertions.assertNotNull;
