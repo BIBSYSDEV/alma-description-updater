@@ -160,10 +160,20 @@ public class UpdateAlmaDescriptionHandler implements RequestHandler<SQSEvent, Vo
             //  response. If earlier iteration of for loop has data in these fields they will not be kept when this
             //  condition is evaluated
             if (sucessCounter < referenceList.size()) {
+                if (almaResponse != null) {
+                    logger.info("GET from Alma has status {} and body {}",
+                                almaResponse.statusCode(),
+                                almaResponse.body());
+                }
                 if (almaResponse == null || almaResponse.statusCode() != HttpStatusCode.OK) {
                     throw new RuntimeException(ONE_OR_MORE_MMS_IDS_FAILED
                                                + isbn
                                                + System.lineSeparator() + GET_FAILED);
+                }
+                if (response != null) {
+                    logger.info("PUT in Alma has status {} and body {}",
+                                response.statusCode(),
+                                response.body());
                 }
                 if (response == null || response.statusCode() != HttpStatusCode.OK) {
                     throw new RuntimeException(ONE_OR_MORE_MMS_IDS_FAILED
