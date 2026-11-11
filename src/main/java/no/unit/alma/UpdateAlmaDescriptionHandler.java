@@ -160,12 +160,22 @@ public class UpdateAlmaDescriptionHandler implements RequestHandler<SQSEvent, Vo
             //  response. If earlier iteration of for loop has data in these fields they will not be kept when this
             //  condition is evaluated
             if (sucessCounter < referenceList.size()) {
-                if (almaResponse == null || almaResponse.statusCode() != HttpStatusCode.OK) {
+                if (almaResponse != null) {
+                    logger.info("GET from Alma has status {} and body {}",
+                                almaResponse.statusCode(),
+                                almaResponse.body());
+                }
+                if (almaResponse == null || isNotSuccessful(almaResponse.statusCode())) {
                     throw new RuntimeException(ONE_OR_MORE_MMS_IDS_FAILED
                                                + isbn
                                                + System.lineSeparator() + GET_FAILED);
                 }
-                if (response == null || response.statusCode() != HttpStatusCode.OK) {
+                if (response != null) {
+                    logger.info("PUT in Alma has status {} and body {}",
+                                response.statusCode(),
+                                response.body());
+                }
+                if (response == null || isNotSuccessful(response.statusCode())) {
                     throw new RuntimeException(ONE_OR_MORE_MMS_IDS_FAILED
                                                + isbn
                                                + System.lineSeparator() + GET_RESPONSE + almaResponse.body());
@@ -181,6 +191,14 @@ public class UpdateAlmaDescriptionHandler implements RequestHandler<SQSEvent, Vo
             throw new RuntimeException(GENERAL_ERROR + e.getMessage());
         }
         return null;
+    }
+
+    private static boolean isNotSuccessful(int statusCode) {
+        return !isSuccessful(statusCode);
+    }
+
+    private static boolean isSuccessful(int statusCode) {
+        return statusCode >= 200 && statusCode < 300;
     }
 
     private String firstElementIsbn(List<UpdateItem> updateItems) {
