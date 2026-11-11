@@ -15,6 +15,9 @@
       "image_small": {
         "S": "small/2/1/9788210053412.jpg"
       },
+      "image_large": {
+        "S": "small/2/1/9788210053412.jpg"
+      },
       "description_short": {
         "S": "Short description v8"
       },
@@ -55,9 +58,6 @@
     "OldImage": {
       "description_short": {
         "S": "Short description v7"
-      },
-      "image_original": {
-        "S": "original/2/1/9788210053412.jpg"
       },
       "author": {
         "S": "Calvert, Christine"

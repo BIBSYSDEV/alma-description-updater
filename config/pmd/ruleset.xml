@@ -10,7 +10,6 @@
   <exclude-pattern>.*/test/.*</exclude-pattern>
 
   <rule ref="category/java/errorprone.xml">
-    <exclude name="DataflowAnomalyAnalysis"/>
     <exclude name="MissingSerialVersionUID"/>
   </rule>
 
@@ -18,7 +17,7 @@
 
   <rule ref="category/java/bestpractices.xml">
     <exclude name="SystemPrintln"/>
-	<exclude name="GuardLogStatement"/>
+    <exclude name="GuardLogStatement"/>
 
     <!-- In TableManager we map ResourceNotFoundException to TableNotFoundException -->
     <exclude name="PreserveStackTrace"/>
@@ -34,8 +33,7 @@
     <exclude name="MethodArgumentCouldBeFinal"/>
     <exclude name="TooManyStaticImports"/>
     <exclude name="ClassNamingConventions"/>
-
-    <!--<exclude name="BeanMembersShouldSerialize"/>-->
+    <exclude name="UnnecessaryConstructor"/>
 
     <exclude name="ConfusingTernary"/>
 
@@ -53,6 +51,9 @@
 
     <!-- Sometimes it is useful in debugging to assign the return value to a local variable  -->
     <exclude name="UnnecessaryLocalBeforeReturn"/>
+
+    <!-- We don't want to exclude use of "var" -->
+    <exclude name="UseExplicitTypes"/>
 
 
   </rule>

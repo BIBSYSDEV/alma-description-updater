@@ -2,9 +2,11 @@ package no.unit.scheduler;
 
 import com.google.gson.JsonObject;
 import com.google.gson.JsonParser;
+import no.unit.aws.DefaultSqsClientFactory;
+import no.unit.aws.SqsClientFactory;
 import no.unit.exceptions.SchedulerException;
 import nva.commons.core.Environment;
-import software.amazon.awssdk.regions.Region;
+import nva.commons.core.JacocoGenerated;
 import software.amazon.awssdk.services.sqs.SqsClient;
 import software.amazon.awssdk.services.sqs.model.SendMessageRequest;
 
@@ -33,17 +35,19 @@ public class SchedulerHelper {
     private static final String SHORT_DESCRIPTION = "Forlagets beskrivelse (kort)";
     private static final String LONG_DESCRIPTION = "Forlagets beskrivelse (lang)";
     private static final String CONTENTS_DESCRIPTION = "Innholdsfortegnelse";
-    private static final String DLQ_QUEUE_URL_KEY = "DLQ_QUEUE_URL";
+    public static final String DLQ_QUEUE_URL_KEY = "DLQ_QUEUE_URL";
 
     private final transient Environment envHandler;
+    private final transient SqsClient sqsClient;
 
-
-    public SchedulerHelper(Environment envHandler) {
-        this.envHandler = envHandler;
+    @JacocoGenerated
+    public SchedulerHelper() {
+        this(new Environment(), new DefaultSqsClientFactory());
     }
 
-    public SchedulerHelper() {
-        this.envHandler = new Environment();
+    public SchedulerHelper(Environment envHandler, SqsClientFactory sqsClientFactory) {
+        this.envHandler = envHandler;
+        this.sqsClient = sqsClientFactory.create();
     }
 
 
@@ -154,18 +158,11 @@ public class SchedulerHelper {
         String link = String.format(envHandler.readEnv(CONTENT_URL_KEY) + FILE_KEY + IMAGE_KEY + imageSize
                 + "/%s/%s/%s.jpg", firstLinkPart, secondLinkPart, isbn);
 
-        String specifiedMaterial;
-        switch (imageSize) {
-            case SMALL_KEY:
-                specifiedMaterial = SMALL_DESCRIPTION;
-                break;
-            case LARGE_KEY:
-                specifiedMaterial = LARGE_DESCRIPTION;
-                break;
-            default:
-                specifiedMaterial = ORIGINAL_DESCRIPTION;
-                break;
-        }
+        String specifiedMaterial = switch (imageSize) {
+            case SMALL_KEY -> SMALL_DESCRIPTION;
+            case LARGE_KEY -> LARGE_DESCRIPTION;
+            default -> ORIGINAL_DESCRIPTION;
+        };
 
         UpdateItem item = new UpdateItem();
         item.setIsbn(isbn);
@@ -184,18 +181,11 @@ public class SchedulerHelper {
     public UpdateItem createContentLink(String contentType, String isbn) {
         String link = envHandler.readEnv(CONTENT_URL_KEY) + CONTENTS_URL_PART + "?isbn=" + isbn;
 
-        String specifiedMaterial;
-        switch (contentType.toLowerCase(Locale.getDefault())) {
-            case SHORT_KEY:
-                specifiedMaterial = SHORT_DESCRIPTION;
-                break;
-            case LONG_KEY:
-                specifiedMaterial = LONG_DESCRIPTION;
-                break;
-            default:
-                specifiedMaterial = CONTENTS_DESCRIPTION;
-                break;
-        }
+        String specifiedMaterial = switch (contentType.toLowerCase(Locale.getDefault())) {
+            case SHORT_KEY -> SHORT_DESCRIPTION;
+            case LONG_KEY -> LONG_DESCRIPTION;
+            default -> CONTENTS_DESCRIPTION;
+        };
         UpdateItem item = new UpdateItem();
         item.setIsbn(isbn);
         item.setLink(link);
@@ -271,15 +261,20 @@ public class SchedulerHelper {
      * @throws SchedulerException when something goes wrong.
      */
     public void writeToDLQ(String message) throws SchedulerException {
-        try (SqsClient sqs = SqsClient.builder().region(Region.EU_WEST_1).build()) {
-            SendMessageRequest sendMsgRequest = SendMessageRequest.builder()
-                    .queueUrl(envHandler.readEnv(DLQ_QUEUE_URL_KEY))
-                    .messageBody(message)
-                    .delaySeconds(5)
-                    .build();
-            sqs.sendMessage(sendMsgRequest);
+        try {
+            var sendMsgRequest = createSendMessageRequest(message);
+            sqsClient.sendMessage(sendMsgRequest);
         } catch (UnsupportedOperationException e) {
             throw new SchedulerException("Failed to send message to DLQ. ", e);
         }
     }
+
+    private SendMessageRequest createSendMessageRequest(String message) {
+        return SendMessageRequest.builder()
+                .queueUrl(envHandler.readEnv(DLQ_QUEUE_URL_KEY))
+                .messageBody(message)
+                .delaySeconds(5)
+                .build();
+    }
+
 }

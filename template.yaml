@@ -118,7 +118,7 @@ Resources:
     Type: AWS::Serverless::Function
     Properties:
       Description: A Lambda function that get data from dynamodb and put in sqs
-      Runtime: nodejs12.x
+      Runtime: nodejs22.x
       Handler: node/schedulerSystem.streamReader
       Environment:
         Variables:
@@ -160,6 +160,7 @@ Resources:
           ALMA_SRU_HOST: !Ref AlmaSruLambda
           STANDARD_CONTENT_URL: '{{resolve:ssm:contentsUrlStart:2}}'
           DLQ_QUEUE_URL: !Ref AlmaUpdateDLQ
+          ALMA_APIKEY: '{{resolve:secretsmanager:ALMA_APIKEY:SecretString:ALMA_APIKEY}}'
       Events:
         SQSQueueEvent:
           Type: SQS
@@ -169,7 +170,7 @@ Resources:
       ReservedConcurrentExecutions: 1
       Timeout: 55 # Chosen to be less than the default SQS Visibility Timeout of 60 seconds
       Handler: no.unit.alma.UpdateAlmaDescriptionHandler::handleRequest
-      Runtime: java11
+      Runtime: java21
       MemorySize: 2048
       Policies:
         - AWSLambdaBasicExecutionRole
@@ -183,7 +184,7 @@ Resources:
     Type: AWS::Serverless::Function
     Properties:
       Description: A Lambda function that handles Alma DLQ
-      Runtime: nodejs12.x
+      Runtime: nodejs22.x
       Handler: node/schedulerSystem.almaErrorHandler
       Environment:
         Variables:
@@ -212,7 +213,7 @@ Resources:
     Type: AWS::Serverless::Function
     Properties:
       Description: A Lambda function that schedules DLQ-reads based on alarms
-      Runtime: nodejs12.x
+      Runtime: nodejs22.x
       Handler: node/schedulerSystem.almaErrorScheduler
       Environment:
         Variables:

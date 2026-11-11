@@ -186,6 +186,7 @@ public class DocumentXmlParser {
      * @return True if both specifiedMaterial and url exists on the same 856 node, false if not.
      * @throws ParsingException when something goes wrong.
      */
+    @SuppressWarnings("PMD.CognitiveComplexity")
     public boolean alreadyExists(String specifiedMaterial, String url, String xml, int marcTag)
             throws ParsingException {
         try {
