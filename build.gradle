@@ -10,8 +10,9 @@ group 'no.unit.alma'
 version '1.0-SNAPSHOT'
 
 java {
-    sourceCompatibility = JavaVersion.VERSION_21  // source-code version and must be <= targetCompatibility
-    targetCompatibility = JavaVersion.VERSION_21 // bytecode target version
+    toolchain {
+        languageVersion = JavaLanguageVersion.of(21)
+    }
 }
 
 repositories {
@@ -21,7 +22,7 @@ repositories {
 
 wrapper {
     distributionType = Wrapper.DistributionType.ALL
-    gradleVersion = "8.14.3"
+    gradleVersion = "8.14.7"
 }
 
 dependencies {
@@ -46,6 +47,10 @@ dependencies {
     runtimeOnly "org.apache.logging.log4j:log4j-core:2.26.1"
     runtimeOnly "org.apache.logging.log4j:log4j-api:2.26.1"
     runtimeOnly "org.apache.logging.log4j:log4j-slf4j2-impl:2.26.1"
+
+    pmdAux javaToolchains.launcherFor(java.toolchain)
+            .map { it.metadata.installationPath }
+            .map { it.files("lib/jrt-fs.jar") }
 }
 
 gradleLint {
@@ -64,14 +69,14 @@ tasks.named('test', Test) {
 }
 
 pmd {
-    toolVersion = '7.16.0'
+    toolVersion = '7.28.0'
     ruleSetConfig = rootProject.resources.text.fromFile('config/pmd/ruleset.xml')
     ruleSets = []
     ignoreFailures = false
 }
 
 checkstyle {
-    toolVersion = '10.26.0'
+    toolVersion = '14.4.0'
     configFile = rootProject.resources.text.fromFile('config/checkstyle/checkstyle.xml').asFile()
     showViolations = true
 }
@@ -81,6 +86,10 @@ tasks.withType(Checkstyle).configureEach {
         html.required
         html.stylesheet = rootProject.resources.text.fromFile('config/checkstyle/checkstyle-simple.xsl')
     }
+}
+
+jacoco {
+    toolVersion = "0.8.16"
 }
 
 jacocoTestReport {
