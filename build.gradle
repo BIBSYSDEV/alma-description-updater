@@ -10,8 +10,9 @@ group 'no.unit.alma'
 version '1.0-SNAPSHOT'
 
 java {
-    sourceCompatibility = JavaVersion.VERSION_21  // source-code version and must be <= targetCompatibility
-    targetCompatibility = JavaVersion.VERSION_21 // bytecode target version
+    toolchain {
+        languageVersion = JavaLanguageVersion.of(21)
+    }
 }
 
 repositories {
@@ -46,6 +47,10 @@ dependencies {
     runtimeOnly "org.apache.logging.log4j:log4j-core:2.26.1"
     runtimeOnly "org.apache.logging.log4j:log4j-api:2.26.1"
     runtimeOnly "org.apache.logging.log4j:log4j-slf4j2-impl:2.26.1"
+
+    pmdAux javaToolchains.launcherFor(java.toolchain)
+            .map { it.metadata.installationPath }
+            .map { it.files("lib/jrt-fs.jar") }
 }
 
 gradleLint {
