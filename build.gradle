@@ -76,7 +76,7 @@ pmd {
 }
 
 checkstyle {
-    toolVersion = '10.26.0'
+    toolVersion = '14.4.0'
     configFile = rootProject.resources.text.fromFile('config/checkstyle/checkstyle.xml').asFile()
     showViolations = true
 }
@@ -86,6 +86,10 @@ tasks.withType(Checkstyle).configureEach {
         html.required
         html.stylesheet = rootProject.resources.text.fromFile('config/checkstyle/checkstyle-simple.xsl')
     }
+}
+
+jacoco {
+    toolVersion = "0.8.16"
 }
 
 jacocoTestReport {
