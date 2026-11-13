@@ -40,8 +40,7 @@ public class IsbnConverter {
         if (moduloResult != 0) {
             lastDigit = 10 - moduloResult;
         }
-        String isbn13 = isbn + lastDigit;
-        return isbn13;
+        return isbn + lastDigit;
     }
 
     /**
@@ -65,8 +64,7 @@ public class IsbnConverter {
         } else {
             lastDigit = String.valueOf(checksum);
         }
-        String isbn10 = isbn + lastDigit;
-        return isbn10;
+        return isbn + lastDigit;
     }
 
 }

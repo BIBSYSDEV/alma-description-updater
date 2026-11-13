@@ -11,6 +11,7 @@
 
   <rule ref="category/java/errorprone.xml">
     <exclude name="MissingSerialVersionUID"/>
+    <exclude name="AvoidCatchingGenericException"/>
   </rule>
 
   <rule ref="category/java/multithreading.xml"/>
@@ -67,7 +68,6 @@
     <exclude name="LawOfDemeter"/>
     <exclude name="DataClass"/>
     <exclude name="ExcessiveImports"/>
-    <exclude name="AvoidCatchingGenericException"/>
     <exclude name="SignatureDeclareThrowsException"/>
     <exclude name="UseObjectForClearerAPI"/>
     <exclude name="TooManyMethods"/>

@@ -139,8 +139,7 @@ public class DocumentXmlParser {
     public int getTagNumber(Node node) {
         String tagString = node.getAttributes().getNamedItem("tag").toString();
         String tagNumberString = tagString.substring(5, tagString.length() - 1);
-        int tagInt = Integer.parseInt(tagNumberString);
-        return tagInt;
+        return Integer.parseInt(tagNumberString);
     }
 
     /**
@@ -150,8 +149,7 @@ public class DocumentXmlParser {
      */
     public char getSubfieldCode(Node node) {
         String codeString = node.getAttributes().getNamedItem("code").toString();
-        char code = codeString.charAt(codeString.length() - 2);
-        return code;
+        return codeString.charAt(codeString.length() - 2);
     }
 
     /**
@@ -234,8 +232,7 @@ public class DocumentXmlParser {
             transformer.setOutputProperty(OutputKeys.OMIT_XML_DECLARATION, "yes");
             StringWriter writer = new StringWriter();
             transformer.transform(new DOMSource(doc), new StreamResult(writer));
-            String output = writer.getBuffer().toString().replaceAll("\n|\r", "");
-            return output;
+            return writer.getBuffer().toString().replaceAll("\n|\r", "");
         } catch (TransformerException e) {
             throw new ParsingException(CONVERTING_TO_STRING_ERROR_MESSAGE, e);
         }
