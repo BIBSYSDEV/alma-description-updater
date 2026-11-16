@@ -14,7 +14,6 @@ import java.io.IOException;
 import java.net.http.HttpResponse;
 import java.util.concurrent.TimeUnit;
 
-@SuppressWarnings("PMD.AvoidDeeplyNestedIfStmts")
 public class AlmaClient {
 
     private static final Logger logger = LoggerFactory.getLogger(AlmaClient.class);
