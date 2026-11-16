@@ -1,8 +1,8 @@
+const { SQSClient, SendMessageCommand } = require("@aws-sdk/client-sqs");
+const { LambdaClient, UpdateEventSourceMappingCommand } = require("@aws-sdk/client-lambda");
 
-const AWS = require("aws-sdk");
-AWS.config.update({region: 'eu-west-1'});
-const sqs = new AWS.SQS({ apiVersion: "2012-11-05" });
-const lambda = new AWS.Lambda();
+const sqs = new SQSClient({ region: 'eu-west-1' });
+const lambda = new LambdaClient({ region: 'eu-west-1' });
 
 exports.almaWriter = function (event, context) {
     console.log('Received records:'+ event.Records.length);
@@ -20,7 +20,7 @@ exports.streamReader =  function(event, context) {
         // CHECK EACH RECORD AND TRANSFORM/SPLIT
         var params = {MessageBody: JSON.stringify(record), QueueUrl: process.env.SqsUrlAlma };
 
-        sqs.sendMessage(params).promise()
+        sqs.send(new SendMessageCommand(params))
         .then(data => console.log("Successfully added message to queue", data.MessageId))
         .catch(err => console.log("There was an Error: ", err));
     });
@@ -45,7 +45,7 @@ exports.almaErrorHandler =  function(event, context) {
             console.log("Sending message to updateQueue")
         }
         let params = {MessageBody: record.body, QueueUrl: queueUrl};
-        sqs.sendMessage(params).promise()
+        sqs.send(new SendMessageCommand(params))
             .then(data => console.log("Successfully added message to queue", data.MessageId))
             .catch(err => console.log("There was an Error: ", err));
 
@@ -61,7 +61,7 @@ exports.almaErrorScheduler =  function(event, context) {
         alarm.NewStateValue=="ALARM" ? EnableEventSource=true : EnableEventSource=false;
     });
 
-    lambda.updateEventSourceMapping({UUID:process.env.ErrorHandlerSwitch, Enabled:EnableEventSource}).promise()
+    lambda.send(new UpdateEventSourceMappingCommand({UUID:process.env.ErrorHandlerSwitch, Enabled:EnableEventSource}))
         .then(data => console.info(console.info("SQS event source:", data.State)))
         .catch(err => console.error("There was an Error: ", err));
 }
