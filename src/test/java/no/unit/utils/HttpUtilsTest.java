@@ -25,4 +25,23 @@ class HttpUtilsTest {
         assertThat(HttpUtils.nonSuccessful(null), equalTo(true));
     }
 
+    @Test
+    @SuppressWarnings("unchecked")
+    void shouldTreat200To300RangeAsSuccessful() {
+        var httpResponse = mock(HttpResponse.class);
+        doReturn(204).when(httpResponse).statusCode();
+
+        assertThat(HttpUtils.isSuccessful(httpResponse), equalTo(true));
+        assertThat(HttpUtils.nonSuccessful(httpResponse), equalTo(false));
+    }
+
+    @Test
+    @SuppressWarnings("unchecked")
+    void shouldTreat400AsNonSuccessful() {
+        var httpResponse = mock(HttpResponse.class);
+        doReturn(400).when(httpResponse).statusCode();
+
+        assertThat(HttpUtils.nonSuccessful(httpResponse), equalTo(true));
+    }
+
 }

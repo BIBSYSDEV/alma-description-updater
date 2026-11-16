@@ -1,7 +1,6 @@
 package no.unit.utils;
 
 import java.net.http.HttpResponse;
-import software.amazon.awssdk.http.HttpStatusCode;
 
 public final class HttpUtils {
 
@@ -10,11 +9,13 @@ public final class HttpUtils {
     }
 
     public static boolean isSuccessful(HttpResponse<String> almaResponse) {
-        return almaResponse != null && almaResponse.statusCode() == HttpStatusCode.OK;
+        return almaResponse != null
+               && almaResponse.statusCode() >= 200
+               && almaResponse.statusCode() < 300;
     }
 
     public static boolean nonSuccessful(HttpResponse<String> httpResponse) {
-        return httpResponse == null || httpResponse.statusCode() != HttpStatusCode.OK;
+        return !isSuccessful(httpResponse);
     }
 
 }
