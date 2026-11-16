@@ -27,6 +27,7 @@ class AlmaClientTest {
     private static final String PAYLOAD = "<body>Hello</body>";
     private static final String MMS_ID = "1234";
     private static final Integer retryIntervalInSeconds = 0;
+    private static final String ERROR_MESSAGE_BODY = "Service Unavailable";
 
     @Mock
     private ReadUpdateConnection mockConnection;
@@ -252,6 +253,10 @@ class AlmaClientTest {
             .doReturn(HTTP_UNAVAILABLE)
             .doReturn(HTTP_UNAVAILABLE).when(mockHttpResponse).statusCode();
 
+        doReturn(ERROR_MESSAGE_BODY)
+            .doReturn(ERROR_MESSAGE_BODY)
+            .doReturn(ERROR_MESSAGE_BODY).when(mockHttpResponse).body();
+
         var mockFourthResponse = mock(HttpResponse.class);
         doReturn(HTTP_OK).when(mockFourthResponse).statusCode();
         doReturn(PAYLOAD).when(mockFourthResponse).body();
@@ -265,6 +270,41 @@ class AlmaClientTest {
         var response = almaClient.putBibRecordInAlmaWithRetries(MMS_ID, PAYLOAD);
 
         verify(mockConnection, times(3)).sendPut(MMS_ID, PAYLOAD);
+        assertNull(response);
+    }
+
+    @Test
+    void shouldGiveUpGetFromAlmaAndReturnNullWhenThirdRetryGivesStatusOtherThan200() throws Exception {
+        doReturn(HTTP_UNAVAILABLE)
+            .doReturn(HTTP_UNAVAILABLE)
+            .doReturn(HTTP_UNAVAILABLE).when(mockHttpResponse).statusCode();
+
+        doReturn(ERROR_MESSAGE_BODY)
+            .doReturn(ERROR_MESSAGE_BODY)
+            .doReturn(ERROR_MESSAGE_BODY).when(mockHttpResponse).body();
+
+        doReturn(mockHttpResponse)
+            .doReturn(mockHttpResponse)
+            .doReturn(mockHttpResponse)
+            .when(mockConnection).sendGet(any());
+
+        var response = almaClient.getBibRecordFromAlmaWithRetries(MMS_ID);
+
+        verify(mockConnection, times(3)).sendGet(MMS_ID);
+        assertNull(response);
+    }
+
+    @Test
+    void shouldGiveUpGetFromAlmaAndReturnNullWhenThirdRetryGivesError() throws Exception {
+        doThrow(IOException.class)
+            .doThrow(InterruptedException.class)
+            .doThrow(IOException.class)
+            .doReturn(mockHttpResponse)
+            .when(mockConnection).sendGet(any());
+
+        var response = almaClient.getBibRecordFromAlmaWithRetries(MMS_ID);
+
+        verify(mockConnection, times(3)).sendGet(MMS_ID);
         assertNull(response);
     }
 

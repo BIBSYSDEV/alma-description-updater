@@ -2,6 +2,8 @@ package no.unit.scheduler;
 
 import com.google.gson.JsonObject;
 import com.google.gson.JsonParser;
+import java.util.function.Consumer;
+import java.util.function.Supplier;
 import no.unit.aws.DefaultSqsClientFactory;
 import no.unit.aws.SqsClientFactory;
 import no.unit.exceptions.SchedulerException;
@@ -36,6 +38,11 @@ public class SchedulerHelper {
     private static final String LONG_DESCRIPTION = "Forlagets beskrivelse (lang)";
     private static final String CONTENTS_DESCRIPTION = "Innholdsfortegnelse";
     public static final String DLQ_QUEUE_URL_KEY = "DLQ_QUEUE_URL";
+    private static final String IMAGE_LARGE = "image_large";
+    private static final String IMAGE_SMALL = "image_small";
+    private static final String TABLE_OF_CONTENTS = "table_of_contents";
+    private static final String IMAGE_ORIGINAL = "image_original";
+    private static final String AUDIO_FILE = "audio_file";
 
     private final transient Environment envHandler;
     private final transient SqsClient sqsClient;
@@ -59,19 +66,19 @@ public class SchedulerHelper {
      * @return A list of UpdateItem objects.
      */
     public List<UpdateItem> splitEventIntoUpdateItems(String eventBody) {
-        JsonObject eventBodyObject = JsonParser.parseString(eventBody).getAsJsonObject();
-        String isbn = eventBodyObject.get("dynamodb").getAsJsonObject().get("Keys")
-                .getAsJsonObject().get("isbn").getAsJsonObject().get(S).getAsString();
-        String eventName = eventBodyObject.get("eventName").getAsString();
-        JsonObject newImage = eventBodyObject.get("dynamodb").getAsJsonObject().get("NewImage").getAsJsonObject();
-        BibItem newBibItem = extractFromJsonObject(newImage);
+        var eventBodyObject = JsonParser.parseString(eventBody).getAsJsonObject();
+        var isbn = eventBodyObject.get("dynamodb").getAsJsonObject().get("Keys")
+                       .getAsJsonObject().get("isbn").getAsJsonObject().get(S).getAsString();
+        var eventName = eventBodyObject.get("eventName").getAsString();
+        var newImage = eventBodyObject.get("dynamodb").getAsJsonObject().get("NewImage").getAsJsonObject();
+        var newBibItem = extractFromJsonObject(newImage);
         newBibItem.setIsbn(isbn);
         if (MODIFY.equals(eventName)) {
-            JsonObject oldImage = eventBodyObject.get("dynamodb").getAsJsonObject().get("OldImage").getAsJsonObject();
-            BibItem oldBibItem = extractFromJsonObject(oldImage);
+            var oldImage = eventBodyObject.get("dynamodb").getAsJsonObject().get("OldImage").getAsJsonObject();
+            var oldBibItem = extractFromJsonObject(oldImage);
             oldBibItem.setIsbn(isbn);
 
-            BibItem diffBibItem = extractDiffs(newBibItem, oldBibItem);
+            var diffBibItem = extractDiffs(newBibItem, oldBibItem);
 
             return createLinks(diffBibItem);
         } else {
@@ -86,29 +93,24 @@ public class SchedulerHelper {
      * @return The DynamoDbItem.
      */
     private BibItem extractFromJsonObject(JsonObject image) {
-        BibItem bibItem = new BibItem();
-        if (image.get("description_short") != null) {
-            bibItem.setDescriptionShort(image.get("description_short").getAsJsonObject().get(S).getAsString());
-        }
-        if (image.get("image_large") != null) {
-            bibItem.setImageLarge(image.get("image_large").getAsJsonObject().get(S).getAsString());
-        }
-        if (image.get("description_long") != null) {
-            bibItem.setDescriptionLong(image.get("description_long").getAsJsonObject().get(S).getAsString());
-        }
-        if (image.get("image_small") != null) {
-            bibItem.setImageSmall(image.get("image_small").getAsJsonObject().get(S).getAsString());
-        }
-        if (image.get("table_of_contents") != null) {
-            bibItem.setTableOfContents(image.get("table_of_contents").getAsJsonObject().get(S).getAsString());
-        }
-        if (image.get("image_original") != null) {
-            bibItem.setImageOriginal(image.get("image_original").getAsJsonObject().get(S).getAsString());
-        }
-        if (image.get("audio_file") != null) {
-            bibItem.setAudioFile(image.get("audio_file").getAsJsonObject().get(S).getAsString());
-        }
+        var bibItem = new BibItem();
+
+        setIfPresent(image, SHORT_KEY, bibItem::setDescriptionShort);
+        setIfPresent(image, IMAGE_LARGE, bibItem::setImageLarge);
+        setIfPresent(image, LONG_KEY, bibItem::setDescriptionLong);
+        setIfPresent(image, IMAGE_SMALL, bibItem::setImageSmall);
+        setIfPresent(image, TABLE_OF_CONTENTS, bibItem::setTableOfContents);
+        setIfPresent(image, IMAGE_ORIGINAL, bibItem::setImageOriginal);
+        setIfPresent(image, AUDIO_FILE, bibItem::setAudioFile);
+
         return bibItem;
+    }
+
+    private void setIfPresent(JsonObject json, String key, Consumer<String> setter) {
+        if (json.get(key) != null) {
+            var value = json.get(key).getAsJsonObject().get(S).getAsString();
+            setter.accept(value);
+        }
     }
 
     /**
@@ -118,31 +120,24 @@ public class SchedulerHelper {
      * @param item The DynamoDbItem from which to extract and create UpdateItems from.
      * @return A list of UpdateItems.
      */
-    public List<UpdateItem> createLinks(BibItem item) {
+    protected List<UpdateItem> createLinks(BibItem item) {
         List<UpdateItem> items = new ArrayList<>();
-        if (item.getDescriptionShort() != null) {
-            items.add(createContentLink(SHORT_KEY, item.getIsbn()));
-        }
-        if (item.getDescriptionLong() != null) {
-            items.add(createContentLink(LONG_KEY, item.getIsbn()));
-        }
-        if (item.getTableOfContents() != null) {
-            items.add(createContentLink(CONTENTS_KEY, item.getIsbn()));
-        }
-        if (item.getImageSmall() != null) {
-            items.add(createImageLink(SMALL_KEY, item.getIsbn()));
-        }
-        if (item.getImageLarge() != null) {
-            items.add(createImageLink(LARGE_KEY, item.getIsbn()));
-        }
-        if (item.getImageOriginal() != null) {
-            items.add(createImageLink(ORIGINAL_KEY, item.getIsbn()));
-        }
-        if (item.getAudioFile() != null) {
-            items.add(createAudioLink(item.getIsbn()));
-        }
+
+        addIfNotNull(item.getDescriptionShort(), () -> createContentLink(SHORT_KEY, item.getIsbn()), items);
+        addIfNotNull(item.getDescriptionLong(), () -> createContentLink(LONG_KEY, item.getIsbn()), items);
+        addIfNotNull(item.getTableOfContents(), () -> createContentLink(CONTENTS_KEY, item.getIsbn()), items);
+        addIfNotNull(item.getImageSmall(), () -> createImageLink(SMALL_KEY, item.getIsbn()), items);
+        addIfNotNull(item.getImageLarge(), () -> createImageLink(LARGE_KEY, item.getIsbn()), items);
+        addIfNotNull(item.getImageOriginal(), () -> createImageLink(ORIGINAL_KEY, item.getIsbn()), items);
+        addIfNotNull(item.getAudioFile(), () -> createAudioLink(item.getIsbn()), items);
 
         return items;
+    }
+
+    private <T> void addIfNotNull(T value, Supplier<UpdateItem> supplier, List<UpdateItem> items) {
+        if (value != null) {
+            items.add(supplier.get());
+        }
     }
 
     /**
@@ -152,22 +147,23 @@ public class SchedulerHelper {
      * @param isbn      The isbn to create the UpdateItem for.
      * @return A UpdateItem.
      */
-    public UpdateItem createImageLink(String imageSize, String isbn) {
-        String secondLinkPart = isbn.substring(isbn.length() - 2, isbn.length() - 1);
-        String firstLinkPart = isbn.substring(isbn.length() - 1);
-        String link = String.format(envHandler.readEnv(CONTENT_URL_KEY) + FILE_KEY + IMAGE_KEY + imageSize
-                + "/%s/%s/%s.jpg", firstLinkPart, secondLinkPart, isbn);
+    protected UpdateItem createImageLink(String imageSize, String isbn) {
+        var secondLinkPart = isbn.substring(isbn.length() - 2, isbn.length() - 1);
+        var firstLinkPart = isbn.substring(isbn.length() - 1);
+        var link = String.format(envHandler.readEnv(CONTENT_URL_KEY) + FILE_KEY + IMAGE_KEY + imageSize
+                                 + "/%s/%s/%s.jpg", firstLinkPart, secondLinkPart, isbn);
 
-        String specifiedMaterial = switch (imageSize) {
+        var specifiedMaterial = switch (imageSize) {
             case SMALL_KEY -> SMALL_DESCRIPTION;
             case LARGE_KEY -> LARGE_DESCRIPTION;
             default -> ORIGINAL_DESCRIPTION;
         };
 
-        UpdateItem item = new UpdateItem();
+        var item = new UpdateItem();
         item.setIsbn(isbn);
         item.setLink(link);
         item.setSpecifiedMaterial(specifiedMaterial);
+
         return item;
     }
 
@@ -178,18 +174,19 @@ public class SchedulerHelper {
      * @param isbn        The isbn to create the UpdateItem for.
      * @return A UpdateItem.
      */
-    public UpdateItem createContentLink(String contentType, String isbn) {
-        String link = envHandler.readEnv(CONTENT_URL_KEY) + CONTENTS_URL_PART + "?isbn=" + isbn;
+    protected UpdateItem createContentLink(String contentType, String isbn) {
+        var link = envHandler.readEnv(CONTENT_URL_KEY) + CONTENTS_URL_PART + "?isbn=" + isbn;
 
-        String specifiedMaterial = switch (contentType.toLowerCase(Locale.getDefault())) {
+        var specifiedMaterial = switch (contentType.toLowerCase(Locale.getDefault())) {
             case SHORT_KEY -> SHORT_DESCRIPTION;
             case LONG_KEY -> LONG_DESCRIPTION;
             default -> CONTENTS_DESCRIPTION;
         };
-        UpdateItem item = new UpdateItem();
+        var item = new UpdateItem();
         item.setIsbn(isbn);
         item.setLink(link);
         item.setSpecifiedMaterial(specifiedMaterial);
+
         return item;
     }
 
@@ -199,16 +196,17 @@ public class SchedulerHelper {
      * @param isbn The isbn to create the UpdateItem for.
      * @return A UpdateItem.
      */
-    public UpdateItem createAudioLink(String isbn) {
-        String secondLinkPart = isbn.substring(isbn.length() - 2, isbn.length() - 1);
-        String firstLinkPart = isbn.substring(isbn.length() - 1);
-        String link = String.format(envHandler.readEnv(CONTENT_URL_KEY) + FILE_KEY + AUDIO_MP3_KEY
-                + "/%s/%s/%s.mp3", firstLinkPart, secondLinkPart, isbn);
-        String specifiedMaterial = "Lydfil";
-        UpdateItem item = new UpdateItem();
+    protected UpdateItem createAudioLink(String isbn) {
+        var secondLinkPart = isbn.substring(isbn.length() - 2, isbn.length() - 1);
+        var firstLinkPart = isbn.substring(isbn.length() - 1);
+        var link = String.format(envHandler.readEnv(CONTENT_URL_KEY) + FILE_KEY + AUDIO_MP3_KEY
+                                 + "/%s/%s/%s.mp3", firstLinkPart, secondLinkPart, isbn);
+        var specifiedMaterial = "Lydfil";
+        var item = new UpdateItem();
         item.setIsbn(isbn);
         item.setLink(link);
         item.setSpecifiedMaterial(specifiedMaterial);
+
         return item;
     }
 
@@ -219,39 +217,32 @@ public class SchedulerHelper {
      * @param oldVersion BibItem containing the old version of the db-record.
      * @return A BibItem with only the field of interest filed.
      */
-    @SuppressWarnings("PMD.NPathComplexity")
-    public BibItem extractDiffs(BibItem newVersion, BibItem oldVersion) {
-        BibItem returnVersion = new BibItem();
+    protected BibItem extractDiffs(BibItem newVersion, BibItem oldVersion) {
+        var returnVersion = new BibItem();
         returnVersion.setIsbn(newVersion.getIsbn());
-        if (newVersion.getDescriptionShort() != null && !newVersion.getDescriptionShort()
-                .equals(oldVersion.getDescriptionShort())) {
-            returnVersion.setDescriptionShort(newVersion.getDescriptionShort());
-        }
-        if (newVersion.getDescriptionLong() != null && !newVersion.getDescriptionLong()
-                .equals(oldVersion.getDescriptionLong())) {
-            returnVersion.setDescriptionLong(newVersion.getDescriptionLong());
-        }
-        if (newVersion.getTableOfContents() != null && !newVersion.getTableOfContents()
-                .equals(oldVersion.getTableOfContents())) {
-            returnVersion.setTableOfContents(newVersion.getTableOfContents());
-        }
-        if (newVersion.getImageSmall() != null && !newVersion.getImageSmall()
-                .equals(oldVersion.getImageSmall())) {
-            returnVersion.setImageSmall(newVersion.getImageSmall());
-        }
-        if (newVersion.getImageOriginal() != null && !newVersion.getImageOriginal()
-                .equals(oldVersion.getImageOriginal())) {
-            returnVersion.setImageOriginal(newVersion.getImageOriginal());
-        }
-        if (newVersion.getImageLarge() != null && !newVersion.getImageLarge()
-                .equals(oldVersion.getImageLarge())) {
-            returnVersion.setImageLarge(newVersion.getImageLarge());
-        }
-        if (newVersion.getAudioFile() != null && !newVersion.getAudioFile()
-                .equals(oldVersion.getAudioFile())) {
-            returnVersion.setAudioFile(newVersion.getAudioFile());
-        }
+
+        copyIfChanged(newVersion.getDescriptionShort(), oldVersion.getDescriptionShort(),
+                      returnVersion::setDescriptionShort);
+        copyIfChanged(newVersion.getDescriptionLong(), oldVersion.getDescriptionLong(),
+                      returnVersion::setDescriptionLong);
+        copyIfChanged(newVersion.getTableOfContents(), oldVersion.getTableOfContents(),
+                      returnVersion::setTableOfContents);
+        copyIfChanged(newVersion.getImageSmall(), oldVersion.getImageSmall(),
+                      returnVersion::setImageSmall);
+        copyIfChanged(newVersion.getImageOriginal(), oldVersion.getImageOriginal(),
+                      returnVersion::setImageOriginal);
+        copyIfChanged(newVersion.getImageLarge(), oldVersion.getImageLarge(),
+                      returnVersion::setImageLarge);
+        copyIfChanged(newVersion.getAudioFile(), oldVersion.getAudioFile(),
+                      returnVersion::setAudioFile);
+
         return returnVersion;
+    }
+
+    private <T> void copyIfChanged(T newValue, T oldValue, Consumer<T> setter) {
+        if (newValue != null && !newValue.equals(oldValue)) {
+            setter.accept(newValue);
+        }
     }
 
     /**

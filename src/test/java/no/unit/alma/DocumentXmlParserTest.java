@@ -5,13 +5,9 @@ import org.junit.jupiter.api.Test;
 import org.w3c.dom.Document;
 import org.w3c.dom.NodeList;
 
-import java.io.BufferedReader;
-import java.io.InputStream;
-import java.io.InputStreamReader;
-
-import static java.util.Objects.isNull;
 import static no.unit.alma.DocumentXmlParser.MARC_TAG_856;
 import static no.unit.alma.DocumentXmlParser.MARC_TAG_956;
+import static no.unit.utils.FileUtils.setup;
 import static org.hamcrest.MatcherAssert.assertThat;
 import static org.hamcrest.Matchers.containsString;
 import static org.hamcrest.Matchers.equalTo;
@@ -41,27 +37,6 @@ public class DocumentXmlParserTest {
         "Caught an error while checking if the update fields already exists";
     public static final String ERROR_WHILE_CONVERTING_TO_DOCUMENT = "Caught an error while converting to document";
     public static final String HOBBIT_TITLE_TAG = "<title>Hobbiten : Smaugs ødemark i bilder</title>";
-
-    /**
-     * A helper method that returnes a string from a source.
-     * @param file The file/source you want to retrieve the string from.
-     * @return A string-value representing the content of the source.
-     * @throws Exception when something goes wrong.
-     */
-    public String setup(String file) throws Exception {
-        InputStream stream = DocumentXmlParserTest.class.getResourceAsStream(file);
-        if (isNull(stream)) {
-            throw new RuntimeException("Could not load xml file " + file);
-        }
-        InputStreamReader reader = new InputStreamReader(stream);
-        BufferedReader br = new BufferedReader(reader);
-        String line;
-        StringBuilder sb = new StringBuilder();
-        while ((line = br.readLine()) != null) {
-            sb.append(line.trim());
-        }
-        return sb.toString();
-    }
 
     @Test
     public void testCreatingUpdateNodeWithAndWithoutType() throws Exception {
